@@ -683,10 +683,12 @@ function dlAsync(login = true){
                             loggerLaunchSuite.log('Shutting down Discord Rich Presence..')
                             DiscordWrapper.shutdownRPC()
                             hasRPC = false
-                            proc = null
-                            toggleLaunchArea(false)
                         })
                     }
+                    proc.on('close', (code, signal) => {
+                        toggleLaunchArea(false)
+                        proc = null
+                    });
 
                 } catch(err) {
                     loggerLaunchSuite.error('Error during launch', err)
