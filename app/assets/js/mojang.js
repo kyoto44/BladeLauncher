@@ -14,7 +14,7 @@ const minecraftAgent = {
     name: 'Minecraft',
     version: 1
 }
-const authpath = 'https://authserver.mojang.com'
+const authpath = 'https://pavel.dev.n-blade.ru/api'
 const statuses = [
     {
         service: 'sessionserver.mojang.com',

@@ -18,10 +18,10 @@ function getCurrentPlatform(){
 builder.build({
     targets: (process.argv[2] != null && Platform[process.argv[2]] != null ? Platform[process.argv[2]] : getCurrentPlatform()).createTarget(),
     config: {
-        appId: 'helioslauncher',
-        productName: 'Helios Launcher',
+        appId: 'bladelauncher',
+        productName: 'Blade Launcher',
         artifactName: '${productName}.${ext}',
-        copyright: 'Copyright © 2018-2019 Daniel Scalzi',
+        copyright: 'Copyright © 2019-2020 N-Blade LLC',
         directories: {
             buildResources: 'build',
             output: 'dist'

@@ -1,3 +1,2 @@
-owner: dscalzi
-repo: HeliosLauncher
-provider: github
+provider: generic
+url: http://127.0.0.1:8001/

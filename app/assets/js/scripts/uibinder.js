@@ -67,7 +67,7 @@ function showMainUI(data){
     refreshServerStatus()
     setTimeout(() => {
         document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
-        document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.jpg')`
+        document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.png')`
         $('#main').show()
 
         const isLoggedIn = Object.keys(ConfigManager.getAuthAccounts()).length > 0
@@ -140,13 +140,15 @@ function onDistroRefresh(data){
  * @param {Object} data The distro index object.
  */
 function syncModConfigurations(data){
+    if(true)
+        return
 
     const syncedCfgs = []
 
     for(let serv of data.getServers()){
 
         const id = serv.getID()
-        const mdls = serv.getModules()
+        const mdls = [] // serv.getModules()
         const cfg = ConfigManager.getModConfiguration(id)
 
         if(cfg != null){

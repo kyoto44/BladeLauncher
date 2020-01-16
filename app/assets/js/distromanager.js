@@ -309,6 +309,27 @@ class Module {
 }
 exports.Module
 
+
+exports.VersionType = {
+    RELEASE: 'release',
+    SNAPSHOT: 'snapshot'
+}
+
+class Version {
+
+    /**
+     * @param {string} id 
+     * @param {string} type 
+     * @param {string} url 
+     */
+    constructor(id, type, url){
+        this.id = id
+        this.type = type // TODO: check type
+        this.url = url
+    }
+}
+exports.Version = Version
+
 /**
  * Represents a server configuration.
  */
@@ -322,22 +343,54 @@ class Server {
      * @returns {Server} The parsed Server object.
      */
     static fromJSON(json){
-
-        const mdls = json.modules
-        json.modules = []
-
-        const serv = Object.assign(new Server(), json)
-        serv._resolveModules(mdls)
-
-        return serv
+        return new Server(
+            json.id,
+            json.name['en_US'],
+            json.description['en_US'],
+            json.icon,
+            this._resolveVersions(json.versions),
+            json.address,
+            json.discord,
+            json['mainServer'] || false,
+            json['autoconnect'] || false
+        )
     }
 
-    _resolveModules(json){
-        const arr = []
-        for(let m of json){
-            arr.push(Module.fromJSON(m, this.getID()))
+    /**
+     * @param {Object} json
+     * 
+     * @returns {Array<Version>} 
+     */
+    static _resolveVersions(json){
+        const result = []
+        for(const d of json){
+            const v = new Version(d.id, d.type, d.url)
+            result.push(v)
         }
-        this.modules = arr
+        return result
+    }
+
+    /**
+     * @param {string} id 
+     * @param {string} name 
+     * @param {string} description 
+     * @param {string} icon 
+     * @param {string} version 
+     * @param {string} address 
+     * @param {Object} discord 
+     * @param {boolean} mainServer 
+     * @param {boolean} autoConnect 
+     */
+    constructor(id, name, description, icon, versions, address, discord, mainServer, autoConnect) {
+        this.id = id
+        this.name = name
+        this.description =description 
+        this.icon = icon
+        this.versions = versions
+        this.address = address
+        this.discord = discord
+        this.mainServer = mainServer
+        this.autoconnect = autoConnect
     }
 
     /**
@@ -369,10 +422,17 @@ class Server {
     }
 
     /**
-     * @returns {string} The version of the server configuration.
+     * @returns {str} The latest version of the server configuration.
      */
     getVersion(){
-        return this.version
+        return this.versions[0].id
+    }
+
+    /**
+     * @returns {Array<Version>} The version of the server configuration.
+     */
+    getVersions(){
+        return this.versions
     }
 
     /**
@@ -380,13 +440,6 @@ class Server {
      */
     getAddress(){
         return this.address
-    }
-
-    /**
-     * @returns {string} The minecraft version of the server.
-     */
-    getMinecraftVersion(){
-        return this.minecraftVersion
     }
 
     /**
@@ -406,13 +459,6 @@ class Server {
         return this.autoconnect
     }
 
-    /**
-     * @returns {Array.<Module>} An array of modules for this server.
-     */
-    getModules(){
-        return this.modules
-    }
-
 }
 exports.Server
 
@@ -429,43 +475,35 @@ class DistroIndex {
      * @returns {DistroIndex} The parsed Server object.
      */
     static fromJSON(json){
+        if (json.version !== '1.0.0')
+            throw new Error('Unsupported distor schema version')
 
-        const servers = json.servers
-        json.servers = []
 
-        const distro = Object.assign(new DistroIndex(), json)
-        distro._resolveServers(servers)
-        distro._resolveMainServer()
+        const distro = new DistroIndex()
+        distro.rss = json.rss
+        distro.discord = json.discord
+        distro._resolveServers(json.servers)
 
         return distro
     }
 
     _resolveServers(json){
+        let mainId = null
         const arr = []
         for(let s of json){
-            arr.push(Server.fromJSON(s))
-        }
-        this.servers = arr
-    }
-
-    _resolveMainServer(){
-
-        for(let serv of this.servers){
-            if(serv.mainServer){
-                this.mainServer = serv.id
-                return
+            const serv = Server.fromJSON(s)
+            arr.push(serv)
+            if(mainId == null && serv.isMainServer()){
+                mainId = serv.getID()
             }
         }
 
-        // If no server declares default_selected, default to the first one declared.
-        this.mainServer = (this.servers.length > 0) ? this.servers[0].getID() : null
-    }
-
-    /**
-     * @returns {string} The version of the distribution index.
-     */
-    getVersion(){
-        return this.version
+        // If no server declares default_selected, default to the first one declared
+        if(mainId == null && arr.length > 0){
+            mainId = arr[0].getID()
+        }
+        this.mainServer = mainId
+        this.servers = arr
     }
 
     /**
@@ -492,7 +530,7 @@ class DistroIndex {
      */
     getServer(id){
         for(let serv of this.servers){
-            if(serv.id === id){
+            if(serv.getID() === id){
                 return serv
             }
         }
@@ -537,32 +575,47 @@ exports.pullRemote = function(){
         return exports.pullLocal()
     }
     return new Promise((resolve, reject) => {
-        const distroURL = 'http://mc.westeroscraft.com/WesterosCraftLauncher/distribution.json'
-        //const distroURL = 'https://gist.githubusercontent.com/dscalzi/53b1ba7a11d26a5c353f9d5ae484b71b/raw/'
+        const distroURL = 'http://n-blade.ru:5050/download/distribution.json'
+        
+        const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
         const opts = {
             url: distroURL,
             timeout: 2500
         }
-        const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
-        request(opts, (error, resp, body) => {
-            if(!error){
-                
-                try {
-                    data = DistroIndex.fromJSON(JSON.parse(body))
-                } catch (e) {
-                    reject(e)
-                }
 
-                fs.writeFile(distroDest, body, 'utf-8', (err) => {
-                    if(!err){
-                        resolve(data)
-                    } else {
-                        reject(err)
-                    }
-                })
-            } else {
-                reject(error)
+        const fileExists = fs.existsSync(distroDest)
+        if(fileExists){
+            const stats = fs.statSync(distroDest)
+            opts.headers = {
+                'If-Modified-Since': stats.mtime.toUTCString()
             }
+        }
+
+        request(opts, (error, resp, body) => {
+            if(error){
+                reject(error)
+                return
+            }
+
+            if(resp.statusCode ===  304){
+                resolve(exports.pullLocal())
+                return
+            }
+                
+            try {
+                data = DistroIndex.fromJSON(JSON.parse(body))
+            } catch (e) {
+                reject(e)
+                return
+            }
+
+            fs.writeFile(distroDest, body, 'utf-8', (err) => {
+                if(!err){
+                    resolve(data)
+                } else {
+                    reject(err)
+                }
+            })
         })
     })
 }

@@ -1,5 +1,4 @@
 // Requirements
-const AdmZip        = require('adm-zip')
 const async         = require('async')
 const child_process = require('child_process')
 const crypto        = require('crypto')
@@ -8,12 +7,10 @@ const fs            = require('fs-extra')
 const path          = require('path')
 const Registry      = require('winreg')
 const request       = require('request')
-const tar           = require('tar-fs')
-const zlib          = require('zlib')
+const xml2js        = require('xml2js')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
-const isDev         = require('./isdev')
 
 // Constants
 // const PLATFORM_MAP = {
@@ -42,10 +39,166 @@ class Asset {
         this.from = from
         this.to = to
     }
+
+    _validateLocal(){
+        return AssetGuard._validateLocal(this.to, this.type != null ? 'md5' : 'sha1', this.hash, this.size)
+    }
+}
+
+class ModifierRule {
+
+    /**
+     * @param {string} path
+     * @param {Server} server
+     */
+    async ensure(path, server){
+        throw new Error('Method is not implemented')
+    }
+}
+
+class XmlModifierRule extends ModifierRule {
+
+    constructor(tree){
+        super()
+        this.tree = tree
+    }
+
+    async ensure(path, server) {
+        const tree = this.tree
+
+        function defer(call){
+            return new Promise((resolve, reject) => {
+                call(function(err, data) {
+                    if(err){
+                        reject(err)
+                    }else{
+                        resolve(data)
+                    }
+                })
+            })
+        }
+
+        const exists = await defer(cb => fs.pathExists(path, cb))
+        let json  = {}
+        if(exists === true){
+            const data = await defer(cb => fs.readFile(path, 'ascii', cb))
+            json = await defer(cb => xml2js.parseString(data, { explicitArray: false, trim: true }, cb))
+        }
+
+        function isObject(obj) {
+            const type = typeof obj
+            return type === 'object' && !!obj
+        }
+
+        function merge(a, b){
+            if(!isObject(b))
+                return b
+            if(!isObject(a))
+                return a
+            
+            const result = {}
+
+            Object.keys(a).concat(Object.keys(b)).forEach(k => {
+                if(!Object.prototype.hasOwnProperty.call(result, k)){
+                    if (!Object.prototype.hasOwnProperty.call(a, k)){
+                        result[k] = b[k]
+                    }else if(!Object.prototype.hasOwnProperty.call(b, k)){
+                        result[k] = a[k]
+                    }else{
+                        result[k] = merge(a[k], b[k])
+                    }
+                }
+            })
+            return result
+        }
+
+        const result = merge(json, tree)
+
+        function resolve(value){
+            const argDiscovery = /\${*(.*)}/
+            if(!value){
+                return
+            }
+            const keys = Object.keys(value)
+            for(let key of keys){
+                const v = value[key]
+                if (argDiscovery.test(v)) {
+                    const identifier = v.match(argDiscovery)[1]
+                    switch(identifier){
+                        case 'server_address':
+                            value[key] = server.getAddress()
+                            continue
+                    }
+                }else if(isObject(v)){
+                    resolve(v)
+                }
+            }
+            
+        }
+
+        resolve(result)
+
+        const builder = new xml2js.Builder()
+        const xml = builder.buildObject(result)
+        return defer(cb => fs.writeFile(path, xml, 'ascii', cb))
+    }
+}
+
+class Modifier {
+    /**
+     * @param {string} path 
+     * @param {Array<ModifierRule>} rules 
+     */
+    constructor(path, rules){
+        this.path = path
+        this.rules = rules
+    }
+
+    /**
+     * @param {Server} server
+     */
+    async apply(server){
+        for(let rule of this.rules){
+            await rule.ensure(this.path, server)
+        }
+    }
 }
 
 /** Class representing a mojang library. */
 class Library extends Asset {
+
+    constructor(id, checksum, size, urls, targetPath){
+        super(id, checksum.hash, size, urls[0], targetPath)
+        this.id = id
+        this.checksum = checksum
+        this.size = size
+        this.urls = urls
+        this.targetPath = targetPath
+    }
+
+    /**
+     * Validate that a file exists and matches a given hash value.
+     * 
+     * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
+     */
+    _validateLocal(){
+        if(!fs.existsSync(this.targetPath)){
+            return false
+        }
+        if (this.size != null){
+            const stats = fs.statSync(this.targetPath)
+            const calcdSize = stats.size
+            if (calcdSize !== this.size)
+                return false
+        }
+        if(this.checksum != null && this.checksum.hash != null){
+            const buf = fs.readFileSync(this.targetPath)
+            const calcdhash = AssetGuard._calculateHash(buf, this.checksum.algo)
+            if (calcdhash !== this.checksum.hash)
+                return false
+        }
+        return true
+    }
 
     /**
      * Converts the process.platform OS names to match mojang's OS names.
@@ -79,11 +232,7 @@ class Library extends Asset {
      */
     static validateRules(rules, natives){
         if(rules == null) {
-            if(natives == null) {
-                return true
-            } else {
-                return natives[Library.mojangFriendlyOS()] != null
-            }
+            return natives == null || natives[Library.mojangFriendlyOS()] != null
         }
 
         for(let rule of rules){
@@ -101,27 +250,6 @@ class Library extends Asset {
         }
         return true
     }
-}
-
-class DistroModule extends Asset {
-
-    /**
-     * Create a DistroModule. This is for processing,
-     * not equivalent to the module objects in the
-     * distro index.
-     * 
-     * @param {any} id The id of the asset.
-     * @param {string} hash The hash value of the asset.
-     * @param {number} size The size in bytes of the asset.
-     * @param {string} from The url where the asset can be found.
-     * @param {string} to The absolute local file path of the asset.
-     * @param {string} type The the module type.
-     */
-    constructor(id, hash, size, from, to, type){
-        super(id, hash, size, from, to)
-        this.type = type
-    }
-
 }
 
 /**
@@ -159,8 +287,12 @@ class Util {
         const act = actual.split('.')
 
         for(let i=0; i<des.length; i++){
-            if(!(parseInt(act[i]) >= parseInt(des[i]))){
-                return false
+            const aInt = act.length > i ? parseInt(act[i]) : 0
+            const dInt = parseInt(des[i])
+            if (aInt > dInt){
+                return true
+            } else if (aInt < dInt){
+                return false                
             }
         }
         return true
@@ -906,6 +1038,8 @@ class AssetGuard extends EventEmitter {
         this.forge = new DLTracker([], 0)
         this.java = new DLTracker([], 0)
         this.extractQueue = []
+        /** @type {Array<Modifier>} */
+        this.modifiers = []
         this.commonPath = commonPath
         this.javaexec = javaexec
     }
@@ -955,161 +1089,23 @@ class AssetGuard extends EventEmitter {
      * @param {string} hash The existing hash to check against.
      * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
      */
-    static _validateLocal(filePath, algo, hash){
-        if(fs.existsSync(filePath)){
-            //No hash provided, have to assume it's good.
-            if(hash == null){
-                return true
-            }
-            let buf = fs.readFileSync(filePath)
-            let calcdhash = AssetGuard._calculateHash(buf, algo)
-            return calcdhash === hash
-        }
-        return false
-    }
-
-    /**
-     * Validates a file in the style used by forge's version index.
-     * 
-     * @param {string} filePath The path of the file to validate.
-     * @param {Array.<string>} checksums The checksums listed in the forge version index.
-     * @returns {boolean} True if the file exists and the hashes match, otherwise false.
-     */
-    static _validateForgeChecksum(filePath, checksums){
-        if(fs.existsSync(filePath)){
-            if(checksums == null || checksums.length === 0){
-                return true
-            }
-            let buf = fs.readFileSync(filePath)
-            let calcdhash = AssetGuard._calculateHash(buf, 'sha1')
-            let valid = checksums.includes(calcdhash)
-            if(!valid && filePath.endsWith('.jar')){
-                valid = AssetGuard._validateForgeJar(filePath, checksums)
-            }
-            return valid
-        }
-        return false
-    }
-
-    /**
-     * Validates a forge jar file dependency who declares a checksums.sha1 file.
-     * This can be an expensive task as it usually requires that we calculate thousands
-     * of hashes.
-     * 
-     * @param {Buffer} buf The buffer of the jar file.
-     * @param {Array.<string>} checksums The checksums listed in the forge version index.
-     * @returns {boolean} True if all hashes declared in the checksums.sha1 file match the actual hashes.
-     */
-    static _validateForgeJar(buf, checksums){
-        // Double pass method was the quickest I found. I tried a version where we store data
-        // to only require a single pass, plus some quick cleanup but that seemed to take slightly more time.
-
-        const hashes = {}
-        let expected = {}
-
-        const zip = new AdmZip(buf)
-        const zipEntries = zip.getEntries()
-
-        //First pass
-        for(let i=0; i<zipEntries.length; i++){
-            let entry = zipEntries[i]
-            if(entry.entryName === 'checksums.sha1'){
-                expected = AssetGuard._parseChecksumsFile(zip.readAsText(entry))
-            }
-            hashes[entry.entryName] = AssetGuard._calculateHash(entry.getData(), 'sha1')
-        }
-
-        if(!checksums.includes(hashes['checksums.sha1'])){
+    static _validateLocal(filePath, algo, hash, sizeBytes){
+        if(!fs.existsSync(filePath)){
             return false
         }
-
-        //Check against expected
-        const expectedEntries = Object.keys(expected)
-        for(let i=0; i<expectedEntries.length; i++){
-            if(expected[expectedEntries[i]] !== hashes[expectedEntries[i]]){
+        if(hash != null){
+            const buf = fs.readFileSync(filePath)
+            const calcdhash = AssetGuard._calculateHash(buf, algo)
+            if (calcdhash !== hash)
                 return false
-            }
+        }
+        if (sizeBytes != null){
+            const stats = fs.statSync(filePath)
+            const calcdSize = stats.size
+            if (calcdSize !== sizeBytes)
+                return false
         }
         return true
-    }
-
-    // #endregion
-
-    // Miscellaneous Static Functions
-    // #region
-
-    /**
-     * Extracts and unpacks a file from .pack.xz format.
-     * 
-     * @param {Array.<string>} filePaths The paths of the files to be extracted and unpacked.
-     * @returns {Promise.<void>} An empty promise to indicate the extraction has completed.
-     */
-    static _extractPackXZ(filePaths, javaExecutable){
-        console.log('[PackXZExtract] Starting')
-        return new Promise((resolve, reject) => {
-
-            let libPath
-            if(isDev){
-                libPath = path.join(process.cwd(), 'libraries', 'java', 'PackXZExtract.jar')
-            } else {
-                if(process.platform === 'darwin'){
-                    libPath = path.join(process.cwd(),'Contents', 'Resources', 'libraries', 'java', 'PackXZExtract.jar')
-                } else {
-                    libPath = path.join(process.cwd(), 'resources', 'libraries', 'java', 'PackXZExtract.jar')
-                }
-            }
-
-            const filePath = filePaths.join(',')
-            const child = child_process.spawn(javaExecutable, ['-jar', libPath, '-packxz', filePath])
-            child.stdout.on('data', (data) => {
-                console.log('[PackXZExtract]', data.toString('utf8'))
-            })
-            child.stderr.on('data', (data) => {
-                console.log('[PackXZExtract]', data.toString('utf8'))
-            })
-            child.on('close', (code, signal) => {
-                console.log('[PackXZExtract]', 'Exited with code', code)
-                resolve()
-            })
-        })
-    }
-
-    /**
-     * Function which finalizes the forge installation process. This creates a 'version'
-     * instance for forge and saves its version.json file into that instance. If that
-     * instance already exists, the contents of the version.json file are read and returned
-     * in a promise.
-     * 
-     * @param {Asset} asset The Asset object representing Forge.
-     * @param {string} commonPath The common path for shared game files.
-     * @returns {Promise.<Object>} A promise which resolves to the contents of forge's version.json.
-     */
-    static _finalizeForgeAsset(asset, commonPath){
-        return new Promise((resolve, reject) => {
-            fs.readFile(asset.to, (err, data) => {
-                const zip = new AdmZip(data)
-                const zipEntries = zip.getEntries()
-
-                for(let i=0; i<zipEntries.length; i++){
-                    if(zipEntries[i].entryName === 'version.json'){
-                        const forgeVersion = JSON.parse(zip.readAsText(zipEntries[i]))
-                        const versionPath = path.join(commonPath, 'versions', forgeVersion.id)
-                        const versionFile = path.join(versionPath, forgeVersion.id + '.json')
-                        if(!fs.existsSync(versionFile)){
-                            fs.ensureDirSync(versionPath)
-                            fs.writeFileSync(path.join(versionPath, forgeVersion.id + '.json'), zipEntries[i].getData())
-                            resolve(forgeVersion)
-                        } else {
-                            //Read the saved file to allow for user modifications.
-                            resolve(JSON.parse(fs.readFileSync(versionFile, 'utf-8')))
-                        }
-                        return
-                    }
-                }
-                //We didn't find forge's version.json.
-                reject('Unable to finalize Forge processing, version.json not found! Has forge changed their format?')
-            })
-        })
     }
 
     // #endregion
@@ -1120,161 +1116,70 @@ class AssetGuard extends EventEmitter {
     // #region
 
     /**
-     * Loads the version data for a given minecraft version.
+     * Loads the version data for a given version.
      * 
-     * @param {string} version The game version for which to load the index data.
+     * @param {DistroManager.Version} version The game version for which to load the index data.
      * @param {boolean} force Optional. If true, the version index will be downloaded even if it exists locally. Defaults to false.
      * @returns {Promise.<Object>} Promise which resolves to the version data object.
      */
     loadVersionData(version, force = false){
         const self = this
         return new Promise(async (resolve, reject) => {
-            const versionPath = path.join(self.commonPath, 'versions', version)
-            const versionFile = path.join(versionPath, version + '.json')
-            if(!fs.existsSync(versionFile) || force){
-                const url = await self._getVersionDataUrl(version)
-                //This download will never be tracked as it's essential and trivial.
-                console.log('Preparing download of ' + version + ' assets.')
-                fs.ensureDirSync(versionPath)
-                const stream = request(url).pipe(fs.createWriteStream(versionFile))
-                stream.on('finish', () => {
-                    resolve(JSON.parse(fs.readFileSync(versionFile)))
-                })
-            } else {
-                resolve(JSON.parse(fs.readFileSync(versionFile)))
-            }
-        })
-    }
+            const versionPath = path.join(self.commonPath, 'versions', version.id)
+            const versionFile = path.join(versionPath, version.id + '.json')
 
-    /**
-     * Parses Mojang's version manifest and retrieves the url of the version
-     * data index.
-     * 
-     * @param {string} version The version to lookup.
-     * @returns {Promise.<string>} Promise which resolves to the url of the version data index.
-     * If the version could not be found, resolves to null.
-     */
-    _getVersionDataUrl(version){
-        return new Promise((resolve, reject) => {
-            request('https://launchermeta.mojang.com/mc/game/version_manifest.json', (error, resp, body) => {
+            const customHeaders = {}
+
+            let fetch = force
+            if(!fetch){
+                fs.ensureDirSync(versionPath)
+                fetch = !fs.existsSync(versionFile)
+            }
+            if(!fetch){
+                const stats = fs.statSync(versionFile)
+                customHeaders['If-Modified-Since'] = stats.mtime.toUTCString()
+            }
+
+            //This download will never be tracked as it's essential and trivial.
+            console.log('Preparing download of ' + version.id + ' assets.')
+
+            const opts = {
+                url: version.url,
+                timeout: 2500
+            }
+            if (Object.keys(customHeaders).length > 0){
+                opts.headers = customHeaders
+            }
+
+            request(opts, (error, resp, body) => {
                 if(error){
                     reject(error)
-                } else {
-                    const manifest = JSON.parse(body)
-
-                    for(let v of manifest.versions){
-                        if(v.id === version){
-                            resolve(v.url)
-                        }
-                    }
-
-                    resolve(null)
+                    return
                 }
-            })
-        })
-    }
 
-
-    // Asset (Category=''') Validation Functions
-    // #region
-
-    /**
-     * Public asset validation function. This function will handle the validation of assets.
-     * It will parse the asset index specified in the version data, analyzing each
-     * asset entry. In this analysis it will check to see if the local file exists and is valid.
-     * If not, it will be added to the download queue for the 'assets' identifier.
-     * 
-     * @param {Object} versionData The version data for the assets.
-     * @param {boolean} force Optional. If true, the asset index will be downloaded even if it exists locally. Defaults to false.
-     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
-     */
-    validateAssets(versionData, force = false){
-        const self = this
-        return new Promise((resolve, reject) => {
-            self._assetChainIndexData(versionData, force).then(() => {
-                resolve()
-            })
-        })
-    }
-
-    //Chain the asset tasks to provide full async. The below functions are private.
-    /**
-     * Private function used to chain the asset validation process. This function retrieves
-     * the index data.
-     * @param {Object} versionData
-     * @param {boolean} force
-     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
-     */
-    _assetChainIndexData(versionData, force = false){
-        const self = this
-        return new Promise((resolve, reject) => {
-            //Asset index constants.
-            const assetIndex = versionData.assetIndex
-            const name = assetIndex.id + '.json'
-            const indexPath = path.join(self.commonPath, 'assets', 'indexes')
-            const assetIndexLoc = path.join(indexPath, name)
-
-            let data = null
-            if(!fs.existsSync(assetIndexLoc) || force){
-                console.log('Downloading ' + versionData.id + ' asset index.')
-                fs.ensureDirSync(indexPath)
-                const stream = request(assetIndex.url).pipe(fs.createWriteStream(assetIndexLoc))
-                stream.on('finish', () => {
-                    data = JSON.parse(fs.readFileSync(assetIndexLoc, 'utf-8'))
-                    self._assetChainValidateAssets(versionData, data).then(() => {
-                        resolve()
-                    })
-                })
-            } else {
-                data = JSON.parse(fs.readFileSync(assetIndexLoc, 'utf-8'))
-                self._assetChainValidateAssets(versionData, data).then(() => {
-                    resolve()
-                })
-            }
-        })
-    }
-
-    /**
-     * Private function used to chain the asset validation process. This function processes
-     * the assets and enqueues missing or invalid files.
-     * @param {Object} versionData
-     * @param {boolean} force
-     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
-     */
-    _assetChainValidateAssets(versionData, indexData){
-        const self = this
-        return new Promise((resolve, reject) => {
-
-            //Asset constants
-            const resourceURL = 'http://resources.download.minecraft.net/'
-            const localPath = path.join(self.commonPath, 'assets')
-            const objectPath = path.join(localPath, 'objects')
-
-            const assetDlQueue = []
-            let dlSize = 0
-            let acc = 0
-            const total = Object.keys(indexData.objects).length
-            //const objKeys = Object.keys(data.objects)
-            async.forEachOfLimit(indexData.objects, 10, (value, key, cb) => {
-                acc++
-                self.emit('progress', 'assets', acc, total)
-                const hash = value.hash
-                const assetName = path.join(hash.substring(0, 2), hash)
-                const urlName = hash.substring(0, 2) + '/' + hash
-                const ast = new Asset(key, hash, value.size, resourceURL + urlName, path.join(objectPath, assetName))
-                if(!AssetGuard._validateLocal(ast.to, 'sha1', ast.hash)){
-                    dlSize += (ast.size*1)
-                    assetDlQueue.push(ast)
+                if(resp.statusCode ===  304){
+                    resolve(JSON.parse(fs.readFileSync(versionFile)))
+                    return
                 }
-                cb()
-            }, (err) => {
-                self.assets = new DLTracker(assetDlQueue, dlSize)
-                resolve()
-            })
-        })
-    }
+                    
+                let data
+                try {
+                    data = JSON.parse(body)
+                } catch (e) {
+                    reject(e)
+                    return
+                }
     
-    // #endregion
+                fs.writeFile(versionFile, body, 'utf-8', (err) => {
+                    if(!err){
+                        resolve(data)
+                    } else {
+                        reject(err)
+                    }
+                })
+            })
+        })
+    }
 
     // Library (Category=''') Validation Functions
     // #region
@@ -1288,22 +1193,41 @@ class AssetGuard extends EventEmitter {
      * @param {Object} versionData The version data for the assets.
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
      */
-    validateLibraries(versionData){
+    validateVersion(versionData){
         const self = this
         return new Promise((resolve, reject) => {
 
-            const libArr = versionData.libraries
-            const libPath = path.join(self.commonPath, 'libraries')
+            const ids = Object.keys(versionData.downloads)
+            const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
 
             const libDlQueue = []
             let dlSize = 0
 
-            //Check validity of each library. If the hashs don't match, download the library.
-            async.eachLimit(libArr, 5, (lib, cb) => {
-                if(Library.validateRules(lib.rules, lib.natives)){
-                    let artifact = (lib.natives == null) ? lib.downloads.artifact : lib.downloads.classifiers[lib.natives[Library.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
-                    const libItm = new Library(lib.name, artifact.sha1, artifact.size, artifact.url, path.join(libPath, artifact.path))
-                    if(!AssetGuard._validateLocal(libItm.to, 'sha1', libItm.hash)){
+            // Check validity of each library. If the hashs don't match, download the library.
+            async.eachLimit(ids, 5, (id, cb) => {
+                const lib = versionData.downloads[id]
+                if(!Library.validateRules(lib.rules, lib.natives)){
+                    cb()
+                    return
+                }
+
+                if(lib.type === 'File'){
+                    const artifact = (lib.natives == null) 
+                        ? lib.artifact 
+                        : lib.classifiers[lib.natives[Library.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
+
+                    const checksum = artifact.checksum.split(':', 2)
+                    const algo = checksum[0].toLowerCase()
+                    const hash = checksum[1]
+                    const libItm = new Library(
+                        id, 
+                        {'algo': algo, 'hash': hash},
+                        artifact.size,
+                        artifact.urls,
+                        path.join(libPath, artifact.path)
+                    )
+                    
+                    if(!libItm._validateLocal()){
                         dlSize += (libItm.size*1)
                         libDlQueue.push(libItm)
                     }
@@ -1318,342 +1242,35 @@ class AssetGuard extends EventEmitter {
 
     // #endregion
 
-    // Miscellaneous (Category=files) Validation Functions
-    // #region
-
-    /**
-     * Public miscellaneous mojang file validation function. These files will be enqueued under
-     * the 'files' identifier.
-     * 
-     * @param {Object} versionData The version data for the assets.
-     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
-     */
-    validateMiscellaneous(versionData){
-        const self = this
-        return new Promise(async (resolve, reject) => {
-            await self.validateClient(versionData)
-            await self.validateLogConfig(versionData)
-            resolve()
-        })
-    }
-
-    /**
-     * Validate client file - artifact renamed from client.jar to '{version}'.jar.
-     * 
-     * @param {Object} versionData The version data for the assets.
-     * @param {boolean} force Optional. If true, the asset index will be downloaded even if it exists locally. Defaults to false.
-     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
-     */
-    validateClient(versionData, force = false){
+    validateModifiers(versionData){
         const self = this
         return new Promise((resolve, reject) => {
-            const clientData = versionData.downloads.client
-            const version = versionData.id
-            const targetPath = path.join(self.commonPath, 'versions', version)
-            const targetFile = version + '.jar'
-
-            let client = new Asset(version + ' client', clientData.sha1, clientData.size, clientData.url, path.join(targetPath, targetFile))
-
-            if(!AssetGuard._validateLocal(client.to, 'sha1', client.hash) || force){
-                self.files.dlqueue.push(client)
-                self.files.dlsize += client.size*1
-                resolve()
-            } else {
-                resolve()
-            }
-        })
-    }
-
-    /**
-     * Validate log config.
-     * 
-     * @param {Object} versionData The version data for the assets.
-     * @param {boolean} force Optional. If true, the asset index will be downloaded even if it exists locally. Defaults to false.
-     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
-     */
-    validateLogConfig(versionData){
-        const self = this
-        return new Promise((resolve, reject) => {
-            const client = versionData.logging.client
-            const file = client.file
-            const targetPath = path.join(self.commonPath, 'assets', 'log_configs')
-
-            let logConfig = new Asset(file.id, file.sha1, file.size, file.url, path.join(targetPath, file.id))
-
-            if(!AssetGuard._validateLocal(logConfig.to, 'sha1', logConfig.hash)){
-                self.files.dlqueue.push(logConfig)
-                self.files.dlsize += logConfig.size*1
-                resolve()
-            } else {
-                resolve()
-            }
-        })
-    }
-
-    // #endregion
-
-    // Distribution (Category=forge) Validation Functions
-    // #region
-
-    /**
-     * Validate the distribution.
-     * 
-     * @param {Server} server The Server to validate.
-     * @returns {Promise.<Object>} A promise which resolves to the server distribution object.
-     */
-    validateDistribution(server){
-        const self = this
-        return new Promise((resolve, reject) => {
-            self.forge = self._parseDistroModules(server.getModules(), server.getMinecraftVersion(), server.getID())
-            resolve(server)
-        })
-    }
-
-    _parseDistroModules(modules, version, servid){
-        let alist = []
-        let asize = 0
-        for(let ob of modules){
-            let obArtifact = ob.getArtifact()
-            let obPath = obArtifact.getPath()
-            let artifact = new DistroModule(ob.getIdentifier(), obArtifact.getHash(), obArtifact.getSize(), obArtifact.getURL(), obPath, ob.getType())
-            const validationPath = obPath.toLowerCase().endsWith('.pack.xz') ? obPath.substring(0, obPath.toLowerCase().lastIndexOf('.pack.xz')) : obPath
-            if(!AssetGuard._validateLocal(validationPath, 'MD5', artifact.hash)){
-                asize += artifact.size*1
-                alist.push(artifact)
-                if(validationPath !== obPath) this.extractQueue.push(obPath)
-            }
-            //Recursively process the submodules then combine the results.
-            if(ob.getSubModules() != null){
-                let dltrack = this._parseDistroModules(ob.getSubModules(), version, servid)
-                asize += dltrack.dlsize*1
-                alist = alist.concat(dltrack.dlqueue)
-            }
-        }
-
-        return new DLTracker(alist, asize)
-    }
-
-    /**
-     * Loads Forge's version.json data into memory for the specified server id.
-     * 
-     * @param {string} server The Server to load Forge data for.
-     * @returns {Promise.<Object>} A promise which resolves to Forge's version.json data.
-     */
-    loadForgeData(server){
-        const self = this
-        return new Promise(async (resolve, reject) => {
-            const modules = server.getModules()
-            for(let ob of modules){
-                const type = ob.getType()
-                if(type === DistroManager.Types.ForgeHosted || type === DistroManager.Types.Forge){
-                    if(Util.mcVersionAtLeast('1.13', server.getMinecraftVersion())){
-                        // Read Manifest
-                        for(let sub of ob.getSubModules()){
-                            if(sub.getType() === DistroManager.Types.VersionManifest){
-                                resolve(JSON.parse(fs.readFileSync(sub.getArtifact().getPath(), 'utf-8')))
-                                return
+            const modifierDlQueue = []
+            const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
+            try {
+                if (versionData.modifiers) {
+                    for(let modifier of versionData.modifiers){
+                        const rules = []
+                        for(let rule of modifier.rules){
+                            if(rule.type === 'xml'){
+                                rules.push(new XmlModifierRule(rule.tree))
                             }
                         }
-                        reject('No forge version manifest found!')
-                        return
-                    } else {
-                        let obArtifact = ob.getArtifact()
-                        let obPath = obArtifact.getPath()
-                        let asset = new DistroModule(ob.getIdentifier(), obArtifact.getHash(), obArtifact.getSize(), obArtifact.getURL(), obPath, type)
-                        try {
-                            let forgeData = await AssetGuard._finalizeForgeAsset(asset, self.commonPath)
-                            resolve(forgeData)
-                        } catch (err){
-                            reject(err)
-                        }
-                        return
+                        modifierDlQueue.push(new Modifier(
+                            path.join(libPath, modifier.path),
+                            rules
+                        ))
                     }
                 }
+
+                self.modifiers = modifierDlQueue
+
+                resolve()
+            } catch(err) {
+                reject(err)
             }
-            reject('No forge module found!')
         })
     }
-
-    _parseForgeLibraries(){
-        /* TODO
-        * Forge asset validations are already implemented. When there's nothing much
-        * to work on, implement forge downloads using forge's version.json. This is to
-        * have the code on standby if we ever need it (since it's half implemented already).
-        */
-    }
-
-    // #endregion
-
-    // Java (Category=''') Validation (download) Functions
-    // #region
-
-    _enqueueOpenJDK(dataDir){
-        return new Promise((resolve, reject) => {
-            JavaGuard._latestOpenJDK('8').then(verData => {
-                if(verData != null){
-
-                    dataDir = path.join(dataDir, 'runtime', 'x64')
-                    const fDir = path.join(dataDir, verData.name)
-                    const jre = new Asset(verData.name, null, verData.size, verData.uri, fDir)
-                    this.java = new DLTracker([jre], jre.size, (a, self) => {
-                        if(verData.name.endsWith('zip')){
-
-                            const zip = new AdmZip(a.to)
-                            const pos = path.join(dataDir, zip.getEntries()[0].entryName)
-                            zip.extractAllToAsync(dataDir, true, (err) => {
-                                if(err){
-                                    console.log(err)
-                                    self.emit('complete', 'java', JavaGuard.javaExecFromRoot(pos))
-                                } else {
-                                    fs.unlink(a.to, err => {
-                                        if(err){
-                                            console.log(err)
-                                        }
-                                        self.emit('complete', 'java', JavaGuard.javaExecFromRoot(pos))
-                                    })
-                                }
-                            })
-
-                        } else {
-                            // Tar.gz
-                            let h = null
-                            fs.createReadStream(a.to)
-                                .on('error', err => console.log(err))
-                                .pipe(zlib.createGunzip())
-                                .on('error', err => console.log(err))
-                                .pipe(tar.extract(dataDir, {
-                                    map: (header) => {
-                                        if(h == null){
-                                            h = header.name
-                                        }
-                                    }
-                                }))
-                                .on('error', err => console.log(err))
-                                .on('finish', () => {
-                                    fs.unlink(a.to, err => {
-                                        if(err){
-                                            console.log(err)
-                                        }
-                                        if(h.indexOf('/') > -1){
-                                            h = h.substring(0, h.indexOf('/'))
-                                        }
-                                        const pos = path.join(dataDir, h)
-                                        self.emit('complete', 'java', JavaGuard.javaExecFromRoot(pos))
-                                    })
-                                })
-                        }
-                    })
-                    resolve(true)
-
-                } else {
-                    resolve(false)
-                }
-            })
-        })
-
-    }
-
-    // _enqueueOracleJRE(dataDir){
-    //     return new Promise((resolve, reject) => {
-    //         JavaGuard._latestJREOracle().then(verData => {
-    //             if(verData != null){
-
-    //                 const combined = verData.uri + PLATFORM_MAP[process.platform]
-        
-    //                 const opts = {
-    //                     url: combined,
-    //                     headers: {
-    //                         'Cookie': 'oraclelicense=accept-securebackup-cookie'
-    //                     }
-    //                 }
-        
-    //                 request.head(opts, (err, resp, body) => {
-    //                     if(err){
-    //                         resolve(false)
-    //                     } else {
-    //                         dataDir = path.join(dataDir, 'runtime', 'x64')
-    //                         const name = combined.substring(combined.lastIndexOf('/')+1)
-    //                         const fDir = path.join(dataDir, name)
-    //                         const jre = new Asset(name, null, parseInt(resp.headers['content-length']), opts, fDir)
-    //                         this.java = new DLTracker([jre], jre.size, (a, self) => {
-    //                             let h = null
-    //                             fs.createReadStream(a.to)
-    //                                 .on('error', err => console.log(err))
-    //                                 .pipe(zlib.createGunzip())
-    //                                 .on('error', err => console.log(err))
-    //                                 .pipe(tar.extract(dataDir, {
-    //                                     map: (header) => {
-    //                                         if(h == null){
-    //                                             h = header.name
-    //                                         }
-    //                                     }
-    //                                 }))
-    //                                 .on('error', err => console.log(err))
-    //                                 .on('finish', () => {
-    //                                     fs.unlink(a.to, err => {
-    //                                         if(err){
-    //                                             console.log(err)
-    //                                         }
-    //                                         if(h.indexOf('/') > -1){
-    //                                             h = h.substring(0, h.indexOf('/'))
-    //                                         }
-    //                                         const pos = path.join(dataDir, h)
-    //                                         self.emit('complete', 'java', JavaGuard.javaExecFromRoot(pos))
-    //                                     })
-    //                                 })
-                                
-    //                         })
-    //                         resolve(true)
-    //                     }
-    //                 })
-
-    //             } else {
-    //                 resolve(false)
-    //             }
-    //         })
-    //     })
-
-    // }
-
-    // _enqueueMojangJRE(dir){
-    //     return new Promise((resolve, reject) => {
-    //         // Mojang does not host the JRE for linux.
-    //         if(process.platform === 'linux'){
-    //             resolve(false)
-    //         }
-    //         AssetGuard.loadMojangLauncherData().then(data => {
-    //             if(data != null) {
-
-    //                 try {
-    //                     const mJRE = data[Library.mojangFriendlyOS()]['64'].jre
-    //                     const url = mJRE.url
-
-    //                     request.head(url, (err, resp, body) => {
-    //                         if(err){
-    //                             resolve(false)
-    //                         } else {
-    //                             const name = url.substring(url.lastIndexOf('/')+1)
-    //                             const fDir = path.join(dir, name)
-    //                             const jre = new Asset('jre' + mJRE.version, mJRE.sha1, resp.headers['content-length'], url, fDir)
-    //                             this.java = new DLTracker([jre], jre.size, a => {
-    //                                 fs.readFile(a.to, (err, data) => {
-    //                                     // Data buffer needs to be decompressed from lzma,
-    //                                     // not really possible using node.js
-    //                                 })
-    //                             })
-    //                         }
-    //                     })
-    //                 } catch (err){
-    //                     resolve(false)
-    //                 }
-
-    //             }
-    //         })
-    //     })
-    // }
-
-
-    // #endregion
 
     // #endregion
 
@@ -1673,105 +1290,85 @@ class AssetGuard extends EventEmitter {
         const dlTracker = this[identifier]
         const dlQueue = dlTracker.dlqueue
 
-        if(dlQueue.length > 0){
-            console.log('DLQueue', dlQueue)
+        if(dlQueue.length <= 0){
+            return false
+        }
+        console.log('DLQueue', dlQueue)
 
-            async.eachLimit(dlQueue, limit, (asset, cb) => {
+        async.eachLimit(dlQueue, limit, (asset, cb) => {
 
-                fs.ensureDirSync(path.join(asset.to, '..'))
+            fs.ensureDirSync(path.dirname(asset.to))
 
-                let req = request(asset.from)
-                req.pause()
+            let req = request(asset.from)
+            req.pause()
 
-                req.on('response', (resp) => {
+            req.on('response', (resp) => {
+                if(resp.statusCode !== 200){
+                    req.abort()
+                    console.log(`Failed to download ${asset.id}(${typeof asset.from === 'object' ? asset.from.url : asset.from}). Response code ${resp.statusCode}`)
+                    cb(`${asset.id}: ${resp.statusMessage}`)
+                    return
+                }
 
-                    if(resp.statusCode === 200){
+                const contentLength = parseInt(resp.headers['content-length'])
 
-                        let doHashCheck = false
-                        const contentLength = parseInt(resp.headers['content-length'])
+                if(contentLength !== asset.size){
+                    console.log(`WARN: Got ${contentLength} bytes for ${asset.id}: Expected ${asset.size}`)
 
-                        if(contentLength !== asset.size){
-                            console.log(`WARN: Got ${contentLength} bytes for ${asset.id}: Expected ${asset.size}`)
-                            doHashCheck = true
+                    // Adjust download
+                    this.totaldlsize -= asset.size
+                    this.totaldlsize += contentLength
+                }
 
-                            // Adjust download
-                            this.totaldlsize -= asset.size
-                            this.totaldlsize += contentLength
-                        }
+                let writeStream = fs.createWriteStream(asset.to)
+                writeStream.on('close', () => {
+                    if(dlTracker.callback != null){
+                        dlTracker.callback.apply(dlTracker, [asset, self])
+                    }
 
-                        let writeStream = fs.createWriteStream(asset.to)
-                        writeStream.on('close', () => {
-                            if(dlTracker.callback != null){
-                                dlTracker.callback.apply(dlTracker, [asset, self])
-                            }
-
-                            if(doHashCheck){
-                                const v = AssetGuard._validateLocal(asset.to, asset.type != null ? 'md5' : 'sha1', asset.hash)
-                                if(v){
-                                    console.log(`Hashes match for ${asset.id}, byte mismatch is an issue in the distro index.`)
-                                } else {
-                                    console.error(`Hashes do not match, ${asset.id} may be corrupted.`)
-                                }
-                            }
-
-                            cb()
-                        })
-                        req.pipe(writeStream)
-                        req.resume()
-
-                    } else {
-
-                        req.abort()
-                        console.log(`Failed to download ${asset.id}(${typeof asset.from === 'object' ? asset.from.url : asset.from}). Response code ${resp.statusCode}`)
-                        self.progress += asset.size*1
-                        self.emit('progress', 'download', self.progress, self.totaldlsize)
+                    const v = asset._validateLocal()
+                    if(v){
                         cb()
-
+                        return
                     }
 
+                    const msg = `Validation of downloaded asset ${asset.id} failed, may be corrupted.`
+                    console.error(msg)
+                    cb(msg)
                 })
-
-                req.on('error', (err) => {
-                    self.emit('error', 'download', err)
-                })
-
-                req.on('data', (chunk) => {
-                    self.progress += chunk.length
-                    self.emit('progress', 'download', self.progress, self.totaldlsize)
-                })
-
-            }, (err) => {
-
-                if(err){
-                    console.log('An item in ' + identifier + ' failed to process')
-                } else {
-                    console.log('All ' + identifier + ' have been processed successfully')
-                }
-
-                //self.totaldlsize -= dlTracker.dlsize
-                //self.progress -= dlTracker.dlsize
-                self[identifier] = new DLTracker([], 0)
-
-                if(self.progress >= self.totaldlsize) {
-                    if(self.extractQueue.length > 0){
-                        self.emit('progress', 'extract', 1, 1)
-                        //self.emit('extracting')
-                        AssetGuard._extractPackXZ(self.extractQueue, self.javaexec).then(() => {
-                            self.extractQueue = []
-                            self.emit('complete', 'download')
-                        })
-                    } else {
-                        self.emit('complete', 'download')
-                    }
-                }
+                req.pipe(writeStream)
+                req.resume()
 
             })
 
-            return true
+            req.on('error', (err) => {
+                self.emit('error', 'download', err)
+            })
 
-        } else {
-            return false
-        }
+            req.on('data', (chunk) => {
+                self.progress += chunk.length
+                self.emit('progress', 'download', self.progress, self.totaldlsize)
+            })
+
+        }, (err) => {
+            if(err){
+                const msg = 'An item in ' + identifier + ' failed to process: ' + err
+                console.log(msg)
+                self.emit('error', 'download', msg)
+                return
+            }
+            
+            console.log('All ' + identifier + ' have been processed successfully')
+
+            self[identifier] = new DLTracker([], 0)
+
+            if(self.progress >= self.totaldlsize) {
+                self.emit('complete', 'download')
+            }
+
+        })
+
+        return true
     }
 
     /**
@@ -1781,10 +1378,12 @@ class AssetGuard extends EventEmitter {
      * the files, it is likely nothing will be enqueued in the object and processing will complete
      * immediately. Once all downloads are complete, this function will fire the 'complete' event on the
      * global object instance.
-     * 
+     *
+     * @param {Server} server 
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
-    processDlQueues(identifiers = [{id:'assets', limit:20}, {id:'libraries', limit:5}, {id:'files', limit:5}, {id:'forge', limit:5}]){
+    processDlQueues(server, identifiers = [{id:'assets', limit:20}, {id:'libraries', limit:5}, {id:'files', limit:5}, {id:'forge', limit:5}]){
+        const self = this
         return new Promise((resolve, reject) => {
             let shouldFire = true
 
@@ -1793,7 +1392,8 @@ class AssetGuard extends EventEmitter {
             this.progress = 0
 
             for(let iden of identifiers){
-                this.totaldlsize += this[iden.id].dlsize
+                const queue = this[iden.id]
+                this.totaldlsize += queue.dlsize
             }
 
             this.once('complete', (data) => {
@@ -1802,41 +1402,44 @@ class AssetGuard extends EventEmitter {
 
             for(let iden of identifiers){
                 let r = this.startAsyncProcess(iden.id, iden.limit)
-                if(r) shouldFire = false
+                if(r)
+                    shouldFire = false
             }
 
             if(shouldFire){
                 this.emit('complete', 'download')
             }
+        }).then(function() {
+            let p = Promise.resolve()
+            for (let modifier of self.modifiers) {
+                p = p.then(() => modifier.apply(server))
+            }
+            return p
         })
     }
 
     async validateEverything(serverid, dev = false){
-
         try {
             if(!ConfigManager.isLoaded()){
                 ConfigManager.load()
             }
+            
             DistroManager.setDevMode(dev)
             const dI = await DistroManager.pullLocal()
     
             const server = dI.getServer(serverid)
     
             // Validate Everything
-    
-            await this.validateDistribution(server)
-            this.emit('validate', 'distribution')
-            const versionData = await this.loadVersionData(server.getMinecraftVersion())
+
+            const versionData = await this.loadVersionData(server.getVersions()[0])
             this.emit('validate', 'version')
-            await this.validateAssets(versionData)
-            this.emit('validate', 'assets')
-            await this.validateLibraries(versionData)
+            await this.validateVersion(versionData)
             this.emit('validate', 'libraries')
-            await this.validateMiscellaneous(versionData)
+            await this.validateModifiers(versionData)
             this.emit('validate', 'files')
-            await this.processDlQueues()
+            await this.processDlQueues(server)
             //this.emit('complete', 'download')
-            const forgeData = await this.loadForgeData(server)
+            const forgeData = {}
         
             return {
                 versionData,
@@ -1844,6 +1447,7 @@ class AssetGuard extends EventEmitter {
             }
 
         } catch (err){
+            console.error(err)
             return {
                 versionData: null,
                 forgeData: null,

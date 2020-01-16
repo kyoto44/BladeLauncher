@@ -273,8 +273,8 @@ function populateServerListings(){
                 <span class="serverListingName">${serv.getName()}</span>
                 <span class="serverListingDescription">${serv.getDescription()}</span>
                 <div class="serverListingInfo">
-                    <div class="serverListingVersion">${serv.getMinecraftVersion()}</div>
-                    <div class="serverListingRevision">${serv.getVersion()}</div>
+                    <div class="serverListingVersion">${serv.getVersion()}</div>
+                    <div class="serverListingRevision" style="display: none;">${serv.getVersion()}</div>
                     ${serv.isMainServer() ? `<div class="serverListingStarWrapper">
                         <svg id="Layer_1" viewBox="0 0 107.45 104.74" width="20px" height="20px">
                             <defs>
@@ -299,7 +299,7 @@ function populateAccountListings(){
     let htmlString = ''
     for(let i=0; i<accounts.length; i++){
         htmlString += `<button class="accountListing" uuid="${accounts[i].uuid}" ${i===0 ? 'selected' : ''}>
-            <img src="https://crafatar.com/renders/head/${accounts[i].uuid}?scale=2&default=MHF_Steve&overlay">
+            <img src="https://www.northernblade.ru/forums/image.php?u=${accounts[i].uuid}">
             <div class="accountListingName">${accounts[i].displayName}</div>
         </button>`
     }

@@ -18,6 +18,17 @@ exports.getStatus = function(address, port = 25565){
     }
 
     return new Promise((resolve, reject) => {
+        resolve({
+            online: true,
+            version: '123',
+            motd: 'good news everyone',
+            onlinePlayers: '123',
+            maxPlayers: '321'
+        })
+        if (true) {
+            return
+        }
+
         const socket = net.connect(port, address, () => {
             let buff = Buffer.from([0xFE, 0x01])
             socket.write(buff)

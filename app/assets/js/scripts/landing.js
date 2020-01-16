@@ -9,7 +9,7 @@ const {URL}                   = require('url')
 // Internal Requirements
 const DiscordWrapper          = require('./assets/js/discordwrapper')
 const Mojang                  = require('./assets/js/mojang')
-const ProcessBuilder          = require('./assets/js/processbuilder')
+const ProcessBuilder          = require('./assets/js/basicprocessbuilder')
 const ServerStatus            = require('./assets/js/serverstatus')
 
 // Launch Elements
@@ -86,6 +86,12 @@ function setLaunchEnabled(val){
 // Bind launch button
 document.getElementById('launch_button').addEventListener('click', function(e){
     loggerLanding.log('Launching game..')
+
+    dlAsync()
+
+    if (true)
+        return
+
     const mcVersion = DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer()).getMinecraftVersion()
     const jExe = ConfigManager.getJavaExecutable()
     if(jExe == null){
@@ -130,7 +136,7 @@ function updateSelectedAccount(authUser){
             username = authUser.displayName
         }
         if(authUser.uuid != null){
-            document.getElementById('avatarContainer').style.backgroundImage = `url('https://crafatar.com/renders/body/${authUser.uuid}')`
+            document.getElementById('avatarContainer').style.backgroundImage = `url('https://www.northernblade.ru/forums/image.php?u=${authUser.uuid}')`
         }
     }
     user_text.innerHTML = username
@@ -150,6 +156,7 @@ function updateSelectedServer(serv){
     }
     setLaunchEnabled(serv != null)
 }
+
 // Real text is set in uibinder.js on distributionIndexDone.
 server_selection_button.innerHTML = '\u2022 Loading..'
 server_selection_button.onclick = (e) => {
@@ -159,6 +166,9 @@ server_selection_button.onclick = (e) => {
 
 // Update Mojang Status Color
 const refreshMojangStatuses = async function(){
+    if (true)
+        return
+
     loggerLanding.log('Refreshing Mojang Statuses..')
 
     let status = 'grey'
@@ -217,6 +227,9 @@ const refreshMojangStatuses = async function(){
 }
 
 const refreshServerStatus = async function(fade = false){
+    if (true)
+        return
+
     loggerLanding.log('Refreshing Server Status')
     const serv = DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer())
 
@@ -252,8 +265,8 @@ refreshMojangStatuses()
 // Server Status is refreshed in uibinder.js on distributionIndexDone.
 
 // Set refresh rate to once every 5 minutes.
-let mojangStatusListener = setInterval(() => refreshMojangStatuses(true), 300000)
-let serverStatusListener = setInterval(() => refreshServerStatus(true), 300000)
+// let mojangStatusListener = setInterval(() => refreshMojangStatuses(true), 300000)
+// let serverStatusListener = setInterval(() => refreshServerStatus(true), 300000)
 
 /**
  * Shows an error overlay, toggles off the launch area.
@@ -295,7 +308,7 @@ function asyncSystemScan(mcVersion, launchAfter = true){
 
     const forkEnv = JSON.parse(JSON.stringify(process.env))
     forkEnv.CONFIG_DIRECT_PATH = ConfigManager.getLauncherDirectory()
-
+/*
     // Fork a process to run validations.
     sysAEx = cp.fork(path.join(__dirname, 'assets', 'js', 'assetexec.js'), [
         'JavaGuard',
@@ -458,6 +471,7 @@ function asyncSystemScan(mcVersion, launchAfter = true){
     setLaunchDetails('Checking system info..')
     sysAEx.send({task: 'execute', function: 'validateJava', argsArr: [ConfigManager.getDataDirectory()]})
 
+*/
 }
 
 // Keep reference to Minecraft Process
@@ -488,7 +502,7 @@ function dlAsync(login = true){
         }
     }
 
-    setLaunchDetails('Please wait..')
+    setLaunchDetails(Lang.queryJS('landing.launch.pleaseWait'))
     toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
@@ -505,6 +519,7 @@ function dlAsync(login = true){
         ConfigManager.getJavaExecutable()
     ], {
         env: forkEnv,
+        // execArgv:['--inspect-brk'],
         stdio: 'pipe'
     })
     // Stdout
@@ -647,49 +662,17 @@ function dlAsync(login = true){
                 let pb = new ProcessBuilder(serv, versionData, forgeData, authUser, remote.app.getVersion())
                 setLaunchDetails('Launching game..')
 
-                // Attach a temporary listener to the client output.
-                // Will wait for a certain bit of text meaning that
-                // the client application has started, and we can hide
-                // the progress bar stuff.
-                const tempListener = function(data){
-                    if(GAME_LAUNCH_REGEX.test(data.trim())){
-                        toggleLaunchArea(false)
-                        if(hasRPC){
-                            DiscordWrapper.updateDetails('Loading game..')
-                        }
-                        proc.stdout.on('data', gameStateChange)
-                        proc.stdout.removeListener('data', tempListener)
-                        proc.stderr.removeListener('data', gameErrorListener)
-                    }
-                }
-
-                // Listener for Discord RPC.
-                const gameStateChange = function(data){
-                    data = data.trim()
-                    if(SERVER_JOINED_REGEX.test(data)){
-                        DiscordWrapper.updateDetails('Exploring the Realm!')
-                    } else if(GAME_JOINED_REGEX.test(data)){
-                        DiscordWrapper.updateDetails('Sailing to Westeros!')
-                    }
-                }
-
-                const gameErrorListener = function(data){
-                    data = data.trim()
-                    if(data.indexOf('Could not find or load main class net.minecraft.launchwrapper.Launch') > -1){
-                        loggerLaunchSuite.error('Game launch failed, LaunchWrapper was not downloaded properly.')
-                        showLaunchFailure('Error During Launch', 'The main file, LaunchWrapper, failed to download properly. As a result, the game cannot launch.<br><br>To fix this issue, temporarily turn off your antivirus software and launch the game again.<br><br>If you have time, please <a href="https://github.com/dscalzi/HeliosLauncher/issues">submit an issue</a> and let us know what antivirus software you use. We\'ll contact them and try to straighten things out.')
-                    }
+                const gameGlobalErrorListener = function(err){
+                    loggerLaunchSuite.error('Game launch failed', err)
+                    showLaunchFailure('Error During Launch', 'To fix this issue, temporarily turn off your antivirus software and launch the game again.')
                 }
 
                 try {
-                    // Build Minecraft process.
+                    // Build Game process.
                     proc = pb.build()
+                    proc.on('error', gameGlobalErrorListener)
 
-                    // Bind listeners to stdout.
-                    proc.stdout.on('data', tempListener)
-                    proc.stderr.on('data', gameErrorListener)
-
-                    setLaunchDetails('Done. Enjoy the server!')
+                    setLaunchDetails('Done. Enjoy the game!')
 
                     // Init Discord Hook
                     const distro = DistroManager.getDistribution()
@@ -701,14 +684,13 @@ function dlAsync(login = true){
                             DiscordWrapper.shutdownRPC()
                             hasRPC = false
                             proc = null
+                            toggleLaunchArea(false)
                         })
                     }
 
                 } catch(err) {
-
                     loggerLaunchSuite.error('Error during launch', err)
-                    showLaunchFailure('Error During Launch', 'Please check the console (CTRL + Shift + i) for more details.')
-
+                    showLaunchFailure('Error During Launch', 'Please contact support.')
                 }
             }
 
@@ -1052,7 +1034,12 @@ document.addEventListener('keydown', (e) => {
 function displayArticle(articleObject, index){
     newsArticleTitle.innerHTML = articleObject.title
     newsArticleTitle.href = articleObject.link
-    newsArticleAuthor.innerHTML = 'by ' + articleObject.author
+    if(articleObject.author){
+        newsArticleAuthor.innerHTML = 'by ' + articleObject.author
+        newsArticleAuthor.style.display = 'block'
+    } else {
+        newsArticleAuthor.style.display = 'none'
+    }
     newsArticleDate.innerHTML = articleObject.date
     newsArticleComments.innerHTML = articleObject.comments
     newsArticleComments.href = articleObject.commentsLink
@@ -1095,7 +1082,8 @@ function loadNews(){
                         comments = comments + ' Comment' + (comments === '1' ? '' : 's')
 
                         // Fix relative links in content.
-                        let content = el.find('content\\:encoded').text()
+                        // let content = el.find('content\\:encoded').text()
+                        let content = el.find('description').text()
                         let regex = /src="(?!http:\/\/|https:\/\/)(.+?)"/g
                         let matches
                         while((matches = regex.exec(content))){

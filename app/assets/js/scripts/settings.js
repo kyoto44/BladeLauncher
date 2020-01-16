@@ -113,7 +113,7 @@ function initSettingsValues(){
                 if(v.type === 'number' || v.type === 'text'){
                     // Special Conditions
                     if(cVal === 'JavaExecutable'){
-                        populateJavaExecDetails(v.value)
+                        // populateJavaExecDetails(v.value)
                         v.value = gFn()
                     } else if (cVal === 'DataDirectory'){
                         v.value = gFn()
@@ -284,10 +284,10 @@ function settingsSaveDisabled(v){
 /* Closes the settings view and saves all data. */
 settingsNavDone.onclick = () => {
     saveSettingsValues()
-    saveModConfiguration()
+    // saveModConfiguration()
     ConfigManager.save()
-    saveDropinModConfiguration()
-    saveShaderpackSettings()
+    // saveDropinModConfiguration()
+    // saveShaderpackSettings()
     switchView(getCurrentView(), VIEWS.landing)
 }
 
@@ -425,7 +425,7 @@ function populateAuthAccounts(){
         const acc = authAccounts[val]
         authAccountStr += `<div class="settingsAuthAccount" uuid="${acc.uuid}">
             <div class="settingsAuthAccountLeft">
-                <img class="settingsAuthAccountImage" alt="${acc.displayName}" src="https://crafatar.com/renders/body/${acc.uuid}?scale=3&default=MHF_Steve&overlay">
+                <img class="settingsAuthAccountImage" alt="${acc.displayName}" src="https://www.northernblade.ru/forums/image.php?u=${acc.uuid}">
             </div>
             <div class="settingsAuthAccountRight">
                 <div class="settingsAuthAccountDetails">
@@ -856,8 +856,8 @@ function loadSelectedServerOnModsTab(){
             <span class="serverListingName">${serv.getName()}</span>
             <span class="serverListingDescription">${serv.getDescription()}</span>
             <div class="serverListingInfo">
-                <div class="serverListingVersion">${serv.getMinecraftVersion()}</div>
-                <div class="serverListingRevision">${serv.getVersion()}</div>
+                <div class="serverListingVersion">${serv.getVersion()}</div>
+                <div class="serverListingRevision" style="display: none;">${serv.getVersion()}</div>
                 ${serv.isMainServer() ? `<div class="serverListingStarWrapper">
                     <svg id="Layer_1" viewBox="0 0 107.45 104.74" width="20px" height="20px">
                         <defs>
@@ -1318,11 +1318,11 @@ function prepareSettings(first = false) {
         initSettingsValidators()
         prepareUpdateTab()
     } else {
-        prepareModsTab()
+        // prepareModsTab()
     }
     initSettingsValues()
     prepareAccountsTab()
-    prepareJavaTab()
+    // prepareJavaTab()
     prepareAboutTab()
 }
 
