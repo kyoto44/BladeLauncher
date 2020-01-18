@@ -39,7 +39,9 @@ webFrame.setLayoutZoomLevelLimits(0, 0)
 // Initialize auto updates in production environments.
 let updateCheckListener
 if(!isDev){
+    let latestDownloadedVersion = null
     ipcRenderer.on('autoUpdateNotification', (event, arg, info) => {
+        console.warn('<<<<<<<<<<<<<<<<<<<<< ' + arg)
         switch(arg){
             case 'checking-for-update':
                 loggerAutoUpdater.log('Checking for update..')
@@ -48,6 +50,9 @@ if(!isDev){
             case 'update-available':
                 loggerAutoUpdaterSuccess.log('New update available', info.version)
                 
+                if (latestDownloadedVersion === info.version)
+                    break;
+
                 if(process.platform === 'darwin'){
                     info.darwindownload = `https://github.com/dscalzi/HeliosLauncher/releases/download/v${info.version}/helioslauncher-${info.version}.dmg`
                     showUpdateUI(info)
@@ -57,6 +62,7 @@ if(!isDev){
                 break
             case 'update-downloaded':
                 loggerAutoUpdaterSuccess.log('Update ' + info.version + ' ready to be installed.')
+                latestDownloadedVersion = info.version
                 settingsUpdateButtonStatus('Install Now', false, () => {
                     if(!isDev){
                         ipcRenderer.send('autoUpdateAction', 'installUpdateNow')

@@ -18,7 +18,7 @@ function getCurrentPlatform(){
 builder.build({
     targets: (process.argv[2] != null && Platform[process.argv[2]] != null ? Platform[process.argv[2]] : getCurrentPlatform()).createTarget(),
     config: {
-        appId: 'bladelauncher',
+        appId: 'nblade.bladelauncher',
         productName: 'Blade Launcher',
         artifactName: '${productName}.${ext}',
         copyright: 'Copyright © 2019-2020 N-Blade LLC',
@@ -26,13 +26,19 @@ builder.build({
             buildResources: 'build',
             output: 'dist'
         },
+        publish: [{
+            provider: 'generic',
+            url: 'http://downloads.northernblade.ru/dist/'
+        }],
         win: {
+            icon: 'app/assets/images/SealCircle.ico',
             target: [
                 {
                     target: 'nsis',
                     arch: 'x64'
                 }
-            ]
+            ],
+            legalTrademarks: 'N-blade'
         },
         nsis: {
             oneClick: false,
@@ -46,10 +52,10 @@ builder.build({
         },
         linux: {
             target: 'AppImage',
-            maintainer: 'Daniel Scalzi',
-            vendor: 'Daniel Scalzi',
-            synopsis: 'Modded Minecraft Launcher',
-            description: 'Custom launcher which allows users to join modded servers. All mods, configurations, and updates are handled automatically.',
+            maintainer: 'N-Blade LLC',
+            vendor: 'N-Blade LLC',
+            synopsis: 'Northern Blade Launcher',
+            description: 'Game launcher which allows users to join servers and handle updates automatically.',
             category: 'Game'
         },
         compression: 'maximum',
