@@ -39,9 +39,8 @@ webFrame.setLayoutZoomLevelLimits(0, 0)
 // Initialize auto updates in production environments.
 let updateCheckListener
 if(!isDev){
-    let latestDownloadedVersion = null
+    let latestDownloadedVersion = null // let's store latest downloaded version to prevent message reordering
     ipcRenderer.on('autoUpdateNotification', (event, arg, info) => {
-        console.warn('<<<<<<<<<<<<<<<<<<<<< ' + arg)
         switch(arg){
             case 'checking-for-update':
                 loggerAutoUpdater.log('Checking for update..')
