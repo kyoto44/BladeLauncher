@@ -274,7 +274,7 @@
                 <span class="settingsTabHeaderText">About</span>
                 <span class="settingsTabHeaderDesc">View information and release notes for the current version.</span>
             </div>
-            <div id="settingsAboutCurrentContainer">
+            <div id="settingsAboutCurrentContainer" style="display: none;">
                 <div id="settingsAboutCurrentContent">
                     <div id="settingsAboutCurrentHeadline">
                         <img id="settingsAboutLogo" src="./assets/images/SealCircle.png">
@@ -291,6 +291,35 @@
                         </div>
                     </div>
                 </div>
+                <div id="settingsAboutButtons" style="display: none;">
+                    <a href="https://github.com/dscalZi/HeliosLauncher" id="settingsAboutSourceButton" class="settingsAboutButton">Source (GitHub)</a>
+                    <!-- The following must be included in third-party usage. -->
+                    <!-- <a href="https://github.com/dscalzi/HeliosLauncher" id="settingsAboutSourceButton" class="settingsAboutButton">Original Source</a> -->
+                    <a href="https://github.com/dscalZi/HeliosLauncher/issues" id="settingsAboutSupportButton" class="settingsAboutButton">Support</a>
+                    <a href="#" id="settingsAboutDevToolsButton" class="settingsAboutButton">DevTools Console</a>
+                </div>
+            </div>
+            <div id="settingsUpdateStatusContainer">
+                <div id="settingsUpdateStatusContent">
+                    <div id="settingsUpdateStatusHeadline">
+                        <img id="settingsAboutLogo" src="./assets/images/SealCircle.png">
+                        <!-- <span id="settingsAboutTitle">Blade Launcher</span> -->
+                        <span id="settingsUpdateTitle">You Are Running the Latest Version</span>
+                    </div>
+                    <div id="settingsUpdateVersion">
+                        <div id="settingsUpdateVersionCheck">&#10003;</div>
+                        <div id="settingsUpdateVersionDetails">
+                            <span id="settingsUpdateVersionTitle">Stable Release</span>
+                            <div id="settingsUpdateVersionLine">
+                                <span id="settingsUpdateVersionText">Version </span>
+                                <span id="settingsUpdateVersionValue">0.0.1-alpha.18</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="settingsUpdateActionContainer">
+                        <button id="settingsUpdateActionButton">Check for Updates</button>
+                    </div>
+                </div>
                 <div id="settingsAboutButtons">
                     <a href="https://github.com/dscalZi/HeliosLauncher" id="settingsAboutSourceButton" class="settingsAboutButton">Source (GitHub)</a>
                     <!-- The following must be included in third-party usage. -->
@@ -299,7 +328,18 @@
                     <a href="#" id="settingsAboutDevToolsButton" class="settingsAboutButton">DevTools Console</a>
                 </div>
             </div>
-            <div class="settingsChangelogContainer">
+            <div class="settingsChangelogContainer" style="display: none;">
+                <div class="settingsChangelogContent">
+                    <div class="settingsChangelogHeadline">
+                        <div class="settingsChangelogLabel">What's New</div>
+                        <div class="settingsChangelogTitle">Update Release Notes</div>
+                    </div>
+                    <div class="settingsChangelogText">
+                        No Release Notes
+                    </div>
+                </div>
+            </div>
+            <div class="settingsChangelogContainer" style="display: none;">
                 <div class="settingsChangelogContent">
                     <div class="settingsChangelogHeadline">
                         <div class="settingsChangelogLabel">Release Notes</div>
@@ -319,7 +359,7 @@
                 <span class="settingsTabHeaderText">Launcher Updates</span>
                 <span class="settingsTabHeaderDesc">Download, install, and review updates for the launcher.</span>
             </div>
-            <div id="settingsUpdateStatusContainer">
+            <!-- <div id="settingsUpdateStatusContainer">
                 <div id="settingsUpdateStatusContent">
                     <div id="settingsUpdateStatusHeadline">
                         <span id="settingsUpdateTitle">You Are Running the Latest Version</span>
@@ -349,7 +389,7 @@
                         No Release Notes
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
     <script src="./assets/js/scripts/settings.js"></script>

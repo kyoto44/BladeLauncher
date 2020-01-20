@@ -1236,7 +1236,7 @@ function prepareAboutTab(){
  * Update Tab
  */
 
-const settingsTabUpdate            = document.getElementById('settingsTabUpdate')
+const settingsTabUpdate            = document.getElementById('settingsTabAbout')
 const settingsUpdateTitle          = document.getElementById('settingsUpdateTitle')
 const settingsUpdateVersionCheck   = document.getElementById('settingsUpdateVersionCheck')
 const settingsUpdateVersionTitle   = document.getElementById('settingsUpdateVersionTitle')
@@ -1323,7 +1323,7 @@ function prepareSettings(first = false) {
     initSettingsValues()
     prepareAccountsTab()
     // prepareJavaTab()
-    prepareAboutTab()
+    // prepareAboutTab()
 }
 
 // Prepare the settings UI on startup.
