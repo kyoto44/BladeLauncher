@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const {remote} = require('electron')
 const request = require('request')
 
 const ConfigManager = require('./configmanager')
@@ -575,20 +576,26 @@ exports.pullRemote = function(){
         return exports.pullLocal()
     }
     return new Promise((resolve, reject) => {
-        const distroURL = 'http://n-blade.ru:5050/download/distribution.json'
-        
+        const distroURL = 'https://pavel.dev.n-blade.ru/api/distribution'
+
+        const authAcc = ConfigManager.getSelectedAccount()
+
         const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
         const opts = {
             url: distroURL,
-            timeout: 2500
+            timeout: 2500,
+            headers: {
+                'User-Agent': 'BladeLauncher/' + remote.app.getVersion()
+            },
+            auth: {
+                'bearer': authAcc.accessToken
+            }
         }
 
         const fileExists = fs.existsSync(distroDest)
         if(fileExists){
             const stats = fs.statSync(distroDest)
-            opts.headers = {
-                'If-Modified-Since': stats.mtime.toUTCString()
-            }
+            opts.headers['If-Modified-Since'] = stats.mtime.toUTCString()
         }
 
         request(opts, (error, resp, body) => {
@@ -655,4 +662,31 @@ exports.isDevMode = function(){
  */
 exports.getDistribution = function(){
     return data
+}
+
+exports.refresh = async function(){
+    try {
+        const d = await exports.pullRemote()
+        logger.log('Loaded distribution index.')
+        return d
+    }
+    catch (err) {
+        logger.log('Failed to load distribution index.')
+        logger.error(err)
+    }
+    logger.log('Attempting to load an older version of the distribution index.')
+    try {
+        const local = await exports.pullLocal()
+        logger.log('Successfully loaded an older version of the distribution index.')
+        return local
+    }
+    catch (er) {
+        logger.log('Failed to load an older version of the distribution index.')
+        logger.error(er)
+    }
+    if (data != null) {
+        return data
+    }
+
+    return Promise.reject('Failed to load distribution index.')
 }

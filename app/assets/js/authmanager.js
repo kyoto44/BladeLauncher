@@ -37,7 +37,7 @@ exports.addAccount = async function(username, password){
             ConfigManager.save()
             return ret
         } else {
-            throw new Error('NotPaidAccount')
+            throw new Error('Error during authentication')
         }
         
     } catch (err){
@@ -77,23 +77,22 @@ exports.removeAccount = async function(uuid){
 exports.validateSelected = async function(){
     const current = ConfigManager.getSelectedAccount()
     const isValid = await Mojang.validate(current.accessToken, ConfigManager.getClientToken())
-    if(!isValid){
-        try {
-            const session = await Mojang.refresh(current.accessToken, ConfigManager.getClientToken())
-            ConfigManager.updateAuthAccount(current.uuid, session.accessToken)
-            ConfigManager.save()
-        } catch(err) {
-            logger.debug('Error while validating selected profile:', err)
-            if(err && err.error === 'ForbiddenOperationException'){
-                // What do we do?
-            }
-            logger.log('Account access token is invalid.')
-            return false
-        }
-        loggerSuccess.log('Account access token validated.')
-        return true
-    } else {
+    if(isValid){
         loggerSuccess.log('Account access token validated.')
         return true
     }
+    try {
+        const session = await Mojang.refresh(current.accessToken, ConfigManager.getClientToken())
+        ConfigManager.updateAuthAccount(current.uuid, session.accessToken)
+        ConfigManager.save()
+    } catch(err) {
+        logger.debug('Error while validating selected profile:', err)
+        if(err && err.error === 'ForbiddenOperationException'){
+            // What do we do?
+        }
+        logger.log('Account access token is invalid.')
+        return false
+    }
+    loggerSuccess.log('Account access token validated.')
+    return true
 }

@@ -26,8 +26,7 @@ window.eval = global.eval = function () {
 
 // Display warning when devtools window is opened.
 remote.getCurrentWebContents().on('devtools-opened', () => {
-    console.log('%cIf you\'ve been told to paste something here, you\'re being scammed.', 'font-size: 4px')
-    console.log('%cUnless you know exactly what you\'re doing, close this window.', 'font-size: 4px')
+    console.log('%cIf you\'ve been told to paste something here, you\'re being scammed.', 'font-size: 12px')
 })
 
 // Disable zoom, needed for darwin.
@@ -210,9 +209,11 @@ $(document).on('click', 'a[href^="http"]', function(event) {
  * This will crash the program if you are using multiple
  * DevTools, for example the chrome debugger in VS Code. 
  */
-document.addEventListener('keydown', function (e) {
-    if((e.key === 'I' || e.key === 'i') && e.ctrlKey && e.shiftKey){
-        let window = remote.getCurrentWindow()
-        window.toggleDevTools()
-    }
-})
+if(isDev){
+    document.addEventListener('keydown', function (e) {
+        if((e.key === 'I' || e.key === 'i') && e.ctrlKey && e.shiftKey){
+            let window = remote.getCurrentWindow()
+            window.toggleDevTools()
+        }
+    })
+}

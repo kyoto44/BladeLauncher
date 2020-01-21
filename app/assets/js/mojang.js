@@ -7,12 +7,15 @@
  */
 // Requirements
 const request = require('request')
+const crypto = require('crypto')
+const {remote} = require('electron')
 const logger  = require('./loggerutil')('%c[Mojang]', 'color: #a02d2a; font-weight: bold')
 
 // Constants
 const minecraftAgent = {
-    name: 'Minecraft',
-    version: 1
+    name: 'BladeLauncher',
+    version: remote.app.getVersion()
+    // Todo: add fingerprint
 }
 const authpath = 'https://pavel.dev.n-blade.ru/api'
 const statuses = [
@@ -134,12 +137,15 @@ exports.status = function(){
 exports.authenticate = function(username, password, clientToken, requestUser = true, agent = minecraftAgent){
     return new Promise((resolve, reject) => {
 
+        const password_hash = crypto.createHash('md5').update(password).digest('hex')
+
         const body = {
             agent,
             username,
-            password,
             requestUser
         }
+        body.password = password_hash
+
         if(clientToken != null){
             body.clientToken = clientToken
         }
@@ -154,7 +160,7 @@ exports.authenticate = function(username, password, clientToken, requestUser = t
                     logger.error('Error during authentication.', error)
                     reject(error)
                 } else {
-                    if(response.statusCode === 200){
+                    if(response.statusCode === 200 && typeof body === 'object'){
                         resolve(body)
                     } else {
                         reject(body || {code: 'ENOTFOUND'})
@@ -188,11 +194,11 @@ exports.validate = function(accessToken, clientToken){
                     logger.error('Error during validation.', error)
                     reject(error)
                 } else {
-                    if(response.statusCode === 403){
-                        resolve(false)
-                    } else {
-                    // 204 if valid
+                    if(response.statusCode === 204){
                         resolve(true)
+                    } else {
+                    // 403 if not valid
+                        resolve(false)
                     }
                 }
             })
@@ -260,7 +266,7 @@ exports.refresh = function(accessToken, clientToken, requestUser = true){
                     logger.error('Error during refresh.', error)
                     reject(error)
                 } else {
-                    if(response.statusCode === 200){
+                    if(response.statusCode === 200 && typeof body === 'object'){
                         resolve(body)
                     } else {
                         reject(body)

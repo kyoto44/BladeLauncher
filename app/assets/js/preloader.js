@@ -29,35 +29,21 @@ function onDistroLoad(data){
     ipcRenderer.send('distributionIndexDone', data != null)
 }
 
-// Ensure Distribution is downloaded and cached.
-DistroManager.pullRemote().then((data) => {
-    logger.log('Loaded distribution index.')
 
-    onDistroLoad(data)
-
-}).catch((err) => {
-    logger.log('Failed to load distribution index.')
-    logger.error(err)
-
+setTimeout(() => { // TODO: there is no need in timeout we just wait to exclude raise in event listener registration. it should be removed when this will be fixed
     logger.log('Attempting to load an older version of the distribution index.')
     // Try getting a local copy, better than nothing.
     DistroManager.pullLocal().then((data) => {
         logger.log('Successfully loaded an older version of the distribution index.')
-
         onDistroLoad(data)
-
-
     }).catch((err) => {
-
         logger.log('Failed to load an older version of the distribution index.')
         logger.log('Application cannot run.')
         logger.error(err)
-
         onDistroLoad(null)
-
     })
+}, 2000)
 
-})
 
 // Clean up temp dir incase previous launches ended unexpectedly. 
 fs.remove(path.join(os.tmpdir(), ConfigManager.getTempNativeFolder()), (err) => {
