@@ -155,6 +155,7 @@ function updateSelectedServer(serv){
         animateModsTabRefresh()
     }
     setLaunchEnabled(serv != null)
+    return Promise.resolve()
 }
 
 // Real text is set in uibinder.js on distributionIndexDone.
@@ -715,9 +716,10 @@ function dlAsync(login = true){
 
     DistroManager.refresh()
         .then((data) => {
-            onDistroRefresh(data)
-            serv = data.getServer(ConfigManager.getSelectedServer())
-            aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer(), DistroManager.isDevMode()]})
+            return onDistroRefresh(data).then(() => {
+                serv = data.getServer(ConfigManager.getSelectedServer())
+                aEx.send({task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer(), DistroManager.isDevMode()]})
+            })
         }, (err) => {
             loggerLaunchSuite.error('Unable to refresh distribution index.', err)
             // Disconnect from AssetExec

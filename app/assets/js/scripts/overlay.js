@@ -177,16 +177,15 @@ document.getElementById('serverSelectConfirm').addEventListener('click', () => {
         if(listings[i].hasAttribute('selected')){
             const serv = DistroManager.getDistribution().getServer(listings[i].getAttribute('servid'))
             updateSelectedServer(serv)
-            refreshServerStatus(true)
-            toggleOverlay(false)
+                .then(() => refreshServerStatus(true))
+                .then(() => toggleOverlay(false))
             return
         }
     }
     // None are selected? Not possible right? Meh, handle it.
     if(listings.length > 0){
         const serv = DistroManager.getDistribution().getServer(listings[i].getAttribute('servid'))
-        updateSelectedServer(serv)
-        toggleOverlay(false)
+        updateSelectedServer(serv).then(() => toggleOverlay(false))
     }
 })
 

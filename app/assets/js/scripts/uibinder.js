@@ -55,7 +55,7 @@ function getCurrentView(){
     return currentView
 }
 
-function showMainUI(data){
+function showMainUI(){
 
     if(!isDev){
         loggerAutoUpdater.log('Initializing..')
@@ -63,44 +63,56 @@ function showMainUI(data){
     }
 
     prepareSettings(true)
-    updateSelectedServer(data.getServer(ConfigManager.getSelectedServer()))
-    refreshServerStatus()
-    setTimeout(() => {
-        document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
-        document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.png')`
-        $('#main').show()
 
-        const isLoggedIn = Object.keys(ConfigManager.getAuthAccounts()).length > 0
 
-        // If this is enabled in a development environment we'll get ratelimited.
-        // The relaunch frequency is usually far too high.
-        if(!isDev && isLoggedIn){
-            validateSelectedAccount()
-        }
+    const isLoggedIn = ConfigManager.getSelectedAccount() != null
+    //Object.keys(ConfigManager.getAuthAccounts()).length > 0
 
-        if(ConfigManager.isFirstLaunch()){
-            currentView = VIEWS.welcome
-            $(VIEWS.welcome).fadeIn(1000)
-        } else {
-            if(isLoggedIn){
-                currentView = VIEWS.landing
-                $(VIEWS.landing).fadeIn(1000)
-            } else {
-                currentView = VIEWS.login
-                $(VIEWS.login).fadeIn(1000)
-            }
-        }
+    // If this is enabled in a development environment we'll get ratelimited.
+    // The relaunch frequency is usually far too high.
+    let validated
+    if(!isDev && isLoggedIn){
+        validated = validateSelectedAccount()
+    } else {
+        validated = Promise.resolve()
+    }
 
-        setTimeout(() => {
-            $('#loadingContainer').fadeOut(500, () => {
-                $('#loadSpinnerImage').removeClass('rotating')
+    validated.then(() => {
+
+        const data = DistroManager.getDistribution()
+        if (data != null) {
+            // Disable tabbing to the news container.
+            onDistroRefresh(data).then(() => {
+                $('#newsContainer *').attr('tabindex', '-1')
             })
-        }, 250)
-        
-    }, 750)
-    // Disable tabbing to the news container.
-    initNews().then(() => {
-        $('#newsContainer *').attr('tabindex', '-1')
+        }
+    
+        setTimeout(() => {
+            document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
+            document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.png')`
+            $('#main').show()
+    
+            if(ConfigManager.isFirstLaunch()){
+                currentView = VIEWS.welcome
+                $(VIEWS.welcome).fadeIn(1000)
+            } else {
+                if(isLoggedIn){
+                    currentView = VIEWS.landing
+                    $(VIEWS.landing).fadeIn(1000)
+                } else {
+                    currentView = VIEWS.login
+                    $(VIEWS.login).fadeIn(1000)
+                }
+            }
+    
+            setTimeout(() => {
+                $('#loadingContainer').fadeOut(500, () => {
+                    $('#loadSpinnerImage').removeClass('rotating')
+                })
+            }, 250)
+            
+        }, 750)
+
     })
 }
 
@@ -128,96 +140,9 @@ function showFatalStartupError(){
  * @param {Object} data The distro index object.
  */
 function onDistroRefresh(data){
-    updateSelectedServer(data.getServer(ConfigManager.getSelectedServer()))
-    refreshServerStatus()
-    initNews()
-    syncModConfigurations(data)
-}
-
-/**
- * Sync the mod configurations with the distro index.
- * 
- * @param {Object} data The distro index object.
- */
-function syncModConfigurations(data){
-    if(true)
-        return
-
-    const syncedCfgs = []
-
-    for(let serv of data.getServers()){
-
-        const id = serv.getID()
-        const mdls = [] // serv.getModules()
-        const cfg = ConfigManager.getModConfiguration(id)
-
-        if(cfg != null){
-
-            const modsOld = cfg.mods
-            const mods = {}
-
-            for(let mdl of mdls){
-                const type = mdl.getType()
-
-                if(type === DistroManager.Types.ForgeMod || type === DistroManager.Types.LiteMod || type === DistroManager.Types.LiteLoader){
-                    if(!mdl.getRequired().isRequired()){
-                        const mdlID = mdl.getVersionlessID()
-                        if(modsOld[mdlID] == null){
-                            mods[mdlID] = scanOptionalSubModules(mdl.getSubModules(), mdl)
-                        } else {
-                            mods[mdlID] = mergeModConfiguration(modsOld[mdlID], scanOptionalSubModules(mdl.getSubModules(), mdl), false)
-                        }
-                    } else {
-                        if(mdl.hasSubModules()){
-                            const mdlID = mdl.getVersionlessID()
-                            const v = scanOptionalSubModules(mdl.getSubModules(), mdl)
-                            if(typeof v === 'object'){
-                                if(modsOld[mdlID] == null){
-                                    mods[mdlID] = v
-                                } else {
-                                    mods[mdlID] = mergeModConfiguration(modsOld[mdlID], v, true)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            syncedCfgs.push({
-                id,
-                mods
-            })
-
-        } else {
-
-            const mods = {}
-
-            for(let mdl of mdls){
-                const type = mdl.getType()
-                if(type === DistroManager.Types.ForgeMod || type === DistroManager.Types.LiteMod || type === DistroManager.Types.LiteLoader){
-                    if(!mdl.getRequired().isRequired()){
-                        mods[mdl.getVersionlessID()] = scanOptionalSubModules(mdl.getSubModules(), mdl)
-                    } else {
-                        if(mdl.hasSubModules()){
-                            const v = scanOptionalSubModules(mdl.getSubModules(), mdl)
-                            if(typeof v === 'object'){
-                                mods[mdl.getVersionlessID()] = v
-                            }
-                        }
-                    }
-                }
-            }
-
-            syncedCfgs.push({
-                id,
-                mods
-            })
-
-        }
-    }
-
-    ConfigManager.setModConfigurations(syncedCfgs)
-    ConfigManager.save()
+    return updateSelectedServer(data.getServer(ConfigManager.getSelectedServer()))
+        .then(() => refreshServerStatus())
+        .then(() => initNews())
 }
 
 /**
@@ -378,8 +303,7 @@ document.addEventListener('readystatechange', function(){
         if(rscShouldLoad){
             rscShouldLoad = false
             if(!fatalStartupError){
-                const data = DistroManager.getDistribution()
-                showMainUI(data)
+                showMainUI()
             } else {
                 showFatalStartupError()
             }
@@ -388,21 +312,10 @@ document.addEventListener('readystatechange', function(){
 }, false)
 
 // Actions that must be performed after the distribution index is downloaded.
-ipcRenderer.on('distributionIndexDone', (event, res) => {
-    if(res) {
-        const data = DistroManager.getDistribution()
-        syncModConfigurations(data)
-        if(document.readyState === 'interactive' || document.readyState === 'complete'){
-            showMainUI(data)
-        } else {
-            rscShouldLoad = true
-        }
+ipcRenderer.on('distributionIndexDone', (event, ready) => {
+    if(document.readyState === 'interactive' || document.readyState === 'complete'){
+        showMainUI()
     } else {
-        fatalStartupError = true
-        if(document.readyState === 'interactive' || document.readyState === 'complete'){
-            showFatalStartupError()
-        } else {
-            rscShouldLoad = true
-        }
+        rscShouldLoad = true
     }
 })
