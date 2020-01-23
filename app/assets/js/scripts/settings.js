@@ -379,9 +379,23 @@ function processLogOut(val, isLastAccount){
             updateSelectedAccount(selAcc)
             validateSelectedAccount()
         }
-    })
-    $(parent).fadeOut(250, () => {
-        parent.remove()
+    }).catch(err => {
+        return new Promise((resolve, reject) => {
+            setOverlayContent(
+                'Failed to invalidate authentication token',
+                'Please contact support for details.',
+                'Okay'
+            )
+            setOverlayHandler(() => {
+                toggleOverlay(false)
+                resolve()
+            })
+            toggleOverlay(true)
+        })
+    }).then(() => {
+        $(parent).fadeOut(250, () => {
+            parent.remove()
+        })
     })
 }
 

@@ -28,7 +28,7 @@ builder.build({
         },
         publish: [{
             provider: 'generic',
-            url: 'http://downloads.northernblade.ru/dist/'
+            url: 'http://downloads.n-blade.ru/launcher/'
         }],
         win: {
             icon: 'app/assets/images/SealCircle.ico',

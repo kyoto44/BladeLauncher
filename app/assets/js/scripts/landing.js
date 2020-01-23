@@ -161,13 +161,17 @@ function updateSelectedServer(serv){
 // Real text is set in uibinder.js on distributionIndexDone.
 server_selection_button.innerHTML = '\u2022 Loading..'
 server_selection_button.onclick = (e) => {
+    e.target.blur()
+
     const distro = DistroManager.getDistribution()
+    if (distro == null) {
+        return
+    }
     const servers = distro.getServers()
     if(servers.length < 2){
         return
     }
 
-    e.target.blur()
     toggleServerSelection(true)
 }
 
@@ -523,7 +527,7 @@ function dlAsync(login = true){
     aEx = cp.fork(path.join(__dirname, 'assets', 'js', 'assetexec.js'), [
         'AssetGuard',
         ConfigManager.getCommonDirectory(),
-        ConfigManager.getJavaExecutable()
+        remote.app.getVersion()
     ], {
         env: forkEnv,
         // execArgv:['--inspect-brk'],

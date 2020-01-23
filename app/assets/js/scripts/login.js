@@ -55,8 +55,8 @@ function shakeError(element){
  */
 function validateEmail(value){
     if(value){
-        if(!basicEmail.test(value) && !validUsername.test(value)){
-            showError(loginEmailError, Lang.queryJS('login.error.invalidValue'))
+        if(!basicEmail.test(value)){
+            showError(loginEmailError, Lang.queryJS('login.error.invalidEmail'))
             loginDisabled(true)
             lu = false
         } else {
@@ -264,7 +264,9 @@ loginButton.addEventListener('click', () => {
 
     AuthManager.addAccount(loginUsername.value, loginPassword.value)
         .then((value) => {
-            return DistroManager.refresh().then(() => value)
+            return DistroManager.refresh()
+                .then((d) => onDistroRefresh(d))
+                .then(() => value)
         })    
         .then((value) => {
             updateSelectedAccount(value)

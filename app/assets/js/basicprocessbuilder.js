@@ -27,13 +27,11 @@ class ProcessBuilder {
         const tempNativePath = path.join(os.tmpdir(), ConfigManager.getTempNativeFolder(), crypto.pseudoRandomBytes(16).toString('hex'))
         process.throwDeprecation = true
         
-        let args = []
-
-        logger.log('Launch Arguments:', args)
 
         let launchExecutable = this.resolveLaunchExecutable()
         let wd = path.dirname(launchExecutable)
 
+        let args = []
         if(process.platform === 'linux'){ // TODO: looks like it should be done with rules
             args.push(launchExecutable)
             launchExecutable = 'wine'

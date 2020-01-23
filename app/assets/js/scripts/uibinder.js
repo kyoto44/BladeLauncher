@@ -140,6 +140,13 @@ function showFatalStartupError(){
  * @param {Object} data The distro index object.
  */
 function onDistroRefresh(data){
+    const selected = ConfigManager.getSelectedServer()
+    // Resolve the selected server if its value has yet to be set.
+    if(selected == null || data.getServer(selected) == null){
+        ConfigManager.setSelectedServer(data.getMainServer().getID())
+        ConfigManager.save()
+    }
+
     return updateSelectedServer(data.getServer(ConfigManager.getSelectedServer()))
         .then(() => refreshServerStatus())
         .then(() => initNews())

@@ -576,7 +576,7 @@ exports.pullRemote = function(){
         return exports.pullLocal()
     }
     return new Promise((resolve, reject) => {
-        const distroURL = 'https://pavel.dev.n-blade.ru/api/distribution'
+        const distroURL = 'https://www.northernblade.ru/api/distribution'
 
         const authAcc = ConfigManager.getSelectedAccount()
 
@@ -671,8 +671,7 @@ exports.refresh = async function(){
         return d
     }
     catch (err) {
-        logger.log('Failed to load distribution index.')
-        logger.error(err)
+        logger.error('Failed to load distribution index.', err)
     }
     logger.log('Attempting to load an older version of the distribution index.')
     try {
@@ -681,8 +680,7 @@ exports.refresh = async function(){
         return local
     }
     catch (er) {
-        logger.log('Failed to load an older version of the distribution index.')
-        logger.error(er)
+        logger.error('Failed to load an older version of the distribution index.', er)
     }
     if (data != null) {
         return data

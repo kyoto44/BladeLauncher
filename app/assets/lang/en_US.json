@@ -6,6 +6,7 @@
         "login": {
             "error": {
                 "invalidValue": "* Invalid Value",
+                "invalidEmail": "* Invalid Email",
                 "requiredValue": "* Required",
                 "userMigrated": {
                     "title": "Error During Login:<br>Invalid Credentials",

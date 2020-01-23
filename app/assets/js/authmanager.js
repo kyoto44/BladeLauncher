@@ -55,9 +55,12 @@ exports.addAccount = async function(username, password){
 exports.removeAccount = async function(uuid){
     try {
         const authAcc = ConfigManager.getAuthAccount(uuid)
-        await Mojang.invalidate(authAcc.accessToken, ConfigManager.getClientToken())
+        const clientToken = ConfigManager.getClientToken()
         ConfigManager.removeAuthAccount(uuid)
         ConfigManager.save()
+
+        await Mojang.invalidate(authAcc.accessToken, clientToken)
+
         return Promise.resolve()
     } catch (err){
         return Promise.reject(err)

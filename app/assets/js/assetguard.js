@@ -1025,10 +1025,10 @@ class AssetGuard extends EventEmitter {
      * values. Each identifier is resolved to an empty DLTracker.
      * 
      * @param {string} commonPath The common path for shared game files.
-     * @param {string} javaexec The path to a java executable which will be used
+     * @param {string} launcherVersion The path to a java executable which will be used
      * to finalize installation.
      */
-    constructor(commonPath, javaexec){
+    constructor(commonPath, launcherVersion){
         super()
         this.totaldlsize = 0
         this.progress = 0
@@ -1041,7 +1041,7 @@ class AssetGuard extends EventEmitter {
         /** @type {Array<Modifier>} */
         this.modifiers = []
         this.commonPath = commonPath
-        this.javaexec = javaexec
+        this.launcherVersion = launcherVersion
     }
 
     // Static Utility Functions
@@ -1128,7 +1128,9 @@ class AssetGuard extends EventEmitter {
             const versionPath = path.join(self.commonPath, 'versions', version.id)
             const versionFile = path.join(versionPath, version.id + '.json')
 
-            const customHeaders = {}
+            const customHeaders = {
+                'User-Agent': 'BladeLauncher/' + this.launcherVersion
+            }
 
             let fetch = force
             if(!fetch){
@@ -1143,9 +1145,14 @@ class AssetGuard extends EventEmitter {
             //This download will never be tracked as it's essential and trivial.
             console.log('Preparing download of ' + version.id + ' assets.')
 
+            const authAcc = ConfigManager.getSelectedAccount()
+
             const opts = {
                 url: version.url,
-                timeout: 2500
+                timeout: 2500,
+                auth: {
+                    'bearer': authAcc.accessToken
+                }
             }
             if (Object.keys(customHeaders).length > 0){
                 opts.headers = customHeaders
@@ -1159,6 +1166,11 @@ class AssetGuard extends EventEmitter {
 
                 if(resp.statusCode ===  304){
                     resolve(JSON.parse(fs.readFileSync(versionFile)))
+                    return
+                }
+
+                if (resp.statusCode !== 200) {
+                    reject(resp.statusMessage || body || 'Failed to retive version data')
                     return
                 }
                     
@@ -1294,12 +1306,24 @@ class AssetGuard extends EventEmitter {
             return false
         }
         console.log('DLQueue', dlQueue)
+        
+        const authAcc = ConfigManager.getSelectedAccount()
 
         async.eachLimit(dlQueue, limit, (asset, cb) => {
 
             fs.ensureDirSync(path.dirname(asset.to))
 
-            let req = request(asset.from)
+            const opt = {
+                url: asset.from,
+                headers: {
+                    'User-Agent': 'BladeLauncher/' + this.launcherVersion
+                },
+                auth: {
+                    'bearer': authAcc.accessToken
+                }   
+            }
+
+            let req = request(opt)
             req.pause()
 
             req.on('response', (resp) => {

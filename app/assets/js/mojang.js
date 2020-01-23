@@ -17,7 +17,7 @@ const minecraftAgent = {
     version: remote.app.getVersion()
     // Todo: add fingerprint
 }
-const authpath = 'https://pavel.dev.n-blade.ru/api'
+const authpath = 'https://www.northernblade.ru/api'
 const statuses = [
     {
         service: 'sessionserver.mojang.com',
@@ -146,7 +146,7 @@ exports.authenticate = function(username, password, clientToken, requestUser = t
         }
         body.password = password_hash
 
-        if(clientToken != null){
+        if (clientToken != null) {
             body.clientToken = clientToken
         }
 
@@ -159,13 +159,41 @@ exports.authenticate = function(username, password, clientToken, requestUser = t
                 if(error){
                     logger.error('Error during authentication.', error)
                     reject(error)
-                } else {
-                    if(response.statusCode === 200 && typeof body === 'object'){
-                        resolve(body)
-                    } else {
-                        reject(body || {code: 'ENOTFOUND'})
-                    }
+                    return
                 }
+                if(response.statusCode === 200 && typeof body === 'object'){
+                    resolve(body)
+                    return
+                } 
+                let errorTitle = 'Error during authentication'
+                let errorMessage = 'Please contact support'
+                if (typeof body === 'object') {
+                    switch (error.code) {
+                        case 'email_not_confirme':
+                            errorTitle = 'Registration was not completed'
+                            errorMessage = 'Please confirm you email address first.'
+                            if (error.url) {
+                                errorMessage += `<br/>Visit <a href="${error.url}">link</a> for more information`
+                            }
+                            break
+                        case 'too_many_bad_login_attempts':
+                            errorTitle = 'ForbiddenOperationException'
+                            errorMessage = 'Invalid credentials.'
+                            break
+                        case 'invalid_credential':
+                            errorTitle = 'ForbiddenOperationException'
+                            errorMessage = 'Invalid credentials. Invalid username or password.'
+                            break
+                            
+                    }
+                } else {
+                    logger.error('Error during authentication with status (' + response.statusCode + '): ' + response.statusMessage, body)
+                }
+
+                reject({
+                    error: errorTitle,
+                    errorMessage
+                })
             })
     })
 }
