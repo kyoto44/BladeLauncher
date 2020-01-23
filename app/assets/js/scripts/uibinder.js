@@ -92,7 +92,7 @@ function showMainUI(){
             document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.png')`
             $('#main').show()
     
-            if(ConfigManager.isFirstLaunch()){
+            if(false && ConfigManager.isFirstLaunch()){
                 currentView = VIEWS.welcome
                 $(VIEWS.welcome).fadeIn(1000)
             } else {

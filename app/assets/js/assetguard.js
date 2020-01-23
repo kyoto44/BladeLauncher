@@ -1149,7 +1149,7 @@ class AssetGuard extends EventEmitter {
 
             const opts = {
                 url: version.url,
-                timeout: 2500,
+                timeout: 5000,
                 auth: {
                     'bearer': authAcc.accessToken
                 }
@@ -1159,6 +1159,7 @@ class AssetGuard extends EventEmitter {
             }
 
             request(opts, (error, resp, body) => {
+                console.info(`Downloading ${version.url}`)
                 if(error){
                     reject(error)
                     return
@@ -1305,7 +1306,6 @@ class AssetGuard extends EventEmitter {
         if(dlQueue.length <= 0){
             return false
         }
-        console.log('DLQueue', dlQueue)
         
         const authAcc = ConfigManager.getSelectedAccount()
 
@@ -1316,7 +1316,8 @@ class AssetGuard extends EventEmitter {
             const opt = {
                 url: asset.from,
                 headers: {
-                    'User-Agent': 'BladeLauncher/' + this.launcherVersion
+                    'User-Agent': 'BladeLauncher/' + this.launcherVersion,
+                    'Accept': '*/*'
                 },
                 auth: {
                     'bearer': authAcc.accessToken
@@ -1329,7 +1330,7 @@ class AssetGuard extends EventEmitter {
             req.on('response', (resp) => {
                 if(resp.statusCode !== 200){
                     req.abort()
-                    console.log(`Failed to download ${asset.id}(${typeof asset.from === 'object' ? asset.from.url : asset.from}). Response code ${resp.statusCode}`)
+                    console.error(`Failed to download ${asset.id}(${typeof asset.from === 'object' ? asset.from.url : asset.from}). Response code ${resp.statusCode}`)
                     cb(`${asset.id}: ${resp.statusMessage}`)
                     return
                 }

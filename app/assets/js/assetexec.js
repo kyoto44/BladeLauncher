@@ -6,7 +6,7 @@ if(target == null){
 }
 let tracker = new target(...(process.argv.splice(3)))
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 //const tracker = new AssetGuard(process.argv[2], process.argv[3])
 console.log('AssetExec Started')
@@ -15,16 +15,25 @@ console.log('AssetExec Started')
 process.on('unhandledRejection', r => console.log(r))
 
 function assignListeners(){
+    let latestPercent = null
+
     tracker.on('validate', (data) => {
+        latestPercent = null
         process.send({context: 'validate', data})
     })
     tracker.on('progress', (data, acc, total) => {
-        process.send({context: 'progress', data, value: acc, total, percent: parseInt((acc/total)*100)})
+        const percent = parseInt((acc / total) * 100)
+        if (latestPercent !== percent) {
+            latestPercent = percent
+            process.send({context: 'progress', data, value: acc, total, percent: percent})
+        }
     })
     tracker.on('complete', (data, ...args) => {
+        latestPercent = null
         process.send({context: 'complete', data, args})
     })
     tracker.on('error', (data, error) => {
+        latestPercent = null
         process.send({context: 'error', data, error})
     })
 }
