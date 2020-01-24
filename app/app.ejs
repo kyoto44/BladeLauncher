@@ -46,7 +46,11 @@
     <script>
         // Load language
         for(let key of Object.keys(Lang.query('html'))){
-            document.getElementById(key).innerHTML = Lang.query(`html.${key}`)
+            const elem = document.getElementById(key)
+            if(elem)
+                elem.innerHTML = Lang.query(`html.${key}`)
+            else
+                console.error(`Failed to get element with Id ${key}`)
         }
     </script>
 </body>

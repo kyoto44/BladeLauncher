@@ -340,10 +340,10 @@ function bindAuthAccountLogOut(){
             if(Object.keys(ConfigManager.getAuthAccounts()).length === 1){
                 isLastAccount = true
                 setOverlayContent(
-                    'Warning<br>This is Your Last Account',
-                    'In order to use the launcher you must be logged into at least one account. You will need to login again after.<br><br>Are you sure you want to log out?',
-                    'I\'m Sure',
-                    'Cancel'
+                    Lang.queryJS('overlay.overlayWarningHead'),
+                    Lang.queryJS('overlay.overlayWarningDesc'),
+                    Lang.queryJS('overlay.overlayWarningAccept'),
+                    Lang.queryJS('overlay.overlayWarningDecline')
                 )
                 setOverlayHandler(() => {
                     processLogOut(val, isLastAccount)
@@ -444,18 +444,18 @@ function populateAuthAccounts(){
             <div class="settingsAuthAccountRight">
                 <div class="settingsAuthAccountDetails">
                     <div class="settingsAuthAccountDetailPane">
-                        <div class="settingsAuthAccountDetailTitle">Username</div>
+                        <div class="settingsAuthAccountDetailTitle">${Lang.queryJS('settings.tabAccount.settingsUsername')}</div>
                         <div class="settingsAuthAccountDetailValue">${acc.displayName}</div>
                     </div>
                     <div class="settingsAuthAccountDetailPane">
-                        <div class="settingsAuthAccountDetailTitle">UUID</div>
+                        <div class="settingsAuthAccountDetailTitle" id="settingsUUID">`+ Lang.queryJS('settings.tabAccount.settingsUUID') +`</div>
                         <div class="settingsAuthAccountDetailValue">${acc.uuid}</div>
                     </div>
                 </div>
                 <div class="settingsAuthAccountActions">
-                    <button class="settingsAuthAccountSelect" ${selectedUUID === acc.uuid ? 'selected>Selected Account &#10004;' : '>Select Account'}</button>
+                    <button class="settingsAuthAccountSelect" id="settingsSelectedAccount" ${selectedUUID === acc.uuid ? 'selected>'+ Lang.queryJS('settings.tabAccount.settingsSelectedAccount') +'&#10004;' : '>Select Account'}</button>
                     <div class="settingsAuthAccountWrapper">
-                        <button class="settingsAuthAccountLogOut">Log Out</button>
+                        <button class="settingsAuthAccountLogOut" id="settingsLogOut">`+ Lang.queryJS('settings.tabAccount.settingsLogOut') +`</button>
                     </div>
                 </div>
             </div>
@@ -1190,7 +1190,7 @@ function populateVersionInformation(version, valueElement, titleElement, checkEl
         titleElement.style.color = '#ff886d'
         checkElement.style.background = '#ff886d'
     } else {
-        titleElement.innerHTML = 'Stable Release'
+        titleElement.innerHTML = Lang.queryJS('settings.tabAbout.settingsUpdateVersionTitle')
         titleElement.style.color = null
         checkElement.style.background = null
     }
@@ -1291,7 +1291,7 @@ function populateSettingsUpdateInformation(data){
             settingsUpdateButtonStatus('Downloading..', true)
         }
     } else {
-        settingsUpdateTitle.innerHTML = 'You Are Running the Latest Version'
+        settingsUpdateTitle.innerHTML = Lang.queryJS('settings.tabAbout.settingsUpdateTitle')
         settingsUpdateChangelogCont.style.display = 'none'
         populateVersionInformation(remote.app.getVersion(), settingsUpdateVersionValue, settingsUpdateVersionTitle, settingsUpdateVersionCheck)
         settingsUpdateButtonStatus('Check for Updates', false, () => {

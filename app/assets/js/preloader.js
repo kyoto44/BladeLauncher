@@ -15,6 +15,7 @@ ConfigManager.load()
 
 // Load Strings
 LangLoader.loadLanguage('en_US')
+LangLoader.loadLanguage('ru_RU')
 
 function onDistroLoad(data){
     ipcRenderer.send('distributionIndexDone', data != null)
