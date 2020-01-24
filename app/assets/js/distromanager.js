@@ -1,6 +1,5 @@
 const fs = require('fs')
 const path = require('path')
-const {remote} = require('electron')
 const request = require('request')
 
 const ConfigManager = require('./configmanager')
@@ -581,9 +580,11 @@ exports.pullRemote = function(){
         const authAcc = ConfigManager.getSelectedAccount()
 
         const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
+        // TODO: move version into config
+        const {remote} = require('electron')
         const opts = {
             url: distroURL,
-            timeout: 2500,
+            timeout: 5000,
             headers: {
                 'User-Agent': 'BladeLauncher/' + remote.app.getVersion()
             },

@@ -168,12 +168,12 @@ exports.authenticate = function(username, password, clientToken, requestUser = t
                 let errorTitle = 'Error during authentication'
                 let errorMessage = 'Please contact support'
                 if (typeof body === 'object') {
-                    switch (error.code) {
+                    switch (body.code) {
                         case 'email_not_confirme':
                             errorTitle = 'Registration was not completed'
                             errorMessage = 'Please confirm you email address first.'
-                            if (error.url) {
-                                errorMessage += `<br/>Visit <a href="${error.url}">link</a> for more information`
+                            if (body.url) {
+                                errorMessage += `<br/>Visit <a href="${body.url}">link</a> for more information`
                             }
                             break
                         case 'too_many_bad_login_attempts':
