@@ -1,46 +1,46 @@
 {
     "html": {
 
-        "avatarOverlay": "Edit",
-        "newsButtonText": "NEWS",
-        "launch_button": "PLAY",
-        "settingsTooltip": "Settings",
+        "avatarOverlay": "Править",
+        "newsButtonText": "НОВОСТИ",
+        "launch_button": "ИГРАТЬ",
+        "settingsTooltip": "Настройки",
 
-        "loginCancelText": "Cansel",
-        "updateAvailableTooltip": "Update Available",
-        "landingPlayerLabel": "SERVER",
-        "player_count": "OFFLINE",
+        "loginCancelText": "Отмена",
+        "updateAvailableTooltip": "Доступно обновление",
+        "landingPlayerLabel": "СЕРВЕР",
+        "player_count": "ВНЕ СЕТИ",
         "landingBotLabel": "MOJANG STATUS",
-        "mojangStatusTooltipTitle": "Services",
+        "mojangStatusTooltipTitle": "Службы",
         "mojangStatusNETitle": "Non Essential",
-        "launch_details_text": "Please wait..",
-        "nEFailedSpan": "Failed to Load News",
-        "nENoneSpan": "No News",
+        "launch_details_text": "Ожидание..",
+        "nEFailedSpan": "Ошибка загрузки новостей",
+        "nENoneSpan": "Нет новостей",
 
-        "serverSelectHeader": "Available Servers",
-        "serverSelectConfirm": "Select",
-        "serverSelectCancel": "Cancel",
+        "serverSelectHeader": "Доступные серверы",
+        "serverSelectConfirm": "Выбрать",
+        "serverSelectCancel": "Отмена",
         "accountSelectHeader": "Select an Account",
-        "accountSelectConfirm": "Select",
-        "accountSelectCancel": "Cancel",
+        "accountSelectConfirm": "Выбор",
+        "accountSelectCancel": "Отмена",
         "overlayTitle": "Lorem Ipsum<br>Finis Illud",
         "overlayDesc": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud..",
         "overlayAcknowledge": "Conare Iterum",
         "overlayDismiss": "Dismiss",
 
-        "settingsNavHeaderText": "Settings",
-        "settingsNavAccount": "Account",
+        "settingsNavHeaderText": "Настройки",
+        "settingsNavAccount": "Аккаунт",
         "settingsNavTabMinecraft": "Minecraft",
-        "settingsNavTabMods": "Mods",
+        "settingsNavTabMods": "Моды",
         "settingsNavTabJava": "Java",
-        "settingsNavItemLauncher": "Launcher",
+        "settingsNavItemLauncher": "Лаунчер",
         "settingsNavUpdate":"About",
-        "settingsNavTabUpdate": "Updates",
-        "settingsNavDone": "Done",
-        "settingsTabAccountHeaderText": "Account Settings",
-        "settingsAccountTabHeaderDesc": "Add new accounts or manage existing ones.",
-        "settingsAddAccountText": "Add Account",
-        "settingsFieldTitleCurrentAccount": "Current Accounts",
+        "settingsNavTabUpdate": "Обновления",
+        "settingsNavDone": "Готово",
+        "settingsTabAccountHeaderText": "Настройки аккаунта",
+        "settingsAccountTabHeaderDesc": "Добавить новую учетную запись или редактировать существующую.",
+        "settingsAddAccountText": "Добавить аккаунт",
+        "settingsFieldTitleCurrentAccount": "Текущий аккаунт",
 
         "settingsTabHeaderTextMinecraftId": "Minecraft Settings",
         "settingsTabHeaderDescMinecraftId": "Options related to game launch.",
@@ -107,6 +107,7 @@
         "login": {
             "error": {
                 "invalidValue": "* Invalid Value",
+                "invalidEmail": "* Invalid Email",
                 "requiredValue": "* Required",
                 "userMigrated": {
                     "title": "Error During Login:<br>Invalid Credentials",
@@ -143,20 +144,20 @@
         },
         "landing": {
             "launch": {
-                "pleaseWait": "Please wait.."
+                "pleaseWait": "Ожидание.."
             }
         },
         "settings": {
             "tabAccount":{
-                "settingsLogOut": "Log Out",
-                "settingsUsername": "Username",
-                "settingsUUID": "UUID",
-                "settingsSelectedAccount": "Selected Account"
+                "settingsLogOut": "Выйти",
+                "settingsUsername": "Имя пользователя",
+                "settingsUUID": "Уникальный ID",
+                "settingsSelectedAccount": "Выбрать аккаунт"
             },
             "tabAbout": {
-                "settingsUpdateTitle": "You Are Running the Latest Version",
-                "settingsUpdateVersionTitle": "Stable Release",
-                "settingsUpdateVersionText": "Version"
+                "settingsUpdateTitle": "Вы используете последнюю версию",
+                "settingsUpdateVersionTitle": "Стабильная версия",
+                "settingsUpdateVersionText": "Версия"
             }
         },
         "overlay": {
@@ -164,15 +165,6 @@
             "overlayWarningDesc": "In order to use the launcher you must be logged into at least one account. You will need to login again after.<br><br>Are you sure you want to log out?",
             "overlayWarningAccept": "I'm Sure",
             "overlayWarningDecline": "Cancel"
-        },
-
-        "ANOTHER": {
-            "newsArticleComments": "0 Comments1",
-            "newsNavigationStatus": "1 of 1_1",
-    
-            "settingsShaderpacksId": "Shaderpacks1",
-            "settingsShaderpackDesc": "Enable or disable shaders. Please note, shaders will only run smoothly on powerful setups. You may add custom packs here.1",
-            "settingsShadersSelected": "Select Shaderpack1"
-        }           
+        } 
     }
 }
