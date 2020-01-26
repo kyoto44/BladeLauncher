@@ -20,7 +20,7 @@
         "serverSelectHeader": "Доступные серверы",
         "serverSelectConfirm": "Выбрать",
         "serverSelectCancel": "Отмена",
-        "accountSelectHeader": "Select an Account",
+        "accountSelectHeader": "Выбрать учетную запись",
         "accountSelectConfirm": "Выбор",
         "accountSelectCancel": "Отмена",
         "overlayTitle": "Lorem Ipsum<br>Finis Illud",
@@ -34,7 +34,7 @@
         "settingsNavTabMods": "Моды",
         "settingsNavTabJava": "Java",
         "settingsNavItemLauncher": "Лаунчер",
-        "settingsNavUpdate":"About",
+        "settingsNavUpdate":"О продукте",
         "settingsNavTabUpdate": "Обновления",
         "settingsNavDone": "Готово",
         "settingsTabAccountHeaderText": "Настройки аккаунта",
@@ -42,19 +42,19 @@
         "settingsAddAccountText": "Добавить аккаунт",
         "settingsFieldTitleCurrentAccount": "Текущий аккаунт",
 
-        "settingsTabHeaderTextMinecraftId": "Minecraft Settings",
+        "settingsTabHeaderTextMinecraftId": "Настройки Minecraft",
         "settingsTabHeaderDescMinecraftId": "Options related to game launch.",
-        "settingsFieldTitleResolution": "Game Resolution",
-        "settingsLaunchInFullscreen": "Launch in fullscreen.",
-        "settingsAutoConnect": "Automatically connect to the server on launch.",
-        "settingsGameWithoutLauncher": "Launch game process detached from launcher.",
+        "settingsFieldTitleResolution": "Разрешение экрана",
+        "settingsLaunchInFullscreen": "Полноэкранный режим",
+        "settingsAutoConnect": "Автоматически подключаться к серверу при запуске.",
+        "settingsGameWithoutLauncher": "Запуск игры отдельно от лаунчера.",
         "settingsCloseAllSwitcher": "If the game is not detached, closing the launcher will also close the game.",
 
-        "settingsTabHeaderTextModsId": "Mod Settings",
-        "settingsTabHeaderDescModsId": "Enable or disable mods.",
-        "settingsSwitchServerButton": "Switch",
-        "settingsRequiredModsId": "Required Mods",
-        "settingsOptionalModsId": "Optional Mods",
+        "settingsTabHeaderTextModsId": "Настройки модов",
+        "settingsTabHeaderDescModsId": "Включить или выключить мод.",
+        "settingsSwitchServerButton": "Переключить",
+        "settingsRequiredModsId": "Требуемые моды",
+        "settingsOptionalModsId": "Дополнительные моды",
         "settingsDropInModsId": "Drop-in Mods",
         "settingsDropinFileSystemButton": "+ Add Mods",
         "settingsDropinRefreshNote": "(F5 to Refresh)???",
@@ -78,29 +78,29 @@
         "settingsJVMOptsTitle": "Additional JVM Options",
         "settingsJVMOptsDesc": "Options to be provided to the JVM at runtime. <em>-Xms</em> and <em>-Xmx</em> should notbe included.<br><a href=\"https://docs.oracle.com/javase/8/docs/technotes/tools/<%= process.platform === 'win32' ? 'windows' : 'unix' %>/java.html\">Available Options for Java 8</a>.",
         
-        "settingsTabHeaderTextlauncherId": "Launcher Settings",
-        "settingsTabHeaderDesclauncherId": "Options related to the launcher itself.",
+        "settingsTabHeaderTextlauncherId": "Настройки запуска",
+        "settingsTabHeaderDesclauncherId": "Настройки лаунчера",
         "settingsPreReleaseHeadId": "Allow Pre-Release Updates.",
         "settingsPreReleaseTextId": "Pre-Releases include new features which may have not been fully tested or integrated.<br>This will always be true if you are using a pre-release version.",
-        "settingsDataDirTitle": "Data Directory",
-        "settingsChoosingFolderId": "Choose Folder",
+        "settingsDataDirTitle": "Расположение",
+        "settingsChoosingFolderId": "Выбрать каталог",
         "settingsInstallInfoId": "All game files and local Java installations will be stored in the data directory.<br>Screenshots and world saves are stored in the instance folder for the corresponding server configuration.",
 
-        "settingsTabHeaderTextAboutId": "About",
+        "settingsTabHeaderTextAboutId": "О продукте",
         "settingsTabHeaderDescAboutId": "View information and release notes for the current version.",
         
         "settingsUpdateVersionValue": "0.0.1-alpha.18",
-        "settingsUpdateActionButton": "Check for Updates",
-        "settingsAboutSourceButton": "Source (GitHub)",
-        "settingsWhatNewId": "What's New",
+        "settingsUpdateActionButton": "Проверить наличие обновлений",
+        "settingsAboutSourceButton": "Источник (GitHub)",
+        "settingsWhatNewId": "Что нового",
         "settingsUpdateReleaseId": "Update Release Notes",
         "settingsNoReleaseNotesId": "No Release Notes",
-        "settingsChangeLogLabelId": "Release Notes",
+        "settingsChangeLogLabelId": "Примечания к выпуску",
         "settingsChangelogTitleId": "Changelog",
         "settingsChangelogTextId": "No Release Notes",    
 
-        "settingsTabHeaderTextLauncherUpdateId": "Launcher Updates",
-        "settingsTabHeaderDescLauncherUpdateId": "Download, install, and review updates for the launcher."
+        "settingsTabHeaderTextLauncherUpdateId": "Обновить лаунчер",
+        "settingsTabHeaderDescLauncherUpdateId": "Скачать, установить и просмотреть обновления."
         
     },
     "js": {
@@ -162,9 +162,9 @@
         },
         "overlay": {
             "overlayWarningHead": "Warning<br>This is Your Last Account",
-            "overlayWarningDesc": "In order to use the launcher you must be logged into at least one account. You will need to login again after.<br><br>Are you sure you want to log out?",
-            "overlayWarningAccept": "I'm Sure",
-            "overlayWarningDecline": "Cancel"
+            "overlayWarningDesc": "In order to use the launcher you must be logged into at least one account. Будет необходимо снова войти на сервер.<br><br>Вы точно хотите выйти?",
+            "overlayWarningAccept": "Да",
+            "overlayWarningDecline": "Отмена"
         } 
     }
 }
