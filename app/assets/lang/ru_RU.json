@@ -118,7 +118,7 @@
         "login": {
             "error": {
                 "invalidValue": "* Invalid Value",
-                "invalidEmail": "* Invalid Email",
+                "invalidEmail": "* Некорректный email",
                 "requiredValue": "* Required",
                 "userMigrated": {
                     "title": "Error During Login:<br>Invalid Credentials",
@@ -148,10 +148,10 @@
                     "title": "Error During Login:<br>Unknown Error"
                 }
             },
-            "login": "LOGIN",
-            "loggingIn": "LOGGING IN",
-            "success": "SUCCESS",
-            "tryAgain": "Try Again"
+            "login": "ВОЙТИ",
+            "loggingIn": "АВТОРИЗАЦИЯ",
+            "success": "УСПЕШНО",
+            "tryAgain": "Попробовать еще раз"
         },
         "landing": {
             "launch": {
@@ -162,7 +162,7 @@
             "tabAccount":{
                 "settingsLogOut": "Выйти",
                 "settingsUsername": "Имя пользователя",
-                "settingsUUID": "Уникальный ID",
+                "settingsUUID": "Идентификатор учетоной записи",
                 "settingsSelectedAccount": "Выбрать аккаунт"
             },
             "tabAbout": {
