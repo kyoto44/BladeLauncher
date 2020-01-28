@@ -100,8 +100,18 @@
         "settingsChangelogTextId": "No Release Notes",    
 
         "settingsTabHeaderTextLauncherUpdateId": "Launcher Updates",
-        "settingsTabHeaderDescLauncherUpdateId": "Download, install, and review updates for the launcher."
-        
+        "settingsTabHeaderDescLauncherUpdateId": "Download, install, and review updates for the launcher.",
+
+        "loginSubheader": "NORTHERN BLADE LOGIN",
+        "loginEmailError":"* Invalid Value",
+        "loginUsername":"EMAIL",
+        "loginPasswordError":"* Required",
+        "loginPassword":"PASSWORD",
+        "forgotPassId":"forgot password?",
+        "loginButtonContent":"LOGIN",
+        "needAccountId":"Need an Account?",
+        "passNotStored":"Your password is sent directly to NorthernBlade server and never stored.",
+        "launcherNotAfillAcc":"Blade Launcher is not affiliated with NorthernBlade account."        
     },
     "js": {
         "login": {

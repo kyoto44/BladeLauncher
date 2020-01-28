@@ -100,7 +100,18 @@
         "settingsChangelogTextId": "No Release Notes",    
 
         "settingsTabHeaderTextLauncherUpdateId": "Обновить лаунчер",
-        "settingsTabHeaderDescLauncherUpdateId": "Скачать, установить и просмотреть обновления."
+        "settingsTabHeaderDescLauncherUpdateId": "Скачать, установить и просмотреть обновления.",
+
+        "loginSubheader": "Вход  на Сервер NORTHERN BLADE",
+        "loginEmailError":"* Отсутствует",
+        "loginUsername":"АДРЕС",
+        "loginPasswordError":"* Обязательное поле",
+        "loginPassword":"ПАРОЛЬ",
+        "forgotPassId":"Забыли пароль?",
+        "loginButtonContent":"ВОЙТИ",
+        "needAccountId":"Зарегистрироваться?",
+        "passNotStored":"Ваш пароль будет отправлен непосредственно на сервер и нигде не хранится.",
+        "launcherNotAfillAcc":"Blade Launcher не связан с аккаунтом NorthernBlade."        
         
     },
     "js": {
