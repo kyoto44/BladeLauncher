@@ -104,9 +104,7 @@
 
         "loginSubheader": "Вход  на Сервер NORTHERN BLADE",
         "loginEmailError":"* Отсутствует",
-        "loginUsername":"АДРЕС",
         "loginPasswordError":"* Обязательное поле",
-        "loginPassword":"ПАРОЛЬ",
         "forgotPassId":"Забыли пароль?",
         "loginButtonContent":"ВОЙТИ",
         "needAccountId":"Зарегистрироваться?",
@@ -117,9 +115,9 @@
     "js": {
         "login": {
             "error": {
-                "invalidValue": "* Invalid Value",
+                "invalidValue": "* Неверно",
                 "invalidEmail": "* Некорректный email",
-                "requiredValue": "* Required",
+                "requiredValue": "* Обязательное поле",
                 "userMigrated": {
                     "title": "Error During Login:<br>Invalid Credentials",
                     "desc": "You've attempted to login with a migrated account. Try again using the account email as the username."
@@ -148,6 +146,8 @@
                     "title": "Error During Login:<br>Unknown Error"
                 }
             },
+            "loginUsername":"АДРЕС",
+            "loginPassword":"ПАРОЛЬ",
             "login": "ВОЙТИ",
             "loggingIn": "АВТОРИЗАЦИЯ",
             "success": "УСПЕШНО",

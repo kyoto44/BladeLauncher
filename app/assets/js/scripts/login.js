@@ -304,3 +304,6 @@ loginButton.addEventListener('click', () => {
         })
 
 })
+
+loginUsername.setAttribute('placeholder', Lang.queryJS('login.loginUsername'))
+loginPassword.setAttribute('placeholder', Lang.queryJS('login.loginPassword'))
