@@ -485,8 +485,8 @@ function asyncSystemScan(mcVersion, launchAfter = true){
 */
 }
 
-// Keep reference to Minecraft Process
-let proc
+// Keep reference to Game Process
+let pb 
 // Is DiscordRPC enabled
 let hasRPC = false
 // Joined server regex
@@ -670,36 +670,36 @@ function dlAsync(login = true){
             if(login && allGood) {
                 const authUser = ConfigManager.getSelectedAccount()
                 loggerLaunchSuite.log(`Sending selected account (${authUser.displayName}) to ProcessBuilder.`)
-                let pb = new ProcessBuilder(serv, versionData, forgeData, authUser, remote.app.getVersion())
+                pb = new ProcessBuilder(serv, versionData, forgeData, authUser, remote.app.getVersion())
                 setLaunchDetails('Launching game..')
 
-                const gameGlobalErrorListener = function(err){
+                const gameGlobalErrorListener = function(err) {
                     loggerLaunchSuite.error('Game launch failed', err)
                     showLaunchFailure('Error During Launch', 'To fix this issue, temporarily turn off your antivirus software and launch the game again.')
+                    pb = null
                 }
 
                 try {
                     // Build Game process.
-                    proc = pb.build()
-                    proc.on('error', gameGlobalErrorListener)
-
-                    setLaunchDetails('Done. Enjoy the game!')
-
+                    pb.addErrorListener(gameGlobalErrorListener).addCloseListener((code, signal) => {
+                        toggleLaunchArea(false)
+                        pb = null
+                    })
+                    
                     // Init Discord Hook
                     const distro = DistroManager.getDistribution()
                     if(distro.discord != null && serv.discord != null){
                         DiscordWrapper.initRPC(distro.discord, serv.discord)
                         hasRPC = true
-                        proc.on('close', (code, signal) => {
+                        pb.addCloseListener((code, signal) => {
                             loggerLaunchSuite.log('Shutting down Discord Rich Presence..')
                             DiscordWrapper.shutdownRPC()
                             hasRPC = false
                         })
                     }
-                    proc.on('close', (code, signal) => {
-                        toggleLaunchArea(false)
-                        proc = null
-                    })
+
+                    pb.build()
+                    setLaunchDetails('Done. Enjoy the game!')
 
                 } catch(err) {
                     loggerLaunchSuite.error('Error during launch', err)

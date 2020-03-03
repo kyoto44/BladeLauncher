@@ -17,12 +17,26 @@ class ProcessBuilder {
         this.authUser = authUser
         this.launcherVersion = launcherVersion
         this.libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
+        this._closeListeners = []
+        this._errorListeners = []
+        this._useShell = false
+        this._proc = null
     }
     
+    addErrorListener(listener) {
+        this._errorListeners.push(listener)
+        return this
+    }
+
+    addCloseListener(listener) {
+        this._closeListeners.push(listener)
+        return this
+    }
+
     /**
      * Convienence method to run the functions typically used to build a process.
      */
-    build(){
+    build() {
         fs.ensureDirSync(this.gameDir)
         const tempNativePath = path.join(os.tmpdir(), ConfigManager.getTempNativeFolder(), crypto.pseudoRandomBytes(16).toString('hex'))
         process.throwDeprecation = true
@@ -32,18 +46,24 @@ class ProcessBuilder {
         let wd = path.dirname(launchExecutable)
 
         let args = []
-        if(process.platform === 'linux'){ // TODO: looks like it should be done with rules
+        if (process.platform === 'linux') { // TODO: looks like it should be done with rules
             args.push(launchExecutable)
             launchExecutable = 'wine'
         }
 
         const detached = ConfigManager.getLaunchDetached()
-        const child = child_process.spawn(launchExecutable, args, {
+        const options = {
             cwd: wd,
             detached: detached
-        })
+        }
+        if (this._useShell) {
+            options.shell = true
+            options.windowsHide = true
+        }
+        const child = child_process.spawn(launchExecutable, args, options)
+        this._proc = child
 
-        if(detached){
+        if (detached) {
             child.unref()
         }
 
@@ -59,6 +79,10 @@ class ProcessBuilder {
         child.stderr.on('data', (data) => {
             loggerMCstderr.log(data)
         })
+
+        let blockListeners = false
+
+        const closeListeners = [...this._closeListeners]
         child.on('close', (code, signal) => {
             logger.log('Exited with code', code)
             fs.remove(tempNativePath, (err) => {
@@ -68,9 +92,30 @@ class ProcessBuilder {
                     logger.log('Temp dir deleted successfully.')
                 }
             })
+            if (blockListeners)
+                return
+            for (let listener of closeListeners) {
+                listener(code, signal)
+            }
+        })
+        const errorListeners = [...this._errorListeners]
+        child.on('error', (err) => {
+            logger.error('Failed to spawn process', err)
+            if (err.code === 'EACCES' && process.platform === 'win32') {
+                // TODO: this ungly code tries to start proccess one more time because for some reason we get EACCES on win because of some bug with checking PATH
+                if (!this._useShell)  {
+                    blockListeners = true
+                    this._useShell = true
+                    this.build()
+                }
+            }
+            if (blockListeners)
+                return
+            for (let listener of errorListeners) {
+                listener(err)
+            }
         })
 
-        return child
     }
 
     resolveLaunchExecutable(){
