@@ -203,21 +203,41 @@ function getPlatformIcon(filename){
     return path.join(__dirname, 'app', 'assets', 'images', filename)
 }
 
-app.on('ready', createWindow)
-app.on('ready', createMenu)
 
-app.on('window-all-closed', () => {
-    // On macOS it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== 'darwin') {
-        app.quit()
-    }
-})
+const gotTheLock = app.requestSingleInstanceLock()
 
-app.on('activate', () => {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (win === null) {
-        createWindow()
-    }
-})
+if (!gotTheLock) {
+    app.quit()
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance, we should focus our window.
+        if (win) {
+            if (win.isMinimized()){
+                win.restore()
+            }
+            // win.show()
+            win.focus()
+        }
+    })
+  
+
+    app.on('ready', createWindow)
+    app.on('ready', createMenu)
+
+    app.on('window-all-closed', () => {
+        // On macOS it is common for applications and their menu bar
+        // to stay active until the user quits explicitly with Cmd + Q
+        if (process.platform !== 'darwin') {
+            app.quit()
+        }
+    })
+
+    app.on('activate', () => {
+        // On macOS it's common to re-create a window in the app when the
+        // dock icon is clicked and there are no other windows open.
+        if (win === null) {
+            createWindow()
+        }
+    })
+
+}
