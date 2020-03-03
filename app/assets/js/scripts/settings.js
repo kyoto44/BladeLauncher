@@ -1276,7 +1276,7 @@ function settingsUpdateButtonStatus(text, disabled = false, handler = null){
  * @param {Object} data The update data.
  */
 function populateSettingsUpdateInformation(data){
-    if(data != null){
+    if(data != null && data.releaseName && data.releaseNotes){
         settingsUpdateTitle.innerHTML = `New ${isPrerelease(data.version) ? 'Pre-release' : 'Release'} Available`
         settingsUpdateChangelogCont.style.display = null
         settingsUpdateChangelogTitle.innerHTML = data.releaseName

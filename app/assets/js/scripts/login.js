@@ -211,19 +211,11 @@ function resolveError(err){
                 title: Lang.queryJS('login.error.notPaid.title'),
                 desc: Lang.queryJS('login.error.notPaid.desc')
             }
-        } else {
-            // Unknown error with request.
-            return {
-                title: Lang.queryJS('login.error.unknown.title'),
-                desc: err.message
-            }
         }
-    } else {
-        // Unknown Mojang error.
-        return {
-            title: err.error,
-            desc: err.errorMessage
-        }
+    }
+    return {
+        title: Lang.queryJS('login.error.unknown.title'),
+        desc: Lang.queryJS('login.error.unknown.desk')
     }
 }
 
@@ -300,7 +292,7 @@ loginButton.addEventListener('click', () => {
                 toggleOverlay(false)
             })
             toggleOverlay(true)
-            loggerLogin.log('Error while logging in.', err)
+            loggerLogin.warn('Error while logging in.', err)
         })
 
 })

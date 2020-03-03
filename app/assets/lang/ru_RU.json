@@ -78,20 +78,20 @@
         "settingsJVMOptsTitle": "Additional JVM Options",
         "settingsJVMOptsDesc": "Options to be provided to the JVM at runtime. <em>-Xms</em> and <em>-Xmx</em> should notbe included.<br><a href=\"https://docs.oracle.com/javase/8/docs/technotes/tools/<%= process.platform === 'win32' ? 'windows' : 'unix' %>/java.html\">Available Options for Java 8</a>.",
         
-        "settingsTabHeaderTextlauncherId": "Настройки запуска",
-        "settingsTabHeaderDesclauncherId": "Настройки лаунчера",
+        "settingsTabHeaderTextlauncherId": "Настройки лаунчера",
+        "settingsTabHeaderDesclauncherId": "Список параметров для конфигурирования лаунчера",
         "settingsPreReleaseHeadId": "Allow Pre-Release Updates.",
         "settingsPreReleaseTextId": "Pre-Releases include new features which may have not been fully tested or integrated.<br>This will always be true if you are using a pre-release version.",
-        "settingsDataDirTitle": "Расположение",
+        "settingsDataDirTitle": "Расположение игровых файлов",
         "settingsChoosingFolderId": "Выбрать каталог",
-        "settingsInstallInfoId": "All game files and local Java installations will be stored in the data directory.<br>Screenshots and world saves are stored in the instance folder for the corresponding server configuration.",
+        "settingsInstallInfoId": "Все игровые файлы и скриншоты будут находиться в указанной директории.",
 
         "settingsTabHeaderTextAboutId": "О продукте",
-        "settingsTabHeaderDescAboutId": "View information and release notes for the current version.",
+        "settingsTabHeaderDescAboutId": "Информация о версии и наличии обновлений лаунчера.",
         
         "settingsUpdateVersionValue": "0.0.1-alpha.18",
         "settingsUpdateActionButton": "Проверить наличие обновлений",
-        "settingsAboutSourceButton": "Источник (GitHub)",
+        "settingsAboutSourceButton": "Оригинальные исходники разработаны Daniel Scalzi (GitHub)",
         "settingsWhatNewId": "Что нового",
         "settingsUpdateReleaseId": "Update Release Notes",
         "settingsNoReleaseNotesId": "No Release Notes",
@@ -102,13 +102,13 @@
         "settingsTabHeaderTextLauncherUpdateId": "Обновить лаунчер",
         "settingsTabHeaderDescLauncherUpdateId": "Скачать, установить и просмотреть обновления.",
 
-        "loginSubheader": "Вход  на Сервер NORTHERN BLADE",
+        "loginSubheader": "Вход",
         "loginEmailError":"* Отсутствует",
         "loginPasswordError":"* Обязательное поле",
         "forgotPassId":"Забыли пароль?",
         "loginButtonContent":"ВОЙТИ",
         "needAccountId":"Зарегистрироваться?",
-        "passNotStored":"Ваш пароль будет отправлен непосредственно на сервер и нигде не хранится.",
+        "passNotStored":"Ваш пароль будет отправлен непосредственно на сервер и нигде сохранен не будет.",
         "launcherNotAfillAcc":"Blade Launcher не связан с аккаунтом NorthernBlade."        
         
     },
@@ -119,34 +119,35 @@
                 "invalidEmail": "* Некорректный email",
                 "requiredValue": "* Обязательное поле",
                 "userMigrated": {
-                    "title": "Error During Login:<br>Invalid Credentials",
+                    "title": "Ошибка авторизации:<br>Неправильная почта или пароль",
                     "desc": "You've attempted to login with a migrated account. Try again using the account email as the username."
                 },
                 "invalidCredentials": {
-                    "title": "Error During Login:<br>Invalid Credentials",
-                    "desc": "The email or password you've entered is incorrect. Please try again."
+                    "title": "Ошибка авторизации:<br>Неправильная почта или пароль",
+                    "desc": "Вы ввели адрес электронный почты, который не был зарегистрирован или неверный пароль. Пожалуйста, попробуйте еще раз."
                 },
                 "rateLimit": {
-                    "title": "Error During Login:<br>Too Many Attempts",
-                    "desc": "There have been too many login attempts with this account recently. Please try again later."
+                    "title": "Ошибка авторизации:<br>Слишком много попыток",
+                    "desc": "За последнее время было произведено слишком много попыток входа с этой учетной записью. Пожалуйста, повторите попытку позже."
                 },
                 "noInternet": {
-                    "title": "Error During Login:<br>No Internet Connection",
-                    "desc": "You must be connected to the internet in order to login. Please connect and try again."
+                    "title": "Ошибка авторизации:<br>Нет подключения к интернету",
+                    "desc": "Вам необходимо подключиться к интернету, чтобы войти в систему. Пожалуйста, проверьте соединение и повторите попытку."
                 },
                 "authDown": {
-                    "title": "Error During Login:<br>Authentication Server Offline",
-                    "desc": "Mojang's authentication server is currently offline or unreachable. Please wait a bit and try again. You can check the status of the server on <a href=\"https://help.mojang.com/\">Mojang's help portal</a>."
+                    "title": "Ошибка авторизации:<br>Authentication Server Offline",
+                    "desc": "Authentication server is currently offline or unreachable. Please wait a bit and try again."
                 },
                 "notPaid": {
                     "title": "Error During Login:<br>Game Not Purchased",
-                    "desc": "The account you are trying to login with has not purchased a copy of Minecraft.<br>You may purchase a copy on <a href=\"https://minecraft.net/\">Minecraft.net</a>"
+                    "desc": "The account you are trying to login with has not purchased"
                 },
                 "unknown": {
-                    "title": "Error During Login:<br>Unknown Error"
+                    "title": "Ошибка авторизации",
+                    "desc": "Пожалуйста обратитесь в <a href=\"https://www.northernblade.ru/support\">службу поддержки</a>"
                 }
             },
-            "loginUsername":"АДРЕС",
+            "loginUsername":"АДРЕС ЭЛЕКТРОННОЙ ПОЧТЫ",
             "loginPassword":"ПАРОЛЬ",
             "login": "ВОЙТИ",
             "loggingIn": "АВТОРИЗАЦИЯ",
@@ -172,8 +173,8 @@
             }
         },
         "overlay": {
-            "overlayWarningHead": "Warning<br>This is Your Last Account",
-            "overlayWarningDesc": "In order to use the launcher you must be logged into at least one account. Будет необходимо снова войти на сервер.<br><br>Вы точно хотите выйти?",
+            "overlayWarningHead": "Внимание",
+            "overlayWarningDesc": "Вы точно хотите выйти?",
             "overlayWarningAccept": "Да",
             "overlayWarningDecline": "Отмена"
         } 

@@ -617,7 +617,6 @@ body, button {
     margin: 10px 0px;
     cursor: pointer;
     position: relative;
-    right: -20px;
     transition: 0.5s ease;
 }
 #loginButton:disabled {
