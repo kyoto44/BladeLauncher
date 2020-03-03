@@ -74,10 +74,10 @@ function showMainUI(){
     if(!isDev && isLoggedIn){
         validated = validateSelectedAccount()
     } else {
-        validated = Promise.resolve()
+        validated = Promise.resolve(true)
     }
 
-    validated.then(() => {
+    validated.then((isAccountValid) => {
 
         const data = DistroManager.getDistribution()
         if (data != null) {
@@ -96,7 +96,7 @@ function showMainUI(){
                 currentView = VIEWS.welcome
                 $(VIEWS.welcome).fadeIn(1000)
             } else {
-                if(isLoggedIn){
+                if (isLoggedIn && isAccountValid) {
                     currentView = VIEWS.landing
                     $(VIEWS.landing).fadeIn(1000)
                 } else {
@@ -238,7 +238,7 @@ function mergeModConfiguration(o, n, nReq = false){
 
 async function validateSelectedAccount(){
     const selectedAcc = ConfigManager.getSelectedAccount()
-    if(selectedAcc == null){
+    if (selectedAcc == null) {
         return true
     }
 
@@ -289,6 +289,8 @@ async function validateSelectedAccount(){
             toggleOverlay(false)
         }
     })
+
+    return false
 }
 
 /**
