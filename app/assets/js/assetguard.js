@@ -8,6 +8,7 @@ const path          = require('path')
 const Registry      = require('winreg')
 const request       = require('request')
 const xml2js        = require('xml2js')
+const url           = require('url')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -45,6 +46,19 @@ class Asset {
     }
 }
 
+
+function defer(call){
+    return new Promise((resolve, reject) => {
+        call(function(err, data) {
+            if(err){
+                reject(err)
+            }else{
+                resolve(data)
+            }
+        })
+    })
+}
+
 class ModifierRule {
 
     /**
@@ -56,6 +70,47 @@ class ModifierRule {
     }
 }
 
+
+class WinCompatibilityModeModifierRule extends ModifierRule {
+    
+    constructor(mode){
+        super()
+        this._mode = mode
+    }
+
+    async ensure(path, server) {
+        let regKey = new Registry({                                  
+            hive: Registry.HKCU,
+            key:  '\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+        })
+    
+        let keyExists = await defer(cb => regKey.keyExists(cb))
+        if (!keyExists) {
+            await defer(cb => regKey.create(cb))
+        }
+        let mode = this._mode
+        await defer(cb => regKey.set(path, Registry.REG_SZ, mode, cb))
+    }
+}
+
+
+class DirectoryModifierRule extends ModifierRule {
+
+    constructor(mode){
+        super()
+        this.mode = mode
+    }
+
+    async ensure(path, server) {
+        switch (this.mode) {
+            case 'exists':
+                return await fs.promises.mkdir(path, { recursive: true })
+            default:
+                throw new Error('Unsupported rule type: ' + this.ensure)
+        }
+    }
+}
+
 class XmlModifierRule extends ModifierRule {
 
     constructor(tree){
@@ -63,25 +118,13 @@ class XmlModifierRule extends ModifierRule {
         this.tree = tree
     }
 
-    async ensure(path, server) {
+    async ensure(filePath, server) {
         const tree = this.tree
 
-        function defer(call){
-            return new Promise((resolve, reject) => {
-                call(function(err, data) {
-                    if(err){
-                        reject(err)
-                    }else{
-                        resolve(data)
-                    }
-                })
-            })
-        }
-
-        const exists = await defer(cb => fs.pathExists(path, cb))
+        const exists = await defer(cb => fs.pathExists(filePath, cb))
         let json  = {}
         if(exists === true){
-            const data = await defer(cb => fs.readFile(path, 'ascii', cb))
+            const data = await defer(cb => fs.readFile(filePath, 'ascii', cb))
             json = await defer(cb => xml2js.parseString(data, { explicitArray: false, trim: true }, cb))
         }
 
@@ -138,9 +181,12 @@ class XmlModifierRule extends ModifierRule {
 
         resolve(result)
 
+        const dirname = path.dirname(filePath)
+        await fs.promises.mkdir(dirname, { recursive: true })
+
         const builder = new xml2js.Builder()
         const xml = builder.buildObject(result)
-        return defer(cb => fs.writeFile(path, xml, 'ascii', cb))
+        return defer(cb => fs.writeFile(filePath, xml, 'ascii', cb))
     }
 }
 
@@ -1115,6 +1161,66 @@ class AssetGuard extends EventEmitter {
     // Validation Functions
     // #region
 
+    static _compareArtifactInfo(a, b) {
+        const keys = ['size', 'checksum', 'path']
+        for (let key of keys) {
+            if (a[key] !== b[key])
+                return false
+        }
+        return true
+    }
+
+    async loadPreviousVersionFilesInfo(targetVersionData) {
+        const modules = targetVersionData.downloads
+        const ids = Object.keys(modules)
+
+        const result = {}
+
+        const versionsPath = path.join(this.commonPath, 'versions')
+        const versionDirs = await defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb))
+        for(let versionDir of versionDirs) {
+            if (!versionDir.isDirectory())
+                continue
+            
+        
+            const versionNumber = versionDir.name
+            if (versionNumber === targetVersionData.id)
+                continue
+
+            const versionFile = path.join(versionsPath, versionNumber, versionNumber + '.json')
+            try {
+                await defer(cb => fs.access(versionFile, fs.constants.R_OK, cb))
+            } catch (err) {
+                continue
+            }
+
+            const versionData = await defer(cb => fs.readFile(versionFile, cb))
+            const versionInfo = JSON.parse(versionData)
+            const previousMoudles = versionInfo.downloads
+
+            for(let id of ids) {
+                const targetModule = modules[id]
+                if (targetModule.type !== 'File')
+                    continue
+
+                const previousMoudle = previousMoudles[id]
+                if (!previousMoudle)
+                    continue
+                if (previousMoudle.type !== 'File')
+                    continue
+
+                
+                if (AssetGuard._compareArtifactInfo(targetModule.artifact, previousMoudle.artifact)) {
+                    let versions = result[id] || []
+                    versions.push(versionNumber)
+                    result[id] = versions
+                }
+            }
+        }
+
+        return result
+    }
+
     /**
      * Loads the version data for a given version.
      * 
@@ -1204,9 +1310,10 @@ class AssetGuard extends EventEmitter {
      * queue for the 'libraries' identifier.
      * 
      * @param {Object} versionData The version data for the assets.
+     * @param {Object} reusableModules Information about same modules in the previous versions which were downloaded and can be reused
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
      */
-    validateVersion(versionData){
+    validateVersion(versionData, reusableModules){
         const self = this
         return new Promise((resolve, reject) => {
 
@@ -1241,6 +1348,26 @@ class AssetGuard extends EventEmitter {
                     )
                     
                     if(!libItm._validateLocal()){
+                        const previousVersions = reusableModules[id]
+                        if (previousVersions) {
+                            for (let previousVersion of previousVersions) {
+                                const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), previousVersion)
+                                const previousPath = path.join(previousLibPath, artifact.path)
+                                const previousLib = new Library(
+                                    id,
+                                    {'algo': algo, 'hash': hash},
+                                    artifact.size,
+                                    artifact.urls,
+                                    previousPath
+                                )
+                                if (previousLib._validateLocal()) {
+                                    const localUrl = url.pathToFileURL(previousPath).href
+                                    libItm.urls.unshift(localUrl)
+                                    break
+                                }
+                            }
+                        }
+
                         dlSize += (libItm.size*1)
                         libDlQueue.push(libItm)
                     }
@@ -1265,8 +1392,18 @@ class AssetGuard extends EventEmitter {
                     for(let modifier of versionData.modifiers){
                         const rules = []
                         for(let rule of modifier.rules){
-                            if(rule.type === 'xml'){
-                                rules.push(new XmlModifierRule(rule.tree))
+                            switch(rule.type){
+                                case 'xml':
+                                    rules.push(new XmlModifierRule(rule.tree))
+                                    break
+                                case 'dir':
+                                    rules.push(new DirectoryModifierRule(rule.ensure))
+                                    break
+                                case 'compat':
+                                    if (process.platform === 'win32') {
+                                        rules.push(new WinCompatibilityModeModifierRule(rule.mode))
+                                    }
+                                    break
                             }
                         }
                         modifierDlQueue.push(new Modifier(
@@ -1311,7 +1448,43 @@ class AssetGuard extends EventEmitter {
 
         async.eachLimit(dlQueue, limit, (asset, cb) => {
 
+            function afterLoad() {
+                if(dlTracker.callback != null){
+                    dlTracker.callback.apply(dlTracker, [asset, self])
+                }
+
+                const v = asset._validateLocal()
+                if (v) {
+                    cb()
+                    return
+                }
+
+                const msg = `Validation of downloaded asset ${asset.id} failed, may be corrupted.`
+                console.error(msg)
+                cb(msg)
+            }
+
             fs.ensureDirSync(path.dirname(asset.to))
+
+            const alternatives = asset.urls
+            for (let alternative of alternatives) {
+                const urlObj = new URL(alternative)
+                if (urlObj.protocol === 'file:') {
+                    fs.copyFile(url.fileURLToPath(alternative), asset.to, (err) => {
+                        if (err) {
+                            cb(err)
+                            return
+                        }
+
+                        self.progress += asset.size
+                        self.emit('progress', 'download', self.progress, self.totaldlsize)
+
+                        afterLoad()
+                    })
+                    return
+                }
+            }
+
 
             const opt = {
                 url: asset.from,
@@ -1347,19 +1520,7 @@ class AssetGuard extends EventEmitter {
 
                 let writeStream = fs.createWriteStream(asset.to)
                 writeStream.on('close', () => {
-                    if(dlTracker.callback != null){
-                        dlTracker.callback.apply(dlTracker, [asset, self])
-                    }
-
-                    const v = asset._validateLocal()
-                    if(v){
-                        cb()
-                        return
-                    }
-
-                    const msg = `Validation of downloaded asset ${asset.id} failed, may be corrupted.`
-                    console.error(msg)
-                    cb(msg)
+                    afterLoad()
                 })
                 req.pipe(writeStream)
                 req.resume()
@@ -1457,8 +1618,10 @@ class AssetGuard extends EventEmitter {
             // Validate Everything
 
             const versionData = await this.loadVersionData(server.getVersions()[0])
+            const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
+
             this.emit('validate', 'version')
-            await this.validateVersion(versionData)
+            await this.validateVersion(versionData, reusableModules)
             this.emit('validate', 'libraries')
             await this.validateModifiers(versionData)
             this.emit('validate', 'files')
