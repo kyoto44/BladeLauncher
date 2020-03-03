@@ -41,10 +41,12 @@ builder.build({
             legalTrademarks: 'N-blade'
         },
         nsis: {
-            oneClick: false,
+            oneClick: true,
             perMachine: false,
             allowElevation: true,
-            allowToChangeInstallationDirectory: true
+            allowToChangeInstallationDirectory: false,
+            deleteAppDataOnUninstall: true,
+            language: '1049'
         },
         mac: {
             target: 'dmg',
