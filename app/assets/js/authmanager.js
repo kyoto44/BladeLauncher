@@ -30,7 +30,7 @@ exports.addAccount = async function(username, password){
     try {
         const session = await Mojang.authenticate(username, password, ConfigManager.getClientToken())
         if(session.selectedProfile != null){
-            const ret = ConfigManager.addAuthAccount(session.selectedProfile.id, session.accessToken, username, session.selectedProfile.name)
+            const ret = ConfigManager.addAuthAccount(session.selectedProfile.id, session.accessToken, session.selectedProfile.username, session.selectedProfile.name)
             if(ConfigManager.getClientToken() == null){
                 ConfigManager.setClientToken(session.clientToken)
             }

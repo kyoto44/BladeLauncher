@@ -52,8 +52,13 @@ class ProcessBuilder {
         }
 
         const detached = ConfigManager.getLaunchDetached()
+        const env = {...process.env}
+        env['LOGIN'] = this.authUser.username 
+        env['TOKEN'] = this.authUser.accessToken
+
         const options = {
             cwd: wd,
+            env: env,
             detached: detached
         }
         if (this._useShell) {
