@@ -116,7 +116,7 @@
         "login": {
             "error": {
                 "invalidValue": "* Неверно",
-                "invalidEmail": "* Некорректный email",
+                "invalidEmail": "* Некорректный email или логин",
                 "requiredValue": "* Обязательное поле",
                 "userMigrated": {
                     "title": "Ошибка авторизации:<br>Неправильная почта или пароль",
@@ -147,7 +147,7 @@
                     "desc": "Пожалуйста обратитесь в <a href=\"https://www.northernblade.ru/support\">службу поддержки</a>"
                 }
             },
-            "loginUsername":"АДРЕС ЭЛЕКТРОННОЙ ПОЧТЫ",
+            "loginUsername": "ЛОГИН ИЛИ EMAIL",
             "loginPassword":"ПАРОЛЬ",
             "login": "ВОЙТИ",
             "loggingIn": "АВТОРИЗАЦИЯ",
