@@ -1401,7 +1401,8 @@ class AssetGuard extends EventEmitter {
                                     break
                                 case 'compat':
                                     if (process.platform === 'win32') {
-                                        rules.push(new WinCompatibilityModeModifierRule(rule.mode))
+                                        // TODO: temporary ignore this modifier because it prevents passing of envs
+                                        // rules.push(new WinCompatibilityModeModifierRule(rule.mode))
                                     }
                                     break
                             }
