@@ -169,7 +169,7 @@ exports.authenticate = function(username, password, clientToken, requestUser = t
                 let errorMessage = 'Please contact support'
                 if (typeof body === 'object' && typeof body.error === 'object') {
                     switch (body.error.code) {
-                        case 'email_not_confirme':
+                        case 'email_not_confirmed':
                             errorTitle = 'Registration was not completed'
                             errorMessage = 'Please confirm you email address first.'
                             if (body.error.url) {

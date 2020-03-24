@@ -171,17 +171,27 @@ function resolveError(err){
         }
     } else {
         if(err.error != null){
-            if(err.error === 'ForbiddenOperationException'){
-                if(err.errorMessage != null){
-                    if(err.errorMessage === 'Invalid credentials. Invalid username or password.'){
-                        return {
-                            title: Lang.queryJS('login.error.invalidCredentials.title'),
-                            desc: Lang.queryJS('login.error.invalidCredentials.desc')
+            switch (err.error) {
+                case 'ForbiddenOperationException': {
+                    if (err.errorMessage != null) {
+                        if (err.errorMessage === 'Invalid credentials. Invalid username or password.') {
+                            return {
+                                title: Lang.queryJS('login.error.invalidCredentials.title'),
+                                desc: Lang.queryJS('login.error.invalidCredentials.desc')
+                            }
+                        } else if(err.errorMessage === 'Invalid credentials.') {
+                            return {
+                                title: Lang.queryJS('login.error.rateLimit.title'),
+                                desc: Lang.queryJS('login.error.rateLimit.desc')
+                            }
                         }
-                    } else if(err.errorMessage === 'Invalid credentials.'){
+                    }
+                }
+                case 'Registration was not completed': {
+                    if (err.errorMessage != null && err.errorMessage.startsWith('Please confirm you email address first.')) {
                         return {
-                            title: Lang.queryJS('login.error.rateLimit.title'),
-                            desc: Lang.queryJS('login.error.rateLimit.desc')
+                            title: Lang.queryJS('login.error.emailNotConfirmed.title'),
+                            desc: Lang.queryJS('login.error.emailNotConfirmed.desc')
                         }
                     }
                 }

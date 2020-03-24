@@ -138,6 +138,10 @@
                     "title": "Ошибка авторизации:<br>Authentication Server Offline",
                     "desc": "Authentication server is currently offline or unreachable. Please wait a bit and try again."
                 },
+                "emailNotConfirmed": {
+                    "title": "Регистрация вашего аккаунта не была завершена",
+                    "desc": "Для входа в систему необходимо завершить регистрацию подтвердив ваш емейл адрес. Для этого пожалуйста <a href=\"https://www.northernblade.ru/auth/confirm/?err=1\">перейдите по ссылке</a> " 
+                },
                 "notPaid": {
                     "title": "Error During Login:<br>Game Not Purchased",
                     "desc": "The account you are trying to login with has not purchased"

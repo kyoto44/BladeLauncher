@@ -139,6 +139,10 @@
                     "title": "Error During Login:<br>Authentication Server Offline",
                     "desc": "Mojang's authentication server is currently offline or unreachable. Please wait a bit and try again. You can check the status of the server on <a href=\"https://help.mojang.com/\">Mojang's help portal</a>."
                 },
+                "emailNotConfirmed": {
+                    "title": "Registration was not completed",
+                    "desc": "Please confirm you email address first.<br/>Visit <a href=\"https://www.northernblade.ru/auth/confirm/?err=1\">link</a> for more information"
+                },
                 "notPaid": {
                     "title": "Error During Login:<br>Game Not Purchased",
                     "desc": "The account you are trying to login with has not purchased a copy of Minecraft.<br>You may purchase a copy on <a href=\"https://minecraft.net/\">Minecraft.net</a>"
