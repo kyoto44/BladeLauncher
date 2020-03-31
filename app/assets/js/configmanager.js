@@ -259,6 +259,15 @@ exports.getInstanceDirectory = function(){
     return path.join(exports.getDataDirectory(), 'instances')
 }
 
+exports.getConfigDirectory = function(){
+ 
+    return path.join(exports.getCommonDirectory(), 'config')
+}
+
+exports.getGameConfigPath = function(){
+    return path.join(exports.getConfigDirectory(), 'preferences.xml')
+}
+
 /**
  * Retrieve the launcher's Client Token.
  * There is no default client token.

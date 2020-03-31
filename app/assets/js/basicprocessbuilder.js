@@ -13,6 +13,7 @@ class ProcessBuilder {
 
     constructor(distroServer, versionData, forgeData, authUser, launcherVersion){
         this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroServer.getID())
+        this,_configPath = ConfigManager.getGameConfigPath()
         this.versionData = versionData
         this.authUser = authUser
         this.launcherVersion = launcherVersion
@@ -46,6 +47,9 @@ class ProcessBuilder {
         let wd = path.dirname(launchExecutable)
 
         let args = []
+
+        args.push('--preferences', this._configPath)
+
         if (process.platform === 'linux') { // TODO: looks like it should be done with rules
             args.push(launchExecutable)
             launchExecutable = 'wine'

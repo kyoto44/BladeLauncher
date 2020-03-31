@@ -1423,6 +1423,30 @@ class AssetGuard extends EventEmitter {
         })
     }
 
+    validateConfig() {
+        const self = this
+        return new Promise((resolve, reject) => {
+            const configPath = ConfigManager.getGameConfigPath()
+            try {
+                const rules = [new XmlModifierRule({
+                    'root': {
+                        'scriptsPreferences': {
+                            'server': '${server_address}'
+                        }
+                    }
+                })]
+                self.modifiers.push(new Modifier(
+                    configPath,
+                    rules
+                ))
+
+                resolve()
+            } catch(err) {
+                reject(err)
+            }
+        })
+    }
+
     // #endregion
 
     // Control Flow Functions
@@ -1625,6 +1649,7 @@ class AssetGuard extends EventEmitter {
             await this.validateVersion(versionData, reusableModules)
             this.emit('validate', 'libraries')
             await this.validateModifiers(versionData)
+            await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server)
             //this.emit('complete', 'download')
