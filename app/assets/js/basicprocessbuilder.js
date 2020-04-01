@@ -13,7 +13,7 @@ class ProcessBuilder {
 
     constructor(distroServer, versionData, forgeData, authUser, launcherVersion){
         this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroServer.getID())
-        this,_configPath = ConfigManager.getGameConfigPath()
+        this._configPath = ConfigManager.getGameConfigPath()
         this.versionData = versionData
         this.authUser = authUser
         this.launcherVersion = launcherVersion
