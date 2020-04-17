@@ -1170,6 +1170,37 @@ class AssetGuard extends EventEmitter {
         return true
     }
 
+    cleanupPreviousVersionData(targetVersionData) {
+        const versionsPath = path.join(this.commonPath, 'versions')
+
+        return defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb)).then((versionDirs) => {
+            const toRemove = {}
+
+            for(let versionDir of versionDirs) {
+                if (!versionDir.isDirectory())
+                    continue
+                
+            
+                const versionNumber = versionDir.name
+                if (versionNumber === targetVersionData.id)
+                    continue
+    
+                toRemove[versionNumber] = path.join(versionsPath, versionNumber)
+            }
+    
+            const ids = Object.keys(toRemove)
+            return async.eachLimit(ids, 5, (id, cb) => {
+                const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), id)
+                fs.remove(previousLibPath)
+                    .then(() => {
+                        const configDirPath = toRemove[id]
+                        return fs.remove(configDirPath)
+                    })
+                    .then(cb, cb)
+            })
+        })
+    }
+
     async loadPreviousVersionFilesInfo(targetVersionData) {
         const modules = targetVersionData.downloads
         const ids = Object.keys(modules)
@@ -1653,6 +1684,8 @@ class AssetGuard extends EventEmitter {
             this.emit('validate', 'files')
             await this.processDlQueues(server)
             //this.emit('complete', 'download')
+            await this.cleanupPreviousVersionData(versionData)
+
             const forgeData = {}
         
             return {

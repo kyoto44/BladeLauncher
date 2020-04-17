@@ -51,7 +51,7 @@ class ProcessBuilder {
         args.push('--preferences', this._configPath)
 
         if (process.platform === 'linux') { // TODO: looks like it should be done with rules
-            args.push(launchExecutable)
+            args.unshift(launchExecutable)
             launchExecutable = 'wine'
         }
 
