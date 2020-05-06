@@ -190,6 +190,37 @@ class XmlModifierRule extends ModifierRule {
     }
 }
 
+
+class EjsModifierRule extends ModifierRule {
+
+    constructor(src){
+        super()
+        this._src = src
+    }
+
+    async ensure(filePath, server) {
+        
+        const exists = await defer(cb => fs.pathExists(this._src, cb))
+        if (!exists) {
+            throw new Error('Source does not exists: ' + this._src)
+        }
+
+        const configDir = path.join(ConfigManager.getConfigDirectory(), 'temp')
+
+        const ejs = require('ejs')
+        const result = await defer(cb => ejs.renderFile(this._src, {
+            server_address: server.getAddress(),
+            config_dir: configDir
+        }, cb))
+
+
+        await fs.promises.mkdir(configDir, { recursive: true })
+
+        return defer(cb => fs.writeFile(filePath, result, 'ascii', cb))
+    }
+}
+
+
 class Modifier {
     /**
      * @param {string} path 
@@ -1429,6 +1460,9 @@ class AssetGuard extends EventEmitter {
                                     break
                                 case 'dir':
                                     rules.push(new DirectoryModifierRule(rule.ensure))
+                                    break
+                                case 'ejs':
+                                    rules.push(new EjsModifierRule(path.join(libPath, rule.src)))
                                     break
                                 case 'compat':
                                     if (process.platform === 'win32') {
