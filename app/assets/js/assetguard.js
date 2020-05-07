@@ -206,15 +206,17 @@ class EjsModifierRule extends ModifierRule {
         }
 
         const configDir = path.join(ConfigManager.getConfigDirectory(), 'temp')
+        await fs.promises.mkdir(configDir, { recursive: true })
+
+        // TODO: quick hack
+        const dirname = path.dirname(filePath)
+        const relativeConfigDirPath = path.relative(dirname, configDir)
 
         const ejs = require('ejs')
         const result = await defer(cb => ejs.renderFile(this._src, {
             server_address: server.getAddress(),
-            config_dir: configDir
+            config_dir: relativeConfigDirPath
         }, cb))
-
-
-        await fs.promises.mkdir(configDir, { recursive: true })
 
         return defer(cb => fs.writeFile(filePath, result, 'ascii', cb))
     }
