@@ -181,6 +181,11 @@
             "overlayWarningDesc": "Вы точно хотите выйти?",
             "overlayWarningAccept": "Да",
             "overlayWarningDecline": "Отмена"
-        } 
+        },
+        "register":{
+            "error":{
+                "requiredValue": "* Обязательное поле"
+            }
+        }
     }
 }

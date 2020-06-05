@@ -45,7 +45,7 @@ exports.addAccount = async function(username, password){
     }
 }
 
-exports.registerAccount = async function(email, pass){
+exports.registerAccount = async function(email){
     return Promise.resolve({userid:123})
 }
 

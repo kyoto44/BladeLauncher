@@ -3946,7 +3946,7 @@ input:checked + .toggleSwitchSlider:before {
 .registerErrorSpan {
     font-family: 'Avenir Medium';
     font-weight: bold;
-    font-size: 8px;
+    font-size: 0.6em;
     color: #ff1b0c;
     width: 100%;
     text-align: right;
