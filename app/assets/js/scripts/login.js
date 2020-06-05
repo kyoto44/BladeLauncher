@@ -18,6 +18,7 @@ const loginRememberOption   = document.getElementById('loginRememberOption')
 const loginButton           = document.getElementById('loginButton')
 const loginForm             = document.getElementById('loginForm')
 
+const register              = document.getElementById('loginRegisterSpan')
 // Control variables.
 let lu = false, lp = false
 
@@ -108,6 +109,13 @@ loginUsername.addEventListener('input', (e) => {
 })
 loginPassword.addEventListener('input', (e) => {
     validatePassword(e.target.value)
+})
+
+// Open register page
+
+register.addEventListener('click', (e) => {
+    $('#registerContainer').show()
+    $('#loginContainer').hide()
 })
 
 /**

@@ -523,7 +523,7 @@ body, button {
 .loginErrorSpan {
     font-family: 'Avenir Medium';
     font-weight: bold;
-    font-size: 8px;
+    font-size: 0.6em;
     color: #ff1b0c;
     width: 100%;
     text-align: right;
@@ -561,6 +561,7 @@ body, button {
     background: none;
     border-width: 1.5px 0px 0px 0px;
     border-style: solid;
+    /* width: 250px; */
     width: 350px;
     margin-bottom: 20px;
     border-color: #fff;
@@ -3782,3 +3783,390 @@ input:checked + .toggleSwitchSlider:before {
 .rotating {
     animation: rotating 10s linear infinite;
 }
+
+
+/*******************************************************************************
+ *                                                                             *
+ * register View (register.ejs)                                                      *
+ *                                                                             *
+ ******************************************************************************/
+
+/* Styles for dimmer register span. */
+.registerSpanDim {
+    font-size: 12px;
+    color: #848484;
+    font-weight: bold;
+}
+
+/* Main register container. */
+#registerContainer {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    transition: filter 0.25s ease;
+    background: rgba(0, 0, 0, 0.50);
+}
+
+/* register cancel button styles. */
+#registerCancelContainer {
+    position: absolute;
+    top: 5%;
+    right: 5%;
+}
+
+/* register cancel button styles. */
+#registerCancelButton {
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    transition: 0.25s ease;
+}
+#registerCancelButton:hover #registerCancelIcon,
+#registerCancelButton:hover #registerCancelText,
+#registerCancelButton:focus #registerCancelIcon,
+#registerCancelButton:focus #registerCancelText {
+    text-shadow: 0px 0px 20px white;
+}
+#registerCancelButton:hover #registerCancelIcon,
+#registerCancelButton:focus #registerCancelIcon {
+    box-shadow: 0px 0px 20px white;
+}
+#registerCancelButton:active #registerCancelIcon,
+#registerCancelButton:active #registerCancelText {
+    text-shadow: 0px 0px 20px rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.75);
+    border-color: rgba(255, 255, 255, 0.75);
+}
+#registerCancelButton:active #registerCancelIcon {
+    box-shadow: 0px 0px 20px rgba(255, 255, 255, 0.75);
+}
+#registerCancelButton:disabled {
+    pointer-events: none;
+}
+#registerCancelButton:disabled #registerCancelIcon,
+#registerCancelButton:disabled #registerCancelText {
+    color: rgba(255, 255, 255, 0.75);
+    border-color: rgba(255, 255, 255, 0.75);
+}
+
+/* The X in a circle icon for the cancel button. */
+#registerCancelIcon {
+    border-radius: 50%;
+    border: 1px solid white;
+    box-sizing: border-box;
+    height: 30px;
+    width: 30px;
+    font-size: 19px;
+    line-height: 30px;
+    margin: 0 auto;
+    margin-bottom: 5px;
+    transition: 0.25s ease;
+}
+/* Text for the register cancel button. */
+#registerCancelText {
+    font-size: 15px;
+    transition: 0.25s ease;
+}
+
+/* register content wrapper. */
+#registerContent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    padding: 0px 25px;
+}
+
+/* register form. */
+#registerForm {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* register form anchor styles. */
+#registerForm a {
+    font-size: 12px;
+    color: #848484;
+    font-weight: bold;
+    text-decoration: none;
+    transition: 0.25s ease;
+}
+#registerForm a:hover,
+#registerForm a:focus {
+    color: #a2a2a2;
+    outline: none;
+}
+#registerForm a:active {
+    color: #8b8b8b;
+}
+
+/* Logo on register form. */
+#registerImageSeal {
+    border-radius: 50%;
+    border: 2px solid #cad7e1;
+    background: rgba(1, 2, 1, 0.5);
+    height: 125px;
+    width: 125px;
+    box-shadow: 0px 0px 10px 0px rgb(0, 0, 0);
+    margin-bottom: 20px;
+}
+
+/* Header on register view. */
+#registerSubheader {
+    font-family: 'Avenir Medium';
+    margin-bottom: 25px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+/* Container to organize register field elements. */
+.registerFieldContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* SVG icons on the register view. */
+.registerSVG {
+    fill: #fff;
+    height: 20px;
+    width: 20px;
+}
+
+/* Span which displays errors related to register field content. */
+.registerErrorSpan {
+    font-family: 'Avenir Medium';
+    font-weight: bold;
+    font-size: 8px;
+    color: #ff1b0c;
+    width: 100%;
+    text-align: right;
+    position: absolute;
+    top: 7px;
+    opacity: 0;
+    transition: 0.25s ease;
+}
+
+/* register text input styles. */
+.registerField {
+    font-family: 'Avenir Book';
+    background: none;
+    border-width: 1.5px 0px 0px 0px;
+    border-style: solid;
+    width: 250px;
+    margin-bottom: 20px;
+    border-color: #fff;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: bold;
+    text-align: center;
+    box-sizing: border-box;
+    padding: 7.5px;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+.registerField:focus {
+    outline: none;
+}
+.registerField:disabled {
+    color: rgba(255, 255, 255, 0.50);
+}
+.registerField::-webkit-input-placeholder {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-align: center;
+    font-weight: bold;
+}
+.registerField:focus::-webkit-input-placeholder {
+    color: transparent;
+}
+
+/* Container which contains the forgot and remember options. */
+#registerOptions {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* Remember option text. */
+#registerRememberText {
+    padding-right: 10px;
+    transition: 0.25s ease;
+}
+
+/* register button styles. */
+#registerButton {
+    background: none;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border: none;
+    padding: 15px 5px;
+    margin: 10px 0px;
+    cursor: pointer;
+    position: relative;
+    right: -20px;
+    transition: 0.5s ease;
+}
+#registerButton:disabled {
+    color: rgba(255, 255, 255, 0.75);
+    pointer-events: none;
+}
+#registerButton[loading] {
+    color: #fff;
+}
+#registerButton:hover,
+#registerButton:focus {
+    text-shadow: 0px 0px 20px #fff;
+    outline: none;
+}
+#registerButton:active {
+    color: #c7c7c7;
+    text-shadow:  0px 0px 20px #c7c7c7;
+}
+#registerSVG {
+    -webkit-transform: translate3d(0, 0, 0);
+    overflow: visible;
+    transform: rotate(90deg);
+    margin-left: 20px;
+    transition: 0.25s ease;
+    width: 20px;
+    height: 20px;
+}
+#registerButton:hover #registerSVG,
+#registerButton:focus #registerSVG {
+    -webkit-filter: drop-shadow(0px 0px 2px #fff);
+}
+#registerButton:active #registerSVG .arrowLine {
+    stroke: #c7c7c7;
+}
+#registerButton:active #registerSVG {
+    -webkit-filter: drop-shadow(0px 0px 2px #c7c7c7);
+}
+#registerButton:disabled #registerSVG .arrowLine {
+    stroke: rgba(255, 255, 255, 0.75);
+}
+
+#registerButtonContent {
+    display: flex;
+    align-items: center;
+}
+
+#registerButton .circle-loader,
+#registerButton[loading] #registerSVG {
+    display: none;
+}
+#registerButton[loading] .circle-loader,
+#registerButton #registerSVG {
+    display: initial;
+}
+
+/* Disclaimer container. */
+#registerDisclaimer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Add spacing between register anchor and disclaimer. */
+#registerRegisterSpan {
+    margin-bottom: 5px;
+}
+
+/* Disclaimer text styles. */
+.registerDisclaimerText {
+    font-size: 7px;
+    color: #848484;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* * *
+* register View | Custom Checkbox
+* * */
+
+/* Checkbox container. */
+#checkmarkContainer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    font-size: 22px;
+    -webkit-user-select: none;
+}
+
+/* Hide the default checkbox. */
+#checkmarkContainer input {
+    opacity: 0;
+    cursor: pointer;
+    position: absolute;
+}
+
+/* Create a custom checkbox. */
+.registerCheckmark {
+    position: relative;
+    height: 10px;
+    width: 10px;
+    border: 1px solid #848484;
+    border-radius: 1px;
+    background: none;
+    transition: 0.25s ease;
+}
+/* On hover and focus, add a grey border color. */
+#checkmarkContainer:hover input ~ *,
+#checkmarkContainer input:focus ~ * {
+    color: #a2a2a2;
+    border-color: #a2a2a2;
+}
+/* On keydown, darken the checkbox a bit. */
+#checkmarkContainer input:active ~ *:not(#registerRememberText) {
+    color: #8d8d8d;
+    border-color: #8d8d8d;
+}
+#checkmarkContainer[disabled] {
+    pointer-events: none;
+}
+/* For checked -> #checkmarkContainer input:checked ~ * */
+/* Create the checkmark/indicator (hidden when not checked). */
+.registerCheckmark:after {
+    content: "";
+    display: none;
+}
+/* Show the checkmark when checked. */
+#checkmarkContainer input:checked ~ .registerCheckmark:after {
+    display: block;
+}
+/* Style the checkmark/indicator. */
+#checkmarkContainer .registerCheckmark:after {
+    position: absolute;
+    left: 3.5px;
+    top: 0.5px;
+    width: 2px;
+    height: 6px;
+    border: solid #a2a2a2;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/*
+#register_filter {
+    height: calc(100% - 22px);
+    width: 100%;
+    z-index: 9000;
+    position: absolute;
+    filter: blur(8px) contrast(0.9) brightness(1.0);
+    background: url('./../images/backgrounds/0.jpg') no-repeat center center fixed;
+    transform: scale(1.2);
+    background-size: cover;
+}
+*/
