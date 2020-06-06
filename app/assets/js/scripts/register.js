@@ -232,11 +232,11 @@ registerButton.addEventListener('click', () => {
     // Show loading stuff.
     registerLoading(true)
 
-    AuthManager.registerAccount(registerUsername.value, registerPassword.value)
+    AuthManager.registerAccount(registerUserMail.value)
         .then((value) => {
             // return DistroManager.refresh()
-            //     .then((d) => onDistroRefresh(d))
-            //     .then(() => value)
+                // .then((d) => onDistroRefresh(d))
+                // .then(() => value)
         })    
         .then((value) => {
             updateSelectedAccount(value)
@@ -261,7 +261,12 @@ registerButton.addEventListener('click', () => {
                     formDisabled(false)
                 })
             }, 1000)
-        }).catch((err) => {
+        })
+        .then((value) => {
+            $('#authContainer').show();
+            $('#registerContainer').hide();
+        })        
+        .catch((err) => {
             registerLoading(false)
             const errF = resolveError(err)
             setOverlayContent(errF.title, errF.desc, Lang.queryJS('register.tryAgain'))
