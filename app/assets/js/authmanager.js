@@ -49,6 +49,10 @@ exports.registerAccount = async function(email){
     return Promise.resolve({userid:123})
 }
 
+// exports.authAccount = async function(username, password){   // TODO уточнить
+//     return Promise.resolve({userid:123})
+// }
+
 /**
  * Remove an account. This will invalidate the access token associated
  * with the account and then remove it from the database.

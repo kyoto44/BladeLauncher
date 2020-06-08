@@ -186,6 +186,18 @@
             "error":{
                 "requiredValue": "* Обязательное поле"
             }
+        },
+        "auth":{
+            "error":{
+                "rateLimit":{
+                    "title": "Ошибка авторизации"
+                },
+                "requiredValue": "* Обязательное поле",
+                "invalidValue": "* Неверно"
+            },
+            "authUsername": "USERNAME",
+            "authPassword": "PASSWORD",
+            "tryAgain": "Попробовать еще раз"
         }
     }
 }

@@ -4544,6 +4544,22 @@ input:checked + .toggleSwitchSlider:before {
     transform: rotate(45deg);
 }
 
+.passwordVisibleImg{
+    width: 20px;
+    height: 20px;
+    background: url('./../images/closed-eye.png') no-repeat;
+    background-size: contain;
+    background-position: center;
+    position: absolute;
+    right: 0;
+}
+
+.passwordVisible{
+    background: url('./../images/open-eye.png') no-repeat;
+    background-size: contain;
+    background-position: center;
+}
+
 /*
 #auth_filter {
     height: calc(100% - 22px);
