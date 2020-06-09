@@ -184,7 +184,8 @@
         },
         "register":{
             "error":{
-                "requiredValue": "* Обязательное поле"
+                "requiredValue": "* Обязательное поле",
+                "invalidEmail": "* Некорректный email"
             }
         },
         "auth":{

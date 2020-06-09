@@ -116,6 +116,7 @@ loginPassword.addEventListener('input', (e) => {
 register.addEventListener('click', (e) => {
     $('#registerContainer').show()
     $('#loginContainer').hide()
+    $('#registerUserMail').focus()
 })
 
 /**

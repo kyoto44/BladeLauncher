@@ -488,8 +488,8 @@ body, button {
     border-radius: 50%;
     border: 2px solid #cad7e1;
     background: rgba(1, 2, 1, 0.5);
-    height: 125px;
-    width: 125px;
+    height: 100px;
+    width: 100px;
     box-shadow: 0px 0px 10px 0px rgb(0, 0, 0);
     margin-bottom: 20px;
 }
@@ -498,7 +498,7 @@ body, button {
 #loginSubheader {
     font-family: 'Avenir Medium';
     margin-bottom: 25px;
-    font-size: 12px;
+    font-size: 1em;
     letter-spacing: 1px;
     font-weight: bold;
 }
@@ -523,7 +523,7 @@ body, button {
 .loginErrorSpan {
     font-family: 'Avenir Medium';
     font-weight: bold;
-    font-size: 0.6em;
+    font-size: 0.7em;
     color: #ff1b0c;
     width: 100%;
     text-align: right;
@@ -3946,7 +3946,7 @@ input:checked + .toggleSwitchSlider:before {
 .registerErrorSpan {
     font-family: 'Avenir Medium';
     font-weight: bold;
-    font-size: 0.6em;
+    font-size: 0.7em;
     color: #ff1b0c;
     width: 100%;
     text-align: right;
@@ -4004,7 +4004,7 @@ input:checked + .toggleSwitchSlider:before {
 }
 
 /* register button styles. */
-#registerButton {
+#registerButton{
     background: none;
     font-weight: bold;
     letter-spacing: 2px;
@@ -4067,6 +4067,13 @@ input:checked + .toggleSwitchSlider:before {
 #registerButton[loading] .circle-loader,
 #registerButton #registerSVG {
     display: initial;
+}
+
+#cancelRegister{
+    background: none;
+    border: none;
+    margin-top: 20px;
+    font-size: 0.8em;
 }
 
 /* Disclaimer container. */
@@ -4332,7 +4339,7 @@ input:checked + .toggleSwitchSlider:before {
 .authErrorSpan {
     font-family: 'Avenir Medium';
     font-weight: bold;
-    font-size: 0.6em;
+    font-size: 0.7em;
     color: #ff1b0c;
     width: 100%;
     text-align: right;

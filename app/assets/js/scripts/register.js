@@ -13,6 +13,7 @@ const registerPassword         = document.getElementById('registerPassword')
 const registerRememberOption   = document.getElementById('registerRememberOption')
 const registerButton           = document.getElementById('registerButton')
 const registerForm             = document.getElementById('registerForm')
+const cancelRegister           = document.getElementById('cancelRegister')
 
 // Control variables.
 // let lu = false, lp = false
@@ -71,6 +72,13 @@ function validateRegEmail(value){
 registerUserMail.addEventListener('focusout', (e) => {
     validateRegEmail(e.target.value)
     shakeError(registerEmailError)
+})
+
+// Cancel register and return to login page
+
+cancelRegister.addEventListener('click', (e) => {
+    $('#loginContainer').show()
+    $('#registerContainer').hide()    
 })
 
 /**
@@ -259,8 +267,9 @@ registerButton.addEventListener('click', () => {
             }, 1000)
         })
         .then((value) => {
-            $('#authContainer').show();
-            $('#registerContainer').hide();
+            $('#authContainer').show()
+            $('#registerContainer').hide()
+            $('#authUsername').focus()
         })        
         .catch((err) => {
             registerLoading(false)
