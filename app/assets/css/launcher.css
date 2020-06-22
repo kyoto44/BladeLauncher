@@ -4580,3 +4580,270 @@ input:checked + .toggleSwitchSlider:before {
 }
 */
 
+/*******************************************************************************
+ *                                                                             *
+ * rules View (rules.ejs)                                                  *
+ *                                                                             *
+ ******************************************************************************/
+
+/* * *
+* rules View (Main Content)
+* * */
+
+/* rules container, placed over the main div. */
+#rulesContainer {
+    position: absolute;
+    z-index: 500;
+    top: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: calc(100% - 22px);
+    background: rgba(0, 0, 0, 0.50);
+}
+
+/* Main rules content. */
+#rulesContent {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /*justify-content: space-between;*/
+    width: 60%;
+    height: 60%;
+    box-sizing: border-box;
+    padding: 15px 0px;
+    /* background-color: #424242; */
+    text-align: center;
+    overflow: scroll;
+    overflow-x: hidden;
+    border-radius: 5px;
+    border: solid white 2px;
+}
+
+/* Main rules content anchor styles. */
+#rulesContent a,
+#rulesDismiss {
+    color: rgba(202, 202, 202, 0.75);
+    transition: 0.25s ease;
+}
+#rulesContent a:hover,
+#rulesContent a:focus,
+#rulesDismiss:focus {
+    color: rgba(255, 255, 255, 0.75);
+}
+#rulesContent a:active,
+#rulesDismiss:active {
+    color: rgba(165, 165, 165, 0.75);
+}
+
+/* Add spacing between rules content elements. */
+#rulesContent > *:first-child {
+    margin-top: 0px !important;
+}
+#rulesContent > *:last-child {
+    margin-bottom: 0px !important;
+}
+#rulesContent > * {
+    margin: 8px 0px;
+}
+
+/* rules title styles. */
+#rulesTitle {
+    font-family: 'Avenir Medium';
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    -webkit-user-select: initial;
+}
+
+/* rules description styles. */
+#rulesDesc {
+    font-size: 12px;
+    font-weight: bold;
+    -webkit-user-select: initial;
+}
+
+/* Div which contains action buttons. */
+#rulesActionContainer {
+    display: flex;
+    align-items: flex-end;
+    margin-top: 10px;
+}
+
+/* rules acknowledge button styles. */
+#rulesAcknowledge {
+    background: none;
+    border: 1px solid #ffffff;
+    color: white;
+    font-family: 'Avenir Medium';
+    font-weight: bold;
+    border-radius: 2px;
+    padding: 0px 8.1px;
+    cursor: pointer;
+    transition: 0.25s ease;
+    margin-left: 5px;
+}
+#rulesAcknowledge:hover,
+#rulesAcknowledge:focus {
+    box-shadow: 0px 0px 10px 0px #fff;
+    outline: none;
+}
+#rulesAcknowledge:active {
+    border-color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* rules dismiss option styles. */
+#rulesDismiss {
+    font-weight: bold;
+    font-size: 10px;
+    text-decoration: none;
+    padding-top: 2.5px;
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+}
+#rulesDismiss:hover {
+    color: rgba(255, 255, 255, 0.75);
+}
+#rulesDismiss:active {
+    color: rgba(165, 165, 165, 0.75);
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * agreement View (agreement.ejs)                                                  *
+ *                                                                             *
+ ******************************************************************************/
+
+/* * *
+* agreement View (Main Content)
+* * */
+
+/* agreement container, placed over the main div. */
+#agreementContainer {
+    position: absolute;
+    z-index: 500;
+    top: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: calc(100% - 22px);
+    background: rgba(0, 0, 0, 0.50);
+}
+
+/* Main agreement content. */
+#agreementContent {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /*justify-content: space-between;*/
+    width: 60%;
+    height: 60%;
+    box-sizing: border-box;
+    padding: 15px 0px;
+    /* background-color: #424242; */
+    text-align: center;
+    overflow: scroll;
+    overflow-x: hidden;
+    border-radius: 5px;
+    border: solid white 2px;
+}
+
+/* Main agreement content anchor styles. */
+#agreementContent a,
+#agreementDismiss {
+    color: rgba(202, 202, 202, 0.75);
+    transition: 0.25s ease;
+}
+#agreementContent a:hover,
+#agreementContent a:focus,
+#agreementDismiss:focus {
+    color: rgba(255, 255, 255, 0.75);
+}
+#agreementContent a:active,
+#agreementDismiss:active {
+    color: rgba(165, 165, 165, 0.75);
+}
+
+/* Add spacing between agreement content elements. */
+#agreementContent > *:first-child {
+    margin-top: 0px !important;
+}
+#agreementContent > *:last-child {
+    margin-bottom: 0px !important;
+}
+#agreementContent > * {
+    margin: 8px 0px;
+}
+
+/* agreement title styles. */
+#agreementTitle {
+    font-family: 'Avenir Medium';
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    -webkit-user-select: initial;
+}
+
+/* agreement description styles. */
+#agreementDesc {
+    font-size: 12px;
+    font-weight: bold;
+    -webkit-user-select: initial;
+}
+
+/* Div which contains action buttons. */
+#agreementActionContainer {
+    display: flex;
+    align-items: flex-end;
+    margin-top: 10px;
+}
+
+/* agreement acknowledge button styles. */
+#agreementAcknowledge {
+    background: none;
+    border: 1px solid #ffffff;
+    color: white;
+    font-family: 'Avenir Medium';
+    font-weight: bold;
+    border-radius: 2px;
+    padding: 0px 8.1px;
+    cursor: pointer;
+    transition: 0.25s ease;
+    margin-left: 5px;
+}
+#agreementAcknowledge:hover,
+#agreementAcknowledge:focus {
+    box-shadow: 0px 0px 10px 0px #fff;
+    outline: none;
+}
+#agreementAcknowledge:active {
+    border-color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* agreement dismiss option styles. */
+#agreementDismiss {
+    font-weight: bold;
+    font-size: 10px;
+    text-decoration: none;
+    padding-top: 2.5px;
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+}
+#agreementDismiss:hover {
+    color: rgba(255, 255, 255, 0.75);
+}
+#agreementDismiss:active {
+    color: rgba(165, 165, 165, 0.75);
+}
