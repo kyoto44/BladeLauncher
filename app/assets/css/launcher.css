@@ -4592,7 +4592,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* rules container, placed over the main div. */
 #rulesContainer {
-    position: absolute;
+    position: relative;
     z-index: 500;
     top: 22px;
     display: flex;
@@ -4611,16 +4611,33 @@ input:checked + .toggleSwitchSlider:before {
     flex-direction: column;
     align-items: center;
     /*justify-content: space-between;*/
-    width: 60%;
+    width: 50%;
     height: 60%;
     box-sizing: border-box;
-    padding: 15px 0px;
+    /* padding: 0 15px 0; */
     /* background-color: #424242; */
-    text-align: center;
+    text-align: left;
+    border-radius: 5px;
+    /* border: solid white 2px; */
+}
+
+#rulesContentScrollable{
     overflow: scroll;
     overflow-x: hidden;
-    border-radius: 5px;
-    border: solid white 2px;
+}
+#rulesContentScrollable span{
+ display: block;
+}
+
+#rulesContentScrollable::-webkit-scrollbar-thumb{
+    border-radius: 10px;
+    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.50);
+}
+#rulesContentScrollable::-webkit-scrollbar-track{
+    display: none;
+}
+#rulesContentScrollable::-webkit-scrollbar{
+    width: 2px;
 }
 
 /* Main rules content anchor styles. */
@@ -4726,7 +4743,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* agreement container, placed over the main div. */
 #agreementContainer {
-    position: absolute;
+    position: relative;
     z-index: 500;
     top: 22px;
     display: flex;
@@ -4745,16 +4762,34 @@ input:checked + .toggleSwitchSlider:before {
     flex-direction: column;
     align-items: center;
     /*justify-content: space-between;*/
-    width: 60%;
+    width: 50%;
     height: 60%;
     box-sizing: border-box;
     padding: 15px 0px;
     /* background-color: #424242; */
-    text-align: center;
+    text-align: left;
+    border-radius: 5px;
+    /* border: solid white 2px; */
+}
+
+#agreementContentScrollable{
     overflow: scroll;
     overflow-x: hidden;
-    border-radius: 5px;
-    border: solid white 2px;
+}
+
+#agreementContent span{
+    display: block;
+}
+
+#agreementContentScrollable::-webkit-scrollbar-thumb{
+    border-radius: 10px;
+    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.50);
+}
+#agreementContentScrollable::-webkit-scrollbar-track{
+    display: none;
+}
+#agreementContentScrollable::-webkit-scrollbar{
+    width: 2px;
 }
 
 /* Main agreement content anchor styles. */
