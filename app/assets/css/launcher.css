@@ -1,5 +1,6 @@
 /* Github Code Highlighting. */
 @import "../../../node_modules/github-syntax-dark/lib/github-dark.css";
+@import "../fonts/AvenirNextCyr/stylesheet.css";
 
 /*******************************************************************************
  *                                                                             *
@@ -4624,6 +4625,7 @@ input:checked + .toggleSwitchSlider:before {
 #rulesContentScrollable{
     overflow: scroll;
     overflow-x: hidden;
+    font-family: 'Avenir Next Cyr';
 }
 #rulesContentScrollable span{
  display: block;
@@ -4775,6 +4777,7 @@ input:checked + .toggleSwitchSlider:before {
 #agreementContentScrollable{
     overflow: scroll;
     overflow-x: hidden;
+    font-family: 'Avenir Next Cyr';
 }
 
 #agreementContent span{
