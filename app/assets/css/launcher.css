@@ -4595,13 +4595,12 @@ input:checked + .toggleSwitchSlider:before {
 #rulesContainer {
     position: relative;
     z-index: 500;
-    top: 22px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: calc(100% - 22px);
+    height: 100%;
     background: rgba(0, 0, 0, 0.50);
 }
 
@@ -4746,13 +4745,12 @@ input:checked + .toggleSwitchSlider:before {
 #agreementContainer {
     position: relative;
     z-index: 500;
-    top: 22px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: calc(100% - 22px);
+    height: 100%;
     background: rgba(0, 0, 0, 0.50);
 }
 
