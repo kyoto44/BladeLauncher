@@ -4615,8 +4615,10 @@ input:checked + .toggleSwitchSlider:before {
     /* background-color: #424242; */
     text-align: left;
     border-radius: 5px;
-    margin: 100px;
-    margin-bottom: 40px;
+    height: 80%;
+    margin-left: 100px;
+    margin-right: 100px;
+    margin-bottom: 30px;
 }
 
 #rulesContentScrollable{
@@ -4766,8 +4768,10 @@ input:checked + .toggleSwitchSlider:before {
     text-align: left;
     border-radius: 5px;
     /* border: solid white 2px; */
-    margin: 100px;
-    margin-bottom: 40px;
+    height: 80%;
+    margin-left: 100px;
+    margin-right: 100px;
+    margin-bottom: 30px;
 }
 
 #agreementContentScrollable{
