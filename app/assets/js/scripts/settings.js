@@ -1,6 +1,7 @@
 // Requirements
 const os     = require('os')
 const semver = require('semver')
+const dialog = require('electron').remote.dialog
 
 const { JavaGuard } = require('./assets/js/assetguard')
 const DropinModUtil  = require('./assets/js/dropinmodutil')
@@ -41,22 +42,16 @@ document.addEventListener('click', closeSettingsSelect)
 bindSettingsSelect()
 
 
-function bindFileSelectors(){
-    for(let ele of document.getElementsByClassName('settingsFileSelSel')){
-        if(ele.id === 'settingsJavaExecSel'){
-            ele.onchange = (e) => {
-                ele.previousElementSibling.value = ele.files[0].path
-                populateJavaExecDetails(ele.previousElementSibling.value)
-            }
-        } else {
-            ele.onchange = (e) => {
-                ele.previousElementSibling.value = ele.files[0].path
-            }
-        }
+document.getElementById('settingsDataDirSel').addEventListener('click', async () => {
+    const gameFolderPath = await dialog.showOpenDialog(remote.getCurrentWindow(), {
+        properties: ['openDirectory']
+    })
+    if (gameFolderPath.filePaths[0] !== undefined) {
+        document.getElementById('settingsDataDirVal').value = gameFolderPath.filePaths[0]
+        await ConfigManager.setDataDirectory(gameFolderPath.filePaths[0])
+        ConfigManager.save()
     }
-}
-
-bindFileSelectors()
+})
 
 
 /**
