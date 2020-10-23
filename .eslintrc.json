@@ -1,11 +1,11 @@
 {
     "env": {
-        "es6": true,
+        "es2017": true,
         "node": true
     },
     "extends": "eslint:recommended",
     "parserOptions": {
-        "ecmaVersion": 2017,
+        "ecmaVersion": 2019,
         "sourceType": "module"
     },
     "rules": {
@@ -52,15 +52,17 @@
     },
     "overrides": [
         {
-          "files": [ "app/assets/js/scripts/*.js" ],
-          "rules": {
-            "no-unused-vars": [
-                0
+            "files": [
+                "app/assets/js/scripts/*.js"
             ],
-            "no-undef": [
-                0
-            ]
-          }
+            "rules": {
+                "no-unused-vars": [
+                    0
+                ],
+                "no-undef": [
+                    0
+                ]
+            }
         }
-      ]
+    ]
 }

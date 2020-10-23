@@ -1,29 +1,28 @@
 // Requirements
-const {app, BrowserWindow, ipcMain} = require('electron')
-const Menu                          = require('electron').Menu
-const autoUpdater                   = require('electron-updater').autoUpdater
-const ejse                          = require('ejs-electron')
-const fs                            = require('fs')
-const isDev                         = require('./app/assets/js/isdev')
-const path                          = require('path')
-const semver                        = require('semver')
-const url                           = require('url')
+const { app, BrowserWindow, ipcMain, Menu } = require('electron')
+const autoUpdater = require('electron-updater').autoUpdater
+const ejse = require('ejs-electron')
+const fs = require('fs')
+const isDev = require('./app/assets/js/isdev')
+const path = require('path')
+const semver = require('semver')
+const url = require('url')
 
 // Setup auto updater.
 function initAutoUpdater(event, data) {
 
-    if(data){
+    if (data) {
         autoUpdater.allowPrerelease = true
     } else {
         // Defaults to true if application version contains prerelease components (e.g. 0.12.1-alpha.1)
         // autoUpdater.allowPrerelease = true
     }
-    
-    if(isDev){
+
+    if (isDev) {
         autoUpdater.autoInstallOnAppQuit = false
         autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml')
     }
-    if(process.platform === 'darwin'){
+    if (process.platform === 'darwin') {
         autoUpdater.autoDownload = false
     }
     autoUpdater.on('update-available', (info) => {
@@ -40,12 +39,12 @@ function initAutoUpdater(event, data) {
     })
     autoUpdater.on('error', (err) => {
         event.sender.send('autoUpdateNotification', 'realerror', err)
-    }) 
+    })
 }
 
 // Open channel to listen for update actions.
 ipcMain.on('autoUpdateAction', (event, arg, data) => {
-    switch(arg){
+    switch (arg) {
         case 'initAutoUpdater':
             console.log('Initializing auto updater.')
             initAutoUpdater(event, data)
@@ -58,9 +57,9 @@ ipcMain.on('autoUpdateAction', (event, arg, data) => {
                 })
             break
         case 'allowPrereleaseChange':
-            if(!data){
+            if (!data) {
                 const preRelComp = semver.prerelease(app.getVersion())
-                if(preRelComp != null && preRelComp.length > 0){
+                if (preRelComp != null && preRelComp.length > 0) {
                     autoUpdater.allowPrerelease = true
                 } else {
                     autoUpdater.allowPrerelease = data
@@ -86,6 +85,9 @@ ipcMain.on('distributionIndexDone', (event, res) => {
 // https://electronjs.org/docs/tutorial/offscreen-rendering
 app.disableHardwareAcceleration()
 
+// https://github.com/electron/electron/issues/18397
+app.allowRendererProcessReuse = true
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win
@@ -100,7 +102,9 @@ function createWindow() {
         webPreferences: {
             preload: path.join(__dirname, 'app', 'assets', 'js', 'preloader.js'),
             nodeIntegration: true,
-            contextIsolation: false
+            contextIsolation: false,
+            enableRemoteModule: true,
+            worldSafeExecuteJavaScript: true
         },
         backgroundColor: '#171614'
     })
@@ -127,8 +131,8 @@ function createWindow() {
 }
 
 function createMenu() {
-    
-    if(process.platform === 'darwin') {
+
+    if (process.platform === 'darwin') {
 
         // Extend default included application menu to continue support for quit keyboard shortcut
         let applicationSubMenu = {
@@ -190,17 +194,19 @@ function createMenu() {
 
 }
 
-function getPlatformIcon(filename){
-    const opSys = process.platform
-    if (opSys === 'darwin') {
-        filename = filename + '.icns'
-    } else if (opSys === 'win32') {
-        filename = filename + '.ico'
-    } else {
-        filename = filename + '.png'
+function getPlatformIcon(filename) {
+    let ext
+    switch (process.platform) {
+        case 'win32':
+            ext = 'ico'
+            break
+        case 'darwin':
+        case 'linux':
+        default:
+            ext = 'png'
+            break
     }
-
-    return path.join(__dirname, 'app', 'assets', 'images', filename)
+    return path.join(__dirname, 'app', 'assets', 'images', `${filename}.${ext}`)
 }
 
 
@@ -212,14 +218,14 @@ if (!gotTheLock) {
     app.on('second-instance', (event, commandLine, workingDirectory) => {
         // Someone tried to run a second instance, we should focus our window.
         if (win) {
-            if (win.isMinimized()){
+            if (win.isMinimized()) {
                 win.restore()
             }
             // win.show()
             win.focus()
         }
     })
-  
+
 
     app.on('ready', createWindow)
     app.on('ready', createMenu)

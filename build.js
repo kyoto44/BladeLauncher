@@ -1,8 +1,8 @@
 const builder = require('electron-builder')
 const Platform = builder.Platform
 
-function getCurrentPlatform(){
-    switch(process.platform){
+function getCurrentPlatform() {
+    switch (process.platform) {
         case 'win32':
             return Platform.WINDOWS
         case 'darwin':
@@ -20,7 +20,7 @@ builder.build({
     config: {
         appId: 'nblade.bladelauncher',
         productName: 'Blade Launcher',
-        artifactName: '${productName}.${ext}',
+        artifactName: '${productName}-setup-${version}.${ext}',
         copyright: 'Copyright © 2019-2020 N-Blade LLC',
         directories: {
             buildResources: 'build',
