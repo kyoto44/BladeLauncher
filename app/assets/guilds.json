@@ -1,0 +1,34 @@
+[
+    {
+        "name": "Без гильдии",
+        "image": "nbladelogo"
+    },
+    {
+        "name": "КАЭР МОРХЕН",
+        "image": "kaermorhen"
+    },
+    {
+        "name": "Империя",
+        "image": "empire"
+    },
+    {
+        "name": "FORCE",
+        "image": "force"
+    },
+    {
+        "name": "Немезида",
+        "image": "nemezida"
+    },
+    {
+        "name": "Медведи",
+        "image": "medvedi"
+    },
+    {
+        "name": "Ветераны",
+        "image": "veterani"
+    },
+    {
+        "name": "Milky Way",
+        "image": "milkyway"
+    }
+] 

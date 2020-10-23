@@ -41,7 +41,7 @@
         "settingsAccountTabHeaderDesc": "Добавить новую учетную запись или редактировать существующую.",
         "settingsAddAccountText": "Добавить аккаунт",
         "settingsFieldTitleCurrentAccount": "Текущий аккаунт",
-
+        "settingsFieldTitleCurrentPlayer": "Данные персонажа",
         "settingsTabHeaderTextMinecraftId": "Настройки Minecraft",
         "settingsTabHeaderDescMinecraftId": "Options related to game launch.",
         "settingsFieldTitleResolution": "Разрешение экрана",

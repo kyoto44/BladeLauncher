@@ -39,6 +39,21 @@
             <div id="settingsCurrentAccounts">
                 <!-- Auth accounts populated here. -->
             </div>
+            <div id="settingsCurrentAccountsHeader">
+                <span class="settingsFieldTitle" id="settingsFieldTitleCurrentAccount">Данные персонажа</span>
+            </div>
+            <form id="discordRPCForm">
+                <div class="discordRPCContainer">
+                    <input id="nicknameDiscordRPC" class="discordRPCField" type="text" placeholder="Ник персонажа">
+                </div>
+                <div class="discordRPCContainer">
+                    <!-- <input id="guildDiscordRPC" class="discordRPCField" type="text" placeholder="Гильдия"> -->
+                    <select id="guildListDiscordRPC" class="discordRPCGuildList"></select>
+                </div>
+                <div class="discordRPCContainer" id="discordRPCButtonContent">
+                    <button id="discordRPCButton">Сохранить</button>
+                </div>
+            </form>
         </div>
         <div id="settingsTabMinecraft" class="settingsTab" style="display: none;">
             <div class="settingsTabHeader">
@@ -369,4 +384,5 @@
         </div>
     </div>
     <script src="./assets/js/scripts/settings.js"></script>
+    <script src="./assets/js/scripts/discordrpc.js"></script>
 </div>

@@ -346,16 +346,20 @@ exports.updateAuthAccount = function(uuid, accessToken){
  * @param {string} accessToken The accessToken of the authenticated account.
  * @param {string} username The username (usually email) of the authenticated account.
  * @param {string} displayName The in game name of the authenticated account.
+ * @param {string} discordNickname The game name for Discord RPC of the authenticated account.
+ * @param {string} discordGuild The guild name for Discord RPC of the authenticated account.
  * 
  * @returns {Object} The authenticated account object created by this action.
  */
-exports.addAuthAccount = function(uuid, accessToken, username, displayName){
+exports.addAuthAccount = function (uuid, accessToken, username, displayName, discordNickname = '', discordGuild = '') {
     config.selectedAccount = uuid
     config.authenticationDatabase[uuid] = {
         accessToken,
         username: username.trim(),
         uuid: uuid.trim(),
-        displayName: displayName.trim()
+        displayName: displayName.trim(),
+        discordNickname: discordNickname.trim(),
+        discordGuild: discordGuild.trim(),
     }
     return config.authenticationDatabase[uuid]
 }
@@ -695,3 +699,13 @@ exports.getAllowPrerelease = function(def = false){
 exports.setAllowPrerelease = function(allowPrerelease){
     config.settings.launcher.allowPrerelease = allowPrerelease
 }
+
+exports.updateDiscordNickname = function (uuid, nickname) {
+    config.authenticationDatabase[uuid].discordNickname = nickname
+    return config.authenticationDatabase[uuid]
+}
+
+exports.updateDiscordGuild = function (uuid, guild) {
+    config.authenticationDatabase[uuid].discordGuild = guild
+    return config.authenticationDatabase[uuid]
+} 

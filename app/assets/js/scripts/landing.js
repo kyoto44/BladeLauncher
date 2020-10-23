@@ -83,10 +83,20 @@ function setLaunchEnabled(val){
     document.getElementById('launch_button').disabled = !val
 }
 
+var guildList = ''
 // Bind launch button
-document.getElementById('launch_button').addEventListener('click', function(e){
-    loggerLanding.log('Launching game..')
-
+document.getElementById('launch_button').addEventListener("click", async function (e) {
+    await loggerLanding.log("Launching game..");
+    if (guildList === '') {
+      guildList = await fetch('https://raw.githubusercontent.com/kyoto44/BladeLauncher/blade/app/assets/guilds.json');
+      //https://raw.githubusercontent.com/N-Blade/BladeLauncher/blade/app/assets/guilds.json 
+      guildList = await guildList.json();
+      guildList.forEach(function (guild) {
+        let option = document.createElement('option');
+        option.innerHTML = guild.name;
+        guildListDiscordRPC.appendChild(option);
+      });
+    }
     dlAsync()
 
     if (true)
@@ -115,9 +125,23 @@ document.getElementById('launch_button').addEventListener('click', function(e){
 })
 
 // Bind settings button
-document.getElementById('settingsMediaButton').onclick = (e) => {
-    prepareSettings()
-    switchView(getCurrentView(), VIEWS.settings)
+document.getElementById("settingsMediaButton").onclick = async (e) => {
+    const guildListDiscordRPC = document.getElementById('guildListDiscordRPC')
+    const nicknameDiscordRPC = document.getElementById('nicknameDiscordRPC')
+    nicknameDiscordRPC.value = ConfigManager.getSelectedAccount().discordNickname
+
+    if (guildList === '') {
+      guildList = await fetch('https://raw.githubusercontent.com/kyoto44/BladeLauncher/blade/app/assets/guilds.json');
+      guildList = await guildList.json();
+      guildList.forEach(function (guild) {
+        let option = document.createElement('option');
+        option.innerHTML = guild.name;
+        guildListDiscordRPC.appendChild(option);
+      });
+    }
+    //guildListDiscordRPC.options[guildListDiscordRPC.selectedIndex].text = ConfigManager.getSelectedAccount().discordGuild
+    await prepareSettings();
+    await switchView(getCurrentView(), VIEWS.settings);
 }
 
 // Bind avatar overlay button.
@@ -687,19 +711,39 @@ function dlAsync(login = true){
                     })
                     
                     // Init Discord Hook
-                    const distro = DistroManager.getDistribution()
-                    if(distro.discord != null && serv.discord != null){
-                        DiscordWrapper.initRPC(distro.discord, serv.discord)
-                        hasRPC = true
-                        pb.addCloseListener((code, signal) => {
-                            loggerLaunchSuite.log('Shutting down Discord Rich Presence..')
-                            DiscordWrapper.shutdownRPC()
-                            hasRPC = false
-                        })
+                    const distro = DistroManager.getDistribution();
+                    if (distro.discord != null && serv.discord != null) {
+
+                        let guildname = ConfigManager.getSelectedAccount().discordGuild
+                        let guildimage
+
+                        const initDiscordRPC = async () => {
+                            guildList.forEach(function (guild) {
+                                if (guild.name.toLowerCase() === ConfigManager.getSelectedAccount().discordGuild.toLowerCase()) {
+                                guildimage = guild.image
+                                }
+                            });
+
+                            DiscordWrapper.initRPC({
+                                nickname: ConfigManager.getSelectedAccount().discordNickname,
+                                guild: ConfigManager.getSelectedAccount().discordGuild,
+                                largeImageKey: 'nbladelogo',
+                                largeImageText: 'Северный Клинок',
+                                smallImageKey: guildimage,
+                                smallImageText: guildname
+                            });
+                            hasRPC = true;
+                            pb.addCloseListener((code, signal) => {
+                                loggerLaunchSuite.log("Shutting down Discord Rich Presence..");
+                                DiscordWrapper.shutdownRPC();
+                                hasRPC = false;
+                            });
+                        }
+                        initDiscordRPC();
                     }
 
-                    pb.build()
-                    setLaunchDetails('Done. Enjoy the game!')
+                    pb.build();
+                    setLaunchDetails("Done. Enjoy the game!");
 
                 } catch(err) {
                     loggerLaunchSuite.error('Error during launch', err)

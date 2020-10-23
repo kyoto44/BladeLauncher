@@ -1304,7 +1304,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Auth account list container styles. */
 #settingsCurrentAccounts {
-    margin-bottom: 5%;
+    /* margin-bottom: 5%; */
 }
 #settingsCurrentAccounts > .settingsAuthAccount:not(:last-child) {
     margin-bottom: 10px;
@@ -4882,4 +4882,74 @@ input:checked + .toggleSwitchSlider:before {
 }
 #agreementDismiss:active {
     color: rgba(165, 165, 165, 0.75);
+}
+
+.discordRPCContainer {
+    position: relative;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#discordRPCButton {
+    background: none;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    left: -12.5%;
+    transition: 0.5s ease;
+}
+#discordRPCButton:disabled {
+    color: rgba(255, 255, 255, 0.75);
+    pointer-events: none;
+}
+#discordRPCButton[loading] {
+    color: #fff;
+}
+#discordRPCButton:hover,
+#discordRPCButton:focus {
+    text-shadow: 0px 0px 20px #fff;
+    outline: none;
+}
+#discordRPCButton:active {
+    color: #c7c7c7;
+    text-shadow:  0px 0px 20px #c7c7c7;
+}
+
+#discordRPCButtonContent {
+    display: flex;
+    align-items: center;
+}
+
+/* DiscordRPC text input styles. */
+.discordRPCField {
+    font-family: 'Avenir Book';
+    background: rgba(0, 0, 0, 0.25);
+    border-width: 1.5px 0px 0px 0px;
+    border-style: solid;
+    width: 75%;
+    margin-bottom: 20px;
+    color: #fff;
+    font-weight: bold;
+    box-sizing: border-box;
+    padding: 7.5px;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.discordRPCGuildList {
+    font-family: 'Avenir Book';
+    background: rgba(0, 0, 0, 0.25);
+    border-width: 1.5px 0px 0px 0px;
+    border-style: solid;
+    width: 75%;
+    margin-bottom: 20px;
+    color: #fff;
+    font-weight: bold;
+    box-sizing: border-box;
+    padding: 7.5px;
+    font-size: 14px;
+    letter-spacing: 1px;
 }
