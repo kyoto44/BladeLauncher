@@ -621,10 +621,6 @@ body, button {
     position: relative;
     transition: 0.5s ease;
 }
-#loginButton:disabled {
-    color: rgba(255, 255, 255, 0.75);
-    pointer-events: none;
-}
 #loginButton[loading] {
     color: #fff;
 }
