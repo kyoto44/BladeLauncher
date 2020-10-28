@@ -296,6 +296,17 @@ function showLaunchFailure(title, desc){
     toggleLaunchArea(false)
 }
 
+function showLibrariesInstallNote(title, desc) {
+    setOverlayContent(title, desc, "Я понял", "Закрыть");
+    setOverlayHandler(() => {
+      document.getElementById('overlayAcknowledge').onclick = () => {
+        toggleOverlay(false)
+      }
+    });
+    toggleOverlay(true);
+    toggleLaunchArea(true);
+}
+
 /* System (Java) Scan */
 
 let sysAEx
@@ -564,6 +575,14 @@ function dlAsync(login = true){
                     loggerLaunchSuite.log('Validated distibution index.')
                     setLaunchDetails('Loading version information..')
                     break
+                case 'librariesInstall':
+                    setLaunchPercentage(30, 100);
+                    loggerLaunchSuite.log("Libraries Install Needed!");
+                    showLibrariesInstallNote(
+                        "Требуется установка необходимых библиотек!",
+                        "Для корректной работы игры, Вам будут загружены и установлены необходимые библиотеки."
+                    );
+                    break; 
                 case 'version':
                     setLaunchPercentage(40, 100)
                     loggerLaunchSuite.log('Version data loaded.')

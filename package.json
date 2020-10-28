@@ -39,7 +39,8 @@
     "tar-fs": "^2.0.0",
     "webtorrent": "^0.107.17",
     "winreg": "^1.2.4",
-    "xml2js": "^0.4.23"
+    "xml2js": "^0.4.23",
+    "node-wget-promise": "^0.1.6"
   },
   "devDependencies": {
     "cross-env": "^6.0.3",
