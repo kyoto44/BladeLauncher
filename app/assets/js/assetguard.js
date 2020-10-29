@@ -1235,26 +1235,24 @@ class AssetGuard extends EventEmitter {
         })
     }
 
+    async checkVCPP() {
+        const Registry = require('winreg')
+        let regKey = new Registry({                  
+            hive: Registry.HKLM,                                        
+            key:  '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}' 
+        })
+        let keyExists = await defer(cb => regKey.keyExists(cb))
+        if (!keyExists) {
+            console.log("VC++ Missing!")
+            return true
+        }
+    }
+
     async checkDirectX() {
         if (!fs.existsSync("C:\\Windows\\System32\\D3DX9_43.dll")) {
                 console.log("DirectX Missing!")
                 return true
-        }
-    }
-
-    async checkVCPP() {
-        const Registry = require('winreg')
-        let regKey = new Registry({                  
-        hive: Registry.HKLM,                                        
-        key:  '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}' 
-        })
-        
-        regKey.values(function (err) {
-        if (err) {
-            console.log("VC++ Missing!", err)
-            return true
-            }
-        })
+        } 
     }
 
     async loadPreviousVersionFilesInfo(targetVersionData) {
@@ -1736,10 +1734,10 @@ class AssetGuard extends EventEmitter {
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
             let isVCPPMissing = await this.checkVCPP()
-            let isDirectxMissing = await this.checkDirectX()
-            if (isVCPPMissing || isVCPPMissing) {
-                this.emit('validate', 'librariesInstall');
+            let isDirectXMissing = await this.checkDirectX()
+            if (isVCPPMissing || isDirectXMissing) {
                 (async () => {
+                    this.emit('validate', 'librariesInstall');
                     if (isVCPPMissing) {
                         const VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
                         console.log('Downloading VC++...');
@@ -1760,7 +1758,7 @@ class AssetGuard extends EventEmitter {
                         });
                     }
                     
-                    if (isDirectxMissing) {
+                    if (isDirectXMissing) {
                         console.log('Downloading DirectX...');
                         const DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
                         await wget('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe', {
