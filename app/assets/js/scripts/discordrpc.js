@@ -14,6 +14,7 @@ const isValid = (value, regex) => {
     }
 }
 
+/*
 // Disable default form behavior.
 discordRPCForm.onsubmit = () => { return false }
 
@@ -27,4 +28,4 @@ discordRPCButton.addEventListener('click', () => {
     let guildname = e.options[e.selectedIndex].text;
     ConfigManager.updateDiscordGuild(current.uuid, guildname)
     ConfigManager.save()
-})
+}) */

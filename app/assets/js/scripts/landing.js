@@ -87,16 +87,15 @@ var guildList = ''
 // Bind launch button
 document.getElementById('launch_button').addEventListener("click", async function (e) {
     await loggerLanding.log("Launching game..");
-    if (guildList === '') {
-      guildList = await fetch('https://raw.githubusercontent.com/kyoto44/BladeLauncher/blade/app/assets/guilds.json');
-      //https://raw.githubusercontent.com/N-Blade/BladeLauncher/blade/app/assets/guilds.json 
+ /* if (guildList === '') {
+      guildList = await fetch('https://raw.githubusercontent.com/N-Blade/BladeLauncher/blade/app/assets/guilds.json');
       guildList = await guildList.json();
       guildList.forEach(function (guild) {
         let option = document.createElement('option');
         option.innerHTML = guild.name;
         guildListDiscordRPC.appendChild(option);
       });
-    }
+    } */
     dlAsync()
 
     if (true)
@@ -128,17 +127,17 @@ document.getElementById('launch_button').addEventListener("click", async functio
 document.getElementById("settingsMediaButton").onclick = async (e) => {
     const guildListDiscordRPC = document.getElementById('guildListDiscordRPC')
     const nicknameDiscordRPC = document.getElementById('nicknameDiscordRPC')
-    nicknameDiscordRPC.value = ConfigManager.getSelectedAccount().discordNickname
+ /* nicknameDiscordRPC.value = ConfigManager.getSelectedAccount().discordNickname
 
     if (guildList === '') {
-      guildList = await fetch('https://raw.githubusercontent.com/kyoto44/BladeLauncher/blade/app/assets/guilds.json');
+      guildList = await fetch('https://raw.githubusercontent.com/N-Blade/BladeLauncher/blade/app/assets/guilds.json');
       guildList = await guildList.json();
       guildList.forEach(function (guild) {
         let option = document.createElement('option');
         option.innerHTML = guild.name;
         guildListDiscordRPC.appendChild(option);
       });
-    }
+    } */
     //guildListDiscordRPC.options[guildListDiscordRPC.selectedIndex].text = ConfigManager.getSelectedAccount().discordGuild
     await prepareSettings();
     await switchView(getCurrentView(), VIEWS.settings);
