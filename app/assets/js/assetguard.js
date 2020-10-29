@@ -1235,10 +1235,26 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async checkLibraries() {
-        if (!fs.existsSync(ConfigManager.getGameConfigPath())) {
+    async checkDirectX() {
+        if (!fs.existsSync("C:\\Windows\\System32\\D3DX9_43.dll")) {
+                console.log("DirectX Missing!")
                 return true
         }
+    }
+
+    async checkVCPP() {
+        const Registry = require('winreg')
+        let regKey = new Registry({                  
+        hive: Registry.HKLM,                                        
+        key:  '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}' 
+        })
+        
+        regKey.values(function (err) {
+        if (err) {
+            console.log("VC++ Missing!", err)
+            return true
+            }
+        })
     }
 
     async loadPreviousVersionFilesInfo(targetVersionData) {
@@ -1719,46 +1735,51 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
-            let isLibrariesMissing = await this.checkLibraries()
-            if (isLibrariesMissing) {
+            let isVCPPMissing = await this.checkVCPP()
+            let isDirectxMissing = await this.checkDirectX()
+            if (isVCPPMissing || isVCPPMissing) {
                 this.emit('validate', 'librariesInstall');
                 (async () => {
-                    const VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x64.exe")
-                    console.log('Downloading VC++...');
-                    await wget('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe', {
-                        output: VCexePath
-                    });
-                    console.log('VC++ download completed & installation started...');
-                    child_process.exec(`${VCexePath} /q`, (error, stdout, stderr) => {
-                        if (error) {
-                            console.log(`error: ${error.message}`);
-                            return;
-                        }
-                        if (stderr) {
-                            console.log(`stderr: ${stderr}`);
-                            return;
-                        }
-                        console.log('VC++ Installation completed.');
-                    });
-
-                    console.log('Downloading DirectX...');
-                    const DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
-                    await wget('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe', {
-                        output: DXexePath
-                    });
+                    if (isVCPPMissing) {
+                        const VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
+                        console.log('Downloading VC++...');
+                        await wget('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', {
+                            output: VCexePath
+                        });
+                        console.log('VC++ download completed & installation started...');
+                        child_process.exec(`${VCexePath} /q`, (error, stdout, stderr) => {
+                            if (error) {
+                                console.log(`error: ${error.message}`);
+                                return;
+                            }
+                            if (stderr) {
+                                console.log(`stderr: ${stderr}`);
+                                return;
+                            }
+                            console.log('VC++ Installation completed.');
+                        });
+                    }
                     
-                    console.log('DirectX download completed & installation started...');
-                    child_process.exec(`${DXexePath} /Q`, (error, stdout, stderr) => {
-                        if (error) {
-                            console.log(`error: ${error.message}`);
-                            return;
-                        }
-                        if (stderr) {
-                            console.log(`stderr: ${stderr}`);
-                            return;
-                        }
-                        console.log('DirectX Installation completed.');
-                    });
+                    if (isDirectxMissing) {
+                        console.log('Downloading DirectX...');
+                        const DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
+                        await wget('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe', {
+                            output: DXexePath
+                        });
+                        
+                        console.log('DirectX download completed & installation started...');
+                        child_process.exec(`${DXexePath} /Q`, (error, stdout, stderr) => {
+                            if (error) {
+                                console.log(`error: ${error.message}`);
+                                return;
+                            }
+                            if (stderr) {
+                                console.log(`stderr: ${stderr}`);
+                                return;
+                            }
+                            console.log('DirectX Installation completed.');
+                        });
+                    }
                 })();
             }
             this.emit('validate', 'version')
