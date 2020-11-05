@@ -9,7 +9,6 @@ const Registry      = require('winreg')
 const request       = require('request')
 const xml2js        = require('xml2js')
 const url           = require('url')
-const wget          = require('node-wget-promise');
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -552,9 +551,7 @@ class AssetGuard extends EventEmitter {
             if (isVCPPMissing) {
                 const VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
                 console.log('Downloading VC++...');
-                await wget('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', {
-                    output: VCexePath
-                });
+                request('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe').pipe(fs.createWriteStream(VCexePath))
                 console.log('VC++ download completed & installation started...');
                 child_process.exec(`${VCexePath} /q`, (error, stderr) => {
                     if (error) {
@@ -572,10 +569,7 @@ class AssetGuard extends EventEmitter {
             if (isDirectXMissing) {
                 console.log('Downloading DirectX...');
                 const DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
-                await wget('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe', {
-                    output: DXexePath
-                });
-
+                request('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe').pipe(fs.createWriteStream(DXexePath))
                 console.log('DirectX download completed & installation started...');
                 child_process.exec(`${DXexePath} /Q`, (error, stderr) => {
                     if (error) {
