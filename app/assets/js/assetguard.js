@@ -551,8 +551,21 @@ class AssetGuard extends EventEmitter {
             if (isVCPPMissing) {
                 const VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
                 console.log('Downloading VC++...');
-                request('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe').pipe(fs.createWriteStream(VCexePath))
-                console.log('VC++ download completed & installation started...');
+                await new Promise((resolve, reject) => {
+                    request('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe')
+                        .pipe(fs.createWriteStream(VCexePath))
+                        .on('finish', () => {
+                            console.log('VC++ download completed & installation started...');
+                            resolve();
+                        })
+                        .on('error', (error) => {
+                            reject(error);
+                        })
+                })
+                .catch(error => {
+                    console.log(`Something happened: ${error}`);
+                });
+                
                 child_process.exec(`${VCexePath} /q`, (error, stderr) => {
                     if (error) {
                         console.log(`error: ${error.message}`);
@@ -569,8 +582,20 @@ class AssetGuard extends EventEmitter {
             if (isDirectXMissing) {
                 console.log('Downloading DirectX...');
                 const DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
-                request('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe').pipe(fs.createWriteStream(DXexePath))
-                console.log('DirectX download completed & installation started...');
+                await new Promise((resolve, reject) => {
+                    request('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe')
+                        .pipe(fs.createWriteStream(DXexePath))
+                        .on('finish', () => {
+                            console.log('DirectX download completed & installation started...');
+                            resolve();
+                        })
+                        .on('error', (error) => {
+                            reject(error);
+                        })
+                })
+                .catch(error => {
+                    console.log(`Something happened: ${error}`);
+                });
                 child_process.exec(`${DXexePath} /Q`, (error, stderr) => {
                     if (error) {
                         console.log(`error: ${error.message}`);
