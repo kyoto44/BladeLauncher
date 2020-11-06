@@ -525,37 +525,50 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async checkVCPP() {
-        const Registry = require('winreg')
-        let regKey = new Registry({                  
-            hive: Registry.HKLM,                                        
-            key:  '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}' 
-        })
-        let keyExists = await defer(cb => regKey.keyExists(cb))
-        if (!keyExists) {
-            console.log("VC++ Missing!")
-            return true
-        }
-    }
 
-    async checkDirectX() {
-        if (!fs.existsSync("C:\\Windows\\System32\\D3DX9_43.dll")) {
+
+    async validateRequirements() {
+
+        function checkDirectX() {
+            if (!fs.existsSync("C:\\Windows\\System32\\D3DX9_43.dll")) {
                 console.log("DirectX Missing!")
                 return true
-        } 
-    }
+            }
+        }
 
-    async validateRequirements(isVCPPMissing, isDirectXMissing) {
-        if (isVCPPMissing || isDirectXMissing) {
+        async function checkVCPP() {
+            const Registry = require('winreg')
+            let regKey = new Registry({
+                hive: Registry.HKLM,
+                key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
+            })
+            let keyExists = await defer(cb => regKey.keyExists(cb))
+            if (!keyExists) {
+                console.log("VC++ Missing!")
+                return true
+            }
+        }
+        
+        var VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
+        var DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
+
+        if (checkDirectX() || checkVCPP()) {
             this.emit('validate', 'librariesInstall');
-            if (isVCPPMissing) {
-                const VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
+
+            const VCPPdl = () => { 
+                return new Promise((resolve, reject) => {
                 console.log('Downloading VC++...');
-                await new Promise((resolve, reject) => {
                     request('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe')
                         .pipe(fs.createWriteStream(VCexePath))
                         .on('finish', () => {
-                            console.log('VC++ download completed & installation started...');
+                            console.log('VC++ download completed');
+                            fs.createReadStream(VCexePath).
+                                pipe(crypto.createHash('md5').setEncoding('hex')).
+                                on('finish', function () {
+                                    if (this.read() !== "35da2bf2befd998980a495b6f4f55e60") {
+                                        reject('Wrong Hash!')
+                                    }
+                                })
                             resolve();
                         })
                         .on('error', (error) => {
@@ -565,7 +578,36 @@ class AssetGuard extends EventEmitter {
                 .catch(error => {
                     console.log(`Something happened: ${error}`);
                 });
-                
+            }
+
+            const DXdl = () => { 
+                return new Promise((resolve, reject) => {
+                console.log('Downloading DirectX...');
+                    request('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe')
+                        .pipe(fs.createWriteStream(DXexePath))
+                        .on('finish', () => {
+                            console.log('DirectX download completed');
+                            fs.createReadStream(DXexePath).
+                                pipe(crypto.createHash('md5').setEncoding('hex')).
+                                on('finish', function () {
+                                    if (this.read() !== "bcbb7c0cd9696068988953990ec5bd11") {
+                                        reject('Wrong Hash!')
+                                    }
+                                })
+                            resolve();
+                        })
+                        .on('error', (error) => {
+                            reject(error);
+                        })
+                })
+                .catch(error => {
+                    console.log(`Something happened: ${error}`);
+                });
+            }
+
+            await Promise.all([VCPPdl(),DXdl()])
+
+            if (checkVCPP()) {
                 child_process.exec(`${VCexePath} /q`, (error, stderr) => {
                     if (error) {
                         console.log(`error: ${error.message}`);
@@ -578,24 +620,8 @@ class AssetGuard extends EventEmitter {
                     console.log('VC++ Installation completed.');
                 });
             }
-
-            if (isDirectXMissing) {
-                console.log('Downloading DirectX...');
-                const DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
-                await new Promise((resolve, reject) => {
-                    request('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe')
-                        .pipe(fs.createWriteStream(DXexePath))
-                        .on('finish', () => {
-                            console.log('DirectX download completed & installation started...');
-                            resolve();
-                        })
-                        .on('error', (error) => {
-                            reject(error);
-                        })
-                })
-                .catch(error => {
-                    console.log(`Something happened: ${error}`);
-                });
+            
+            if (checkDirectX()) {
                 child_process.exec(`${DXexePath} /Q`, (error, stderr) => {
                     if (error) {
                         console.log(`error: ${error.message}`);
@@ -1089,7 +1115,7 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
-            await this.validateRequirements(await this.checkVCPP(), await this.checkDirectX())
+            await this.validateRequirements()
             this.emit('validate', 'version')
             await this.validateVersion(versionData, reusableModules)
             this.emit('validate', 'libraries')
