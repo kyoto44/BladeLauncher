@@ -569,27 +569,29 @@ class AssetGuard extends EventEmitter {
                             reject(error);
                         })
                 })
-                .catch(error => {
-                    console.log(`Something went wrong... : ${error}`);
-                });
         }
 
-        function installReq(reqName, path, flags) {
-            child_process.exec(`${path} ${flags}`, (error, stderr) => {
-                    if (error) {
-                        console.log(`error: ${error.message}`);
-                        return;
-                    }
-                    if (stderr) {
-                        console.log(`stderr: ${stderr}`);
-                        return;
-                    }
-                    console.log(`${reqName} Installation completed.`);
-                });
-
+       async function installReq(reqName, path, flags) {
+            return new Promise((resolve, reject) => {
+                child_process.exec(`${path} ${flags}`, (error, stderr) => {
+                        if (error) {
+                            console.log(`error: ${error.message}`);
+                            reject(error);
+                            return;
+                        }
+                        if (stderr) {
+                            console.log(`stderr: ${stderr}`);
+                            return;
+                        }
+                        console.log(`${reqName} Installation completed.`);
+                        resolve();
+                    });
+            });
         }
 
-        if (await checkDirectX() || await checkVCPP()) {
+        const isDirectXMissing = await checkDirectX()
+        const isVCPPMissing = await checkVCPP()
+        if (isDirectXMissing || isVCPPMissing) {
             this.emit('validate', 'librariesInstall');
             await Promise.all(
                 [
@@ -598,12 +600,12 @@ class AssetGuard extends EventEmitter {
                 ]
             )
 
-            if (await checkVCPP()) {
-                installReq('VC++', VCexePath, '/q')
+            if (isVCPPMissing) {
+               await installReq('VC++', VCexePath, '/q')
             }
             
-            if (await checkDirectX()) {
-                installReq('DirectX', DXexePath, '/Q')
+            if (isDirectXMissing) {
+               await installReq('DirectX', DXexePath, '/Q')
             }
 
             throw 'Requirements missing'

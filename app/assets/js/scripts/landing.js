@@ -289,9 +289,8 @@ function dlAsync(login = true){
                     break
                 case 'librariesInstall':
                     setLaunchPercentage(30, 100);
-                    loggerLaunchSuite.log("Libraries Install Needed!");
-                    document.getElementById('launch_button').disabled = true
-                    showLibrariesInstallNote();
+                    loggerLaunchSuite.log("Libraries Install Required!");
+                    setLaunchDetails('Installing libraries..')
                     break; 
                 case 'version':
                     setLaunchPercentage(40, 100)
@@ -385,9 +384,7 @@ function dlAsync(login = true){
 
             //Workaround for missing requirements
             if (m.result.versionData == 'Requirements missing') {
-                setOverlayHandler(null)
-                toggleOverlay(true)
-                toggleLaunchArea(false)
+                showLaunchFailure('Error During Launch', 'На вашей системе не найдены необходимые библиотеки!')
                 document.getElementById('launch_button').disabled = false
                 allGood = false
             }
