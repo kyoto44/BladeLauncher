@@ -375,6 +375,8 @@ function dlAsync(login = true){
                 Lang.queryJS('requirements.accept')
                 )
                 allGood = false
+                aEx.disconnect()
+                return
             }
             // If these properties are not defined it's likely an error.
             if(m.result.forgeData == null || m.result.versionData == null){

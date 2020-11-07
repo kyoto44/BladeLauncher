@@ -563,8 +563,9 @@ class AssetGuard extends EventEmitter {
                                 on('finish', function () {
                                     if (this.read() !== hash) {
                                         reject('Wrong Hash!')
+                                    } else {
+                                        resolve();
                                     }
-                                    resolve();
                                 })
                         })
                         .on('error', (error) => {
@@ -585,9 +586,10 @@ class AssetGuard extends EventEmitter {
                         if (error) {
                             console.log(`error: ${error.message}`);
                             reject(error);
+                        } else {
+                            console.log(`${reqName} Installation completed.`);
+                            resolve();
                         }
-                        console.log(`${reqName} Installation completed.`);
-                        resolve();
                     });
             });
         }
@@ -1113,19 +1115,11 @@ class AssetGuard extends EventEmitter {
 
         } catch (err){
             console.error(err)
-            if (err === 'Requirements missing') {
-                return {
-                versionData: err,
-                forgeData: err,
-                error: err
-                }
-            } else {
-                return {
+            return {
                 versionData: null,
                 forgeData: null,
                 error: err
-                }
-            }    
+            }  
         }
         
 
