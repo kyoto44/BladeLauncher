@@ -290,6 +290,7 @@ function dlAsync(login = true){
                 case 'librariesInstall':
                     setLaunchPercentage(30, 100);
                     loggerLaunchSuite.log("Libraries Install Needed!");
+                    document.getElementById('launch_button').disabled = true
                     showLibrariesInstallNote();
                     break; 
                 case 'version':
@@ -382,6 +383,14 @@ function dlAsync(login = true){
 
             let allGood = true
 
+            //Workaround for missing requirements
+            if (m.result.versionData == 'Requirements missing') {
+                setOverlayHandler(null)
+                toggleOverlay(true)
+                toggleLaunchArea(false)
+                document.getElementById('launch_button').disabled = false
+                allGood = false
+            }
             // If these properties are not defined it's likely an error.
             if(m.result.forgeData == null || m.result.versionData == null){
                 loggerLaunchSuite.error('Error during validation:', m.result)

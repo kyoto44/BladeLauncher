@@ -525,11 +525,11 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-
-
     async validateRequirements() {
+        const VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
+        const DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
 
-        function checkDirectX() {
+        async function checkDirectX() {
             if (!fs.existsSync("C:\\Windows\\System32\\D3DX9_43.dll")) {
                 console.log("DirectX Missing!")
                 return true
@@ -549,23 +549,17 @@ class AssetGuard extends EventEmitter {
             }
         }
         
-        var VCexePath = path.join(ConfigManager.getCommonDirectory(), "/vcredist_x86.exe")
-        var DXexePath = path.join(ConfigManager.getCommonDirectory(), "/dxwebsetup.exe")
-
-        if (checkDirectX() || checkVCPP()) {
-            this.emit('validate', 'librariesInstall');
-
-            const VCPPdl = () => { 
-                return new Promise((resolve, reject) => {
-                console.log('Downloading VC++...');
-                    request('https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe')
-                        .pipe(fs.createWriteStream(VCexePath))
+        function downloadReq(reqName, url, path, hash) {
+            return new Promise((resolve, reject) => {
+                console.log(`Downloading ${reqName}...`);
+                    request(url)
+                        .pipe(fs.createWriteStream(path))
                         .on('finish', () => {
-                            console.log('VC++ download completed');
-                            fs.createReadStream(VCexePath).
+                            console.log(`${reqName} download completed`);
+                            fs.createReadStream(path).
                                 pipe(crypto.createHash('md5').setEncoding('hex')).
                                 on('finish', function () {
-                                    if (this.read() !== "35da2bf2befd998980a495b6f4f55e60") {
+                                    if (this.read() !== hash) {
                                         reject('Wrong Hash!')
                                     }
                                 })
@@ -576,39 +570,12 @@ class AssetGuard extends EventEmitter {
                         })
                 })
                 .catch(error => {
-                    console.log(`Something happened: ${error}`);
+                    console.log(`Something went wrong... : ${error}`);
                 });
-            }
+        }
 
-            const DXdl = () => { 
-                return new Promise((resolve, reject) => {
-                console.log('Downloading DirectX...');
-                    request('https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe')
-                        .pipe(fs.createWriteStream(DXexePath))
-                        .on('finish', () => {
-                            console.log('DirectX download completed');
-                            fs.createReadStream(DXexePath).
-                                pipe(crypto.createHash('md5').setEncoding('hex')).
-                                on('finish', function () {
-                                    if (this.read() !== "bcbb7c0cd9696068988953990ec5bd11") {
-                                        reject('Wrong Hash!')
-                                    }
-                                })
-                            resolve();
-                        })
-                        .on('error', (error) => {
-                            reject(error);
-                        })
-                })
-                .catch(error => {
-                    console.log(`Something happened: ${error}`);
-                });
-            }
-
-            await Promise.all([VCPPdl(),DXdl()])
-
-            if (checkVCPP()) {
-                child_process.exec(`${VCexePath} /q`, (error, stderr) => {
+        function installReq(reqName, path, flags) {
+            child_process.exec(`${path} ${flags}`, (error, stderr) => {
                     if (error) {
                         console.log(`error: ${error.message}`);
                         return;
@@ -617,23 +584,29 @@ class AssetGuard extends EventEmitter {
                         console.log(`stderr: ${stderr}`);
                         return;
                     }
-                    console.log('VC++ Installation completed.');
+                    console.log(`${reqName} Installation completed.`);
                 });
+
+        }
+
+        if (await checkDirectX() || await checkVCPP()) {
+            this.emit('validate', 'librariesInstall');
+            await Promise.all(
+                [
+                    downloadReq('VC++', 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', VCexePath, '35da2bf2befd998980a495b6f4f55e60'),
+                    downloadReq('DirectX', 'https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe', DXexePath, 'bcbb7c0cd9696068988953990ec5bd11')
+                ]
+            )
+
+            if (await checkVCPP()) {
+                installReq('VC++', VCexePath, '/q')
             }
             
-            if (checkDirectX()) {
-                child_process.exec(`${DXexePath} /Q`, (error, stderr) => {
-                    if (error) {
-                        console.log(`error: ${error.message}`);
-                        return;
-                    }
-                    if (stderr) {
-                        console.log(`stderr: ${stderr}`);
-                        return;
-                    }
-                    console.log('DirectX Installation completed.');
-                });
+            if (await checkDirectX()) {
+                installReq('DirectX', DXexePath, '/Q')
             }
+
+            throw 'Requirements missing'
         }
     }
 
@@ -1135,11 +1108,19 @@ class AssetGuard extends EventEmitter {
 
         } catch (err){
             console.error(err)
-            return {
+            if (err === 'Requirements missing') {
+                return {
+                versionData: err,
+                forgeData: err,
+                error: err
+                }
+            } else {
+                return {
                 versionData: null,
                 forgeData: null,
                 error: err
-            }
+                }
+            }    
         }
         
 
