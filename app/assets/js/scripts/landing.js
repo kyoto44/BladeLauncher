@@ -182,11 +182,11 @@ refreshMojangStatuses()
  * @param {string} title The overlay title.
  * @param {string} desc The overlay description.
  */
-function showLaunchFailure(title, desc){
+function showLaunchFailure(title, desc, accept = "Okay"){
     setOverlayContent(
         title,
         desc,
-        'Okay'
+        accept
     )
     setOverlayHandler(null)
     toggleOverlay(true)
@@ -368,8 +368,12 @@ function dlAsync(login = true){
             let allGood = true
 
             //Workaround for missing requirements
-            if (m.result.versionData == 'Requirements missing') {
-                showLaunchFailure('Error During Launch', 'На вашей системе не найдены необходимые библиотеки!')
+            if (m.result.error == 'Requirements missing') {
+                showLaunchFailure(
+                Lang.queryJS('requirements.title'),
+                Lang.queryJS('requirements.desc'),
+                Lang.queryJS('requirements.accept')
+                )
                 allGood = false
             }
             // If these properties are not defined it's likely an error.

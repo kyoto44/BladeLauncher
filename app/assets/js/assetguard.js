@@ -534,6 +534,7 @@ class AssetGuard extends EventEmitter {
                 console.log("DirectX Missing!")
                 return true
             }
+            return false
         }
 
         async function checkVCPP() {
@@ -547,6 +548,7 @@ class AssetGuard extends EventEmitter {
                 console.log("VC++ Missing!")
                 return true
             }
+            return false
         }
         
         function downloadReq(reqName, url, path, hash) {
@@ -562,8 +564,8 @@ class AssetGuard extends EventEmitter {
                                     if (this.read() !== hash) {
                                         reject('Wrong Hash!')
                                     }
+                                    resolve();
                                 })
-                            resolve();
                         })
                         .on('error', (error) => {
                             reject(error);
@@ -573,13 +575,16 @@ class AssetGuard extends EventEmitter {
 
        function installReq(reqName, path, flags) {
             return new Promise((resolve, reject) => {
-                child_process.exec(`${path} ${flags}`, (error, stderr) => {
-                        if (error) {
-                            console.log(`error: ${error.message}`);
-                            reject(error);
+                child_process.exec(`${path} ${flags}`, (error, stdout, stderr) => {
+                        if (stdout) {
+                            console.log(`stdout: ${stdout}`);
                         }
                         if (stderr) {
                             console.log(`stderr: ${stderr}`);
+                        }
+                        if (error) {
+                            console.log(`error: ${error.message}`);
+                            reject(error);
                         }
                         console.log(`${reqName} Installation completed.`);
                         resolve();

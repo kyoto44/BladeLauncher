@@ -181,7 +181,7 @@
             "overlayWarningDecline": "Cancel"
         },
         "requirements": {
-            "title": "You need to install the necessary libraries!",
+            "title": "Error: The required libraries were not found.",
             "desc": "For the game to work correctly, you will need to download and install the necessary libraries.",
             "accept": "Okay"
         } 
