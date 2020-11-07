@@ -92,26 +92,6 @@ document.getElementById('launch_button').addEventListener('click', function(e){
     if (true)
         return
 
-    const mcVersion = DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer()).getMinecraftVersion()
-    const jExe = ConfigManager.getJavaExecutable()
-    if(jExe == null){
-        asyncSystemScan(mcVersion)
-    } else {
-
-        setLaunchDetails(Lang.queryJS('landing.launch.pleaseWait'))
-        toggleLaunchArea(true)
-        setLaunchPercentage(0, 100)
-
-        const jg = new JavaGuard(mcVersion)
-        jg._validateJavaBinary(jExe).then((v) => {
-            loggerLanding.log('Java version meta', v)
-            if(v.valid){
-                dlAsync()
-            } else {
-                asyncSystemScan(mcVersion)
-            }
-        })
-    }
 })
 
 // Bind settings button
@@ -180,95 +160,12 @@ const refreshMojangStatuses = async function(){
     if (true)
         return
 
-    loggerLanding.log('Refreshing Mojang Statuses..')
-
-    let status = 'grey'
-    let tooltipEssentialHTML = ''
-    let tooltipNonEssentialHTML = ''
-
-    try {
-        const statuses = await Mojang.status()
-        greenCount = 0
-        greyCount = 0
-
-        for(let i=0; i<statuses.length; i++){
-            const service = statuses[i]
-
-            if(service.essential){
-                tooltipEssentialHTML += `<div class="mojangStatusContainer">
-                    <span class="mojangStatusIcon" style="color: ${Mojang.statusToHex(service.status)};">&#8226;</span>
-                    <span class="mojangStatusName">${service.name}</span>
-                </div>`
-            } else {
-                tooltipNonEssentialHTML += `<div class="mojangStatusContainer">
-                    <span class="mojangStatusIcon" style="color: ${Mojang.statusToHex(service.status)};">&#8226;</span>
-                    <span class="mojangStatusName">${service.name}</span>
-                </div>`
-            }
-
-            if(service.status === 'yellow' && status !== 'red'){
-                status = 'yellow'
-            } else if(service.status === 'red'){
-                status = 'red'
-            } else {
-                if(service.status === 'grey'){
-                    ++greyCount
-                }
-                ++greenCount
-            }
-
-        }
-
-        if(greenCount === statuses.length){
-            if(greyCount === statuses.length){
-                status = 'grey'
-            } else {
-                status = 'green'
-            }
-        }
-
-    } catch (err) {
-        loggerLanding.warn('Unable to refresh Mojang service status.')
-        loggerLanding.debug(err)
-    }
-    
-    document.getElementById('mojangStatusEssentialContainer').innerHTML = tooltipEssentialHTML
-    document.getElementById('mojangStatusNonEssentialContainer').innerHTML = tooltipNonEssentialHTML
-    document.getElementById('mojang_status_icon').style.color = Mojang.statusToHex(status)
 }
 
 const refreshServerStatus = async function(fade = false){
     if (true)
         return
 
-    loggerLanding.log('Refreshing Server Status')
-    const serv = DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer())
-
-    let pLabel = 'SERVER'
-    let pVal = 'OFFLINE'
-
-    try {
-        const serverURL = new URL('my://' + serv.getAddress())
-        const servStat = await ServerStatus.getStatus(serverURL.hostname, serverURL.port)
-        if(servStat.online){
-            pLabel = 'PLAYERS'
-            pVal = servStat.onlinePlayers + '/' + servStat.maxPlayers
-        }
-
-    } catch (err) {
-        loggerLanding.warn('Unable to refresh server status, assuming offline.')
-        loggerLanding.debug(err)
-    }
-    if(fade){
-        $('#server_status_wrapper').fadeOut(250, () => {
-            document.getElementById('landingPlayerLabel').innerHTML = pLabel
-            document.getElementById('player_count').innerHTML = pVal
-            $('#server_status_wrapper').fadeIn(500)
-        })
-    } else {
-        document.getElementById('landingPlayerLabel').innerHTML = pLabel
-        document.getElementById('player_count').innerHTML = pVal
-    }
     
 }
 
@@ -285,204 +182,15 @@ refreshMojangStatuses()
  * @param {string} title The overlay title.
  * @param {string} desc The overlay description.
  */
-function showLaunchFailure(title, desc){
+function showLaunchFailure(title, desc, accept = "Okay"){
     setOverlayContent(
         title,
         desc,
-        'Okay'
+        accept
     )
     setOverlayHandler(null)
     toggleOverlay(true)
     toggleLaunchArea(false)
-}
-
-/* System (Java) Scan */
-
-let sysAEx
-let scanAt
-
-let extractListener
-
-/**
- * Asynchronously scan the system for valid Java installations.
- * 
- * @param {string} mcVersion The Minecraft version we are scanning for.
- * @param {boolean} launchAfter Whether we should begin to launch after scanning. 
- */
-function asyncSystemScan(mcVersion, launchAfter = true){
-
-    setLaunchDetails('Please wait..')
-    toggleLaunchArea(true)
-    setLaunchPercentage(0, 100)
-
-    const loggerSysAEx = LoggerUtil('%c[SysAEx]', 'color: #353232; font-weight: bold')
-
-    const forkEnv = JSON.parse(JSON.stringify(process.env))
-    forkEnv.CONFIG_DIRECT_PATH = ConfigManager.getLauncherDirectory()
-/*
-    // Fork a process to run validations.
-    sysAEx = cp.fork(path.join(__dirname, 'assets', 'js', 'assetexec.js'), [
-        'JavaGuard',
-        mcVersion
-    ], {
-        env: forkEnv,
-        stdio: 'pipe'
-    })
-    // Stdout
-    sysAEx.stdio[1].setEncoding('utf8')
-    sysAEx.stdio[1].on('data', (data) => {
-        loggerSysAEx.log(data)
-    })
-    // Stderr
-    sysAEx.stdio[2].setEncoding('utf8')
-    sysAEx.stdio[2].on('data', (data) => {
-        loggerSysAEx.log(data)
-    })
-    
-    sysAEx.on('message', (m) => {
-
-        if(m.context === 'validateJava'){
-            if(m.result == null){
-                // If the result is null, no valid Java installation was found.
-                // Show this information to the user.
-                setOverlayContent(
-                    'No Compatible<br>Java Installation Found',
-                    'In order to join WesterosCraft, you need a 64-bit installation of Java 8. Would you like us to install a copy? By installing, you accept <a href="http://www.oracle.com/technetwork/java/javase/terms/license/index.html">Oracle\'s license agreement</a>.',
-                    'Install Java',
-                    'Install Manually'
-                )
-                setOverlayHandler(() => {
-                    setLaunchDetails('Preparing Java Download..')
-                    sysAEx.send({task: 'changeContext', class: 'AssetGuard', args: [ConfigManager.getCommonDirectory(),ConfigManager.getJavaExecutable()]})
-                    sysAEx.send({task: 'execute', function: '_enqueueOpenJDK', argsArr: [ConfigManager.getDataDirectory()]})
-                    toggleOverlay(false)
-                })
-                setDismissHandler(() => {
-                    $('#overlayContent').fadeOut(250, () => {
-                        //$('#overlayDismiss').toggle(false)
-                        setOverlayContent(
-                            'Java is Required<br>to Launch',
-                            'A valid x64 installation of Java 8 is required to launch.<br><br>Please refer to our <a href="https://github.com/dscalzi/HeliosLauncher/wiki/Java-Management#manually-installing-a-valid-version-of-java">Java Management Guide</a> for instructions on how to manually install Java.',
-                            'I Understand',
-                            'Go Back'
-                        )
-                        setOverlayHandler(() => {
-                            toggleLaunchArea(false)
-                            toggleOverlay(false)
-                        })
-                        setDismissHandler(() => {
-                            toggleOverlay(false, true)
-                            asyncSystemScan()
-                        })
-                        $('#overlayContent').fadeIn(250)
-                    })
-                })
-                toggleOverlay(true, true)
-
-            } else {
-                // Java installation found, use this to launch the game.
-                ConfigManager.setJavaExecutable(m.result)
-                ConfigManager.save()
-
-                // We need to make sure that the updated value is on the settings UI.
-                // Just incase the settings UI is already open.
-                settingsJavaExecVal.value = m.result
-                populateJavaExecDetails(settingsJavaExecVal.value)
-
-                if(launchAfter){
-                    dlAsync()
-                }
-                sysAEx.disconnect()
-            }
-        } else if(m.context === '_enqueueOpenJDK'){
-
-            if(m.result === true){
-
-                // Oracle JRE enqueued successfully, begin download.
-                setLaunchDetails('Downloading Java..')
-                sysAEx.send({task: 'execute', function: 'processDlQueues', argsArr: [[{id:'java', limit:1}]]})
-
-            } else {
-
-                // Oracle JRE enqueue failed. Probably due to a change in their website format.
-                // User will have to follow the guide to install Java.
-                setOverlayContent(
-                    'Unexpected Issue:<br>Java Download Failed',
-                    'Unfortunately we\'ve encountered an issue while attempting to install Java. You will need to manually install a copy. Please check out our <a href="https://github.com/dscalzi/HeliosLauncher/wiki">Troubleshooting Guide</a> for more details and instructions.',
-                    'I Understand'
-                )
-                setOverlayHandler(() => {
-                    toggleOverlay(false)
-                    toggleLaunchArea(false)
-                })
-                toggleOverlay(true)
-                sysAEx.disconnect()
-
-            }
-
-        } else if(m.context === 'progress'){
-
-            switch(m.data){
-                case 'download':
-                    // Downloading..
-                    setDownloadPercentage(m.value, m.total, m.percent)
-                    break
-            }
-
-        } else if(m.context === 'complete'){
-
-            switch(m.data){
-                case 'download': {
-                    // Show installing progress bar.
-                    remote.getCurrentWindow().setProgressBar(2)
-
-                    // Wait for extration to complete.
-                    const eLStr = 'Extracting'
-                    let dotStr = ''
-                    setLaunchDetails(eLStr)
-                    extractListener = setInterval(() => {
-                        if(dotStr.length >= 3){
-                            dotStr = ''
-                        } else {
-                            dotStr += '.'
-                        }
-                        setLaunchDetails(eLStr + dotStr)
-                    }, 750)
-                    break
-                }
-                case 'java':
-                // Download & extraction complete, remove the loading from the OS progress bar.
-                    remote.getCurrentWindow().setProgressBar(-1)
-
-                    // Extraction completed successfully.
-                    ConfigManager.setJavaExecutable(m.args[0])
-                    ConfigManager.save()
-
-                    if(extractListener != null){
-                        clearInterval(extractListener)
-                        extractListener = null
-                    }
-
-                    setLaunchDetails('Java Installed!')
-
-                    if(launchAfter){
-                        dlAsync()
-                    }
-
-                    sysAEx.disconnect()
-                    break
-            }
-
-        } else if(m.context === 'error'){
-            console.log(m.error)
-        }
-    })
-
-    // Begin system Java scan.
-    setLaunchDetails('Checking system info..')
-    sysAEx.send({task: 'execute', function: 'validateJava', argsArr: [ConfigManager.getDataDirectory()]})
-
-*/
 }
 
 // Keep reference to Game Process
@@ -564,6 +272,11 @@ function dlAsync(login = true){
                     loggerLaunchSuite.log('Validated distibution index.')
                     setLaunchDetails('Loading version information..')
                     break
+                case 'librariesInstall':
+                    setLaunchPercentage(30, 100);
+                    loggerLaunchSuite.log("Libraries Install Required!");
+                    setLaunchDetails('Installing libraries..')
+                    break; 
                 case 'version':
                     setLaunchPercentage(40, 100)
                     loggerLaunchSuite.log('Version data loaded.')
@@ -654,6 +367,17 @@ function dlAsync(login = true){
 
             let allGood = true
 
+            //Workaround for missing requirements
+            if (m.result.error == 'Requirements missing') {
+                showLaunchFailure(
+                    Lang.queryJS('requirements.title'),
+                    Lang.queryJS('requirements.desc'),
+                    Lang.queryJS('requirements.accept')
+                )
+                allGood = false
+                aEx.disconnect()
+                return
+            }
             // If these properties are not defined it's likely an error.
             if(m.result.forgeData == null || m.result.versionData == null){
                 loggerLaunchSuite.error('Error during validation:', m.result)

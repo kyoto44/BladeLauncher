@@ -190,8 +190,8 @@ function resolveError(err){
                             }
                         } else if(err.errorMessage === 'Invalid credentials.') {
                             return {
-                                title: Lang.queryJS('login.error.rateLimit.title'),
-                                desc: Lang.queryJS('login.error.rateLimit.desc')
+                                title: Lang.queryJS('login.error.invalidCredentials.title'),
+                                desc: Lang.queryJS('login.error.invalidCredentials.desc')
                             }
                         }
                     }
