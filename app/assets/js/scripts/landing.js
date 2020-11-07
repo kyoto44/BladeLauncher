@@ -193,21 +193,6 @@ function showLaunchFailure(title, desc){
     toggleLaunchArea(false)
 }
 
-function showLibrariesInstallNote() {
-    setOverlayContent(
-            Lang.queryJS('requirements.title'),
-            Lang.queryJS('requirements.desc'),
-            Lang.queryJS('requirements.accept')
-            );
-    setOverlayHandler(() => {
-      document.getElementById('overlayAcknowledge').onclick = () => {
-        toggleOverlay(false)
-      }
-    });
-    toggleOverlay(true);
-    toggleLaunchArea(true);
-}
-
 // Keep reference to Game Process
 let pb 
 // Is DiscordRPC enabled
@@ -385,7 +370,6 @@ function dlAsync(login = true){
             //Workaround for missing requirements
             if (m.result.versionData == 'Requirements missing') {
                 showLaunchFailure('Error During Launch', 'На вашей системе не найдены необходимые библиотеки!')
-                document.getElementById('launch_button').disabled = false
                 allGood = false
             }
             // If these properties are not defined it's likely an error.

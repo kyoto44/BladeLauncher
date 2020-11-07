@@ -571,17 +571,15 @@ class AssetGuard extends EventEmitter {
                 })
         }
 
-       async function installReq(reqName, path, flags) {
+       function installReq(reqName, path, flags) {
             return new Promise((resolve, reject) => {
                 child_process.exec(`${path} ${flags}`, (error, stderr) => {
                         if (error) {
                             console.log(`error: ${error.message}`);
                             reject(error);
-                            return;
                         }
                         if (stderr) {
                             console.log(`stderr: ${stderr}`);
-                            return;
                         }
                         console.log(`${reqName} Installation completed.`);
                         resolve();
