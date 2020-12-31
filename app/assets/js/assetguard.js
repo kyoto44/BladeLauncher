@@ -1,14 +1,14 @@
 // Requirements
-const async         = require('async')
+const async = require('async')
 const child_process = require('child_process')
-const crypto        = require('crypto')
-const EventEmitter  = require('events')
-const fs            = require('fs-extra')
-const path          = require('path')
-const Registry      = require('winreg')
-const request       = require('request')
-const xml2js        = require('xml2js')
-const url           = require('url')
+const crypto = require('crypto')
+const EventEmitter = require('events')
+const fs = require('fs-extra')
+const path = require('path')
+const Registry = require('winreg')
+const request = require('request')
+const xml2js = require('xml2js')
+const url = require('url')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -33,7 +33,7 @@ class Asset {
      * @param {string} from The url where the asset can be found.
      * @param {string} to The absolute local file path of the asset.
      */
-    constructor(id, hash, size, from, to){
+    constructor(id, hash, size, from, to) {
         this.id = id
         this.hash = hash
         this.size = size
@@ -41,18 +41,18 @@ class Asset {
         this.to = to
     }
 
-    _validateLocal(){
+    _validateLocal() {
         return AssetGuard._validateLocal(this.to, this.type != null ? 'md5' : 'sha1', this.hash, this.size)
     }
 }
 
 
-function defer(call){
+function defer(call) {
     return new Promise((resolve, reject) => {
-        call(function(err, data) {
-            if(err){
+        call(function (err, data) {
+            if (err) {
                 reject(err)
-            }else{
+            } else {
                 resolve(data)
             }
         })
@@ -65,25 +65,25 @@ class ModifierRule {
      * @param {string} path
      * @param {Server} server
      */
-    async ensure(path, server){
+    async ensure(path, server) {
         throw new Error('Method is not implemented')
     }
 }
 
 
 class WinCompatibilityModeModifierRule extends ModifierRule {
-    
-    constructor(mode){
+
+    constructor(mode) {
         super()
         this._mode = mode
     }
 
     async ensure(path, server) {
-        let regKey = new Registry({                                  
+        let regKey = new Registry({
             hive: Registry.HKCU,
-            key:  '\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+            key: '\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
         })
-    
+
         let keyExists = await defer(cb => regKey.keyExists(cb))
         if (!keyExists) {
             await defer(cb => regKey.create(cb))
@@ -96,7 +96,7 @@ class WinCompatibilityModeModifierRule extends ModifierRule {
 
 class DirectoryModifierRule extends ModifierRule {
 
-    constructor(mode){
+    constructor(mode) {
         super()
         this.mode = mode
     }
@@ -113,7 +113,7 @@ class DirectoryModifierRule extends ModifierRule {
 
 class XmlModifierRule extends ModifierRule {
 
-    constructor(tree){
+    constructor(tree) {
         super()
         this.tree = tree
     }
@@ -122,8 +122,8 @@ class XmlModifierRule extends ModifierRule {
         const tree = this.tree
 
         const exists = await defer(cb => fs.pathExists(filePath, cb))
-        let json  = {}
-        if(exists === true){
+        let json = {}
+        if (exists === true) {
             const data = await defer(cb => fs.readFile(filePath, 'ascii', cb))
             json = await defer(cb => xml2js.parseString(data, { explicitArray: false, trim: true }, cb))
         }
@@ -133,21 +133,21 @@ class XmlModifierRule extends ModifierRule {
             return type === 'object' && !!obj
         }
 
-        function merge(a, b){
-            if(!isObject(b))
+        function merge(a, b) {
+            if (!isObject(b))
                 return b
-            if(!isObject(a))
+            if (!isObject(a))
                 return a
-            
+
             const result = {}
 
             Object.keys(a).concat(Object.keys(b)).forEach(k => {
-                if(!Object.prototype.hasOwnProperty.call(result, k)){
-                    if (!Object.prototype.hasOwnProperty.call(a, k)){
+                if (!Object.prototype.hasOwnProperty.call(result, k)) {
+                    if (!Object.prototype.hasOwnProperty.call(a, k)) {
                         result[k] = b[k]
-                    }else if(!Object.prototype.hasOwnProperty.call(b, k)){
+                    } else if (!Object.prototype.hasOwnProperty.call(b, k)) {
                         result[k] = a[k]
-                    }else{
+                    } else {
                         result[k] = merge(a[k], b[k])
                     }
                 }
@@ -157,26 +157,26 @@ class XmlModifierRule extends ModifierRule {
 
         const result = merge(json, tree)
 
-        function resolve(value){
+        function resolve(value) {
             const argDiscovery = /\${*(.*)}/
-            if(!value){
+            if (!value) {
                 return
             }
             const keys = Object.keys(value)
-            for(let key of keys){
+            for (let key of keys) {
                 const v = value[key]
                 if (argDiscovery.test(v)) {
                     const identifier = v.match(argDiscovery)[1]
-                    switch(identifier){
+                    switch (identifier) {
                         case 'server_address':
                             value[key] = server.getAddress()
                             continue
                     }
-                }else if(isObject(v)){
+                } else if (isObject(v)) {
                     resolve(v)
                 }
             }
-            
+
         }
 
         resolve(result)
@@ -193,13 +193,13 @@ class XmlModifierRule extends ModifierRule {
 
 class EjsModifierRule extends ModifierRule {
 
-    constructor(src){
+    constructor(src) {
         super()
         this._src = src
     }
 
     async ensure(filePath, server) {
-        
+
         const exists = await defer(cb => fs.pathExists(this._src, cb))
         if (!exists) {
             throw new Error('Source does not exists: ' + this._src)
@@ -228,7 +228,7 @@ class Modifier {
      * @param {string} path 
      * @param {Array<ModifierRule>} rules 
      */
-    constructor(path, rules){
+    constructor(path, rules) {
         this.path = path
         this.rules = rules
     }
@@ -236,8 +236,8 @@ class Modifier {
     /**
      * @param {Server} server
      */
-    async apply(server){
-        for(let rule of this.rules){
+    async apply(server) {
+        for (let rule of this.rules) {
             await rule.ensure(this.path, server)
         }
     }
@@ -246,7 +246,7 @@ class Modifier {
 /** Class representing a mojang library. */
 class Library extends Asset {
 
-    constructor(id, checksum, size, urls, targetPath){
+    constructor(id, checksum, size, urls, targetPath) {
         super(id, checksum.hash, size, urls[0], targetPath)
         this.id = id
         this.checksum = checksum
@@ -260,17 +260,17 @@ class Library extends Asset {
      * 
      * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
      */
-    _validateLocal(){
-        if(!fs.existsSync(this.targetPath)){
+    _validateLocal() {
+        if (!fs.existsSync(this.targetPath)) {
             return false
         }
-        if (this.size != null){
+        if (this.size != null) {
             const stats = fs.statSync(this.targetPath)
             const calcdSize = stats.size
             if (calcdSize !== this.size)
                 return false
         }
-        if(this.checksum != null && this.checksum.hash != null){
+        if (this.checksum != null && this.checksum.hash != null) {
             const buf = fs.readFileSync(this.targetPath)
             const calcdhash = AssetGuard._calculateHash(buf, this.checksum.algo)
             if (calcdhash !== this.checksum.hash)
@@ -282,13 +282,13 @@ class Library extends Asset {
     /**
      * Converts the process.platform OS names to match mojang's OS names.
      */
-    static mojangFriendlyOS(){
+    static mojangFriendlyOS() {
         const opSys = process.platform
         if (opSys === 'darwin') {
             return 'osx'
-        } else if (opSys === 'win32'){
+        } else if (opSys === 'win32') {
             return 'windows'
-        } else if (opSys === 'linux'){
+        } else if (opSys === 'linux') {
             return 'linux'
         } else {
             return 'unknown_os'
@@ -309,20 +309,20 @@ class Library extends Asset {
      * @param {Object} natives The Library's natives object.
      * @returns {boolean} True if the Library follows the specified rules, otherwise false.
      */
-    static validateRules(rules, natives){
-        if(rules == null) {
+    static validateRules(rules, natives) {
+        if (rules == null) {
             return natives == null || natives[Library.mojangFriendlyOS()] != null
         }
 
-        for(let rule of rules){
+        for (let rule of rules) {
             const action = rule.action
             const osProp = rule.os
-            if(action != null && osProp != null){
+            if (action != null && osProp != null) {
                 const osName = osProp.name
                 const osMoj = Library.mojangFriendlyOS()
-                if(action === 'allow'){
+                if (action === 'allow') {
                     return osName === osMoj
-                } else if(action === 'disallow'){
+                } else if (action === 'disallow') {
                     return osName !== osMoj
                 }
             }
@@ -344,7 +344,7 @@ class DLTracker {
      * @param {number} dlsize The combined size of each asset in the download queue array.
      * @param {function(Asset)} callback Optional callback which is called when an asset finishes downloading.
      */
-    constructor(dlqueue, dlsize, callback = null){
+    constructor(dlqueue, dlsize, callback = null) {
         this.dlqueue = dlqueue
         this.dlsize = dlsize
         this.callback = callback
@@ -361,17 +361,17 @@ class Util {
      * @param {string} desired The desired version.
      * @param {string} actual The actual version.
      */
-    static mcVersionAtLeast(desired, actual){
+    static mcVersionAtLeast(desired, actual) {
         const des = desired.split('.')
         const act = actual.split('.')
 
-        for(let i=0; i<des.length; i++){
+        for (let i = 0; i < des.length; i++) {
             const aInt = act.length > i ? parseInt(act[i]) : 0
             const dInt = parseInt(des[i])
-            if (aInt > dInt){
+            if (aInt > dInt) {
                 return true
-            } else if (aInt < dInt){
-                return false                
+            } else if (aInt < dInt) {
+                return false
             }
         }
         return true
@@ -398,7 +398,7 @@ class AssetGuard extends EventEmitter {
      * @param {string} launcherVersion The path to a java executable which will be used
      * to finalize installation.
      */
-    constructor(commonPath, launcherVersion){
+    constructor(commonPath, launcherVersion) {
         super()
         this.totaldlsize = 0
         this.progress = 0
@@ -427,7 +427,7 @@ class AssetGuard extends EventEmitter {
      * @param {string} algo The hash algorithm.
      * @returns {string} The calculated hash in hex.
      */
-    static _calculateHash(buf, algo){
+    static _calculateHash(buf, algo) {
         return crypto.createHash(algo).update(buf).digest('hex')
     }
 
@@ -438,12 +438,12 @@ class AssetGuard extends EventEmitter {
      * @param {string} content The string content of the checksums file.
      * @returns {Object} An object with keys being the file names, and values being the hashes.
      */
-    static _parseChecksumsFile(content){
+    static _parseChecksumsFile(content) {
         let finalContent = {}
         let lines = content.split('\n')
-        for(let i=0; i<lines.length; i++){
+        for (let i = 0; i < lines.length; i++) {
             let bits = lines[i].split(' ')
-            if(bits[1] == null) {
+            if (bits[1] == null) {
                 continue
             }
             finalContent[bits[1]] = bits[0]
@@ -459,17 +459,17 @@ class AssetGuard extends EventEmitter {
      * @param {string} hash The existing hash to check against.
      * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
      */
-    static _validateLocal(filePath, algo, hash, sizeBytes){
-        if(!fs.existsSync(filePath)){
+    static _validateLocal(filePath, algo, hash, sizeBytes) {
+        if (!fs.existsSync(filePath)) {
             return false
         }
-        if(hash != null){
+        if (hash != null) {
             const buf = fs.readFileSync(filePath)
             const calcdhash = AssetGuard._calculateHash(buf, algo)
             if (calcdhash !== hash)
                 return false
         }
-        if (sizeBytes != null){
+        if (sizeBytes != null) {
             const stats = fs.statSync(filePath)
             const calcdSize = stats.size
             if (calcdSize !== sizeBytes)
@@ -497,21 +497,21 @@ class AssetGuard extends EventEmitter {
     cleanupPreviousVersionData(targetVersionData) {
         const versionsPath = path.join(this.commonPath, 'versions')
 
-        return defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb)).then((versionDirs) => {
+        return defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb)).then((versionDirs) => {
             const toRemove = {}
 
-            for(let versionDir of versionDirs) {
+            for (let versionDir of versionDirs) {
                 if (!versionDir.isDirectory())
                     continue
-                
-            
+
+
                 const versionNumber = versionDir.name
                 if (versionNumber === targetVersionData.id)
                     continue
-    
+
                 toRemove[versionNumber] = path.join(versionsPath, versionNumber)
             }
-    
+
             const ids = Object.keys(toRemove)
             return async.eachLimit(ids, 5, (id, cb) => {
                 const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), id)
@@ -529,7 +529,8 @@ class AssetGuard extends EventEmitter {
         const requirementsDirectory = path.join(ConfigManager.getCommonDirectory(), 'requirements');
         await fs.promises.mkdir(requirementsDirectory, { recursive: true });
 
-        const VCexePath = path.join(requirementsDirectory, "vcredist_x86.exe")
+        const VC08exePath = path.join(requirementsDirectory, "vcredist_x86.exe")
+        const VC19exePath = path.join(requirementsDirectory, "VC_redist.x86.exe")
         const DXexePath = path.join(requirementsDirectory, "dxwebsetup.exe")
 
         async function checkDirectX() {
@@ -540,7 +541,7 @@ class AssetGuard extends EventEmitter {
             return false
         }
 
-        async function checkVCPP() {
+        async function checkVCPP08() {
             const Registry = require('winreg')
             let regKey = new Registry({
                 hive: Registry.HKLM,
@@ -548,12 +549,26 @@ class AssetGuard extends EventEmitter {
             })
             let keyExists = await defer(cb => regKey.keyExists(cb))
             if (!keyExists) {
-                console.log("VC++ Missing!")
+                console.log("VC++ 2008 x86 Missing!")
                 return true
             }
             return false
         }
-        
+
+        async function checkVCPP19() {
+            const Registry = require('winreg')
+            let regKey = new Registry({
+                hive: Registry.HKLM,
+                key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{b2d0f752-adc5-496e-8f70-8669de01f746}'
+            })
+            let keyExists = await defer(cb => regKey.keyExists(cb))
+            if (!keyExists) {
+                console.log("VC++ 2019 x86 Missing!")
+                return true
+            }
+            return false
+        }
+
         function downloadReq(reqName, url, path, hash) {
             return new Promise((resolve, reject) => {
                 console.log(`Downloading ${reqName}...`);
@@ -577,48 +592,55 @@ class AssetGuard extends EventEmitter {
             })
         }
 
-       function installReq(reqName, path, flags) {
+        function installReq(reqName, path, flags) {
             return new Promise((resolve, reject) => {
                 child_process.exec(`${path} ${flags}`, (error, stdout, stderr) => {
-                        if (stdout) {
-                            console.log(`stdout: ${stdout}`);
-                        }
-                        if (stderr) {
-                            console.log(`stderr: ${stderr}`);
-                        }
-                        if (error) {
-                            console.log(`error: ${error.message}`);
-                            reject(error);
-                        } else {
-                            console.log(`${reqName} Installation completed.`);
-                            resolve();
-                        }
-                    });
+                    if (stdout) {
+                        console.log(`stdout: ${stdout}`);
+                    }
+                    if (stderr) {
+                        console.log(`stderr: ${stderr}`);
+                    }
+                    if (error) {
+                        console.log(`error: ${error.message}`);
+                        reject(error);
+                    } else {
+                        console.log(`${reqName} Installation completed.`);
+                        resolve();
+                    }
+                });
             });
         }
 
         const isDirectXMissing = await checkDirectX()
-        const isVCPPMissing = await checkVCPP()
-        if (!isDirectXMissing && !isVCPPMissing) {
+        const isVCPP08Missing = await checkVCPP08()
+        const isVCPP19Missing = await checkVCPP19()
+
+        if (!isDirectXMissing && !isVCPP08Missing && !isVCPP19Missing) {
             return;
         }
         this.emit('validate', 'librariesInstall');
         await Promise.all(
             [
-                downloadReq('VC++', 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', VCexePath, '35da2bf2befd998980a495b6f4f55e60'),
+                downloadReq('VC++ 2008 x86', 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', VC08exePath, '35da2bf2befd998980a495b6f4f55e60'),
+                downloadReq('VC++ 2019 x86', 'https://aka.ms/vs/16/release/vc_redist.x86.exe', VC19exePath, '69551A0ABA9BE450EF30813456BBFE58'),
                 downloadReq('DirectX', 'https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe', DXexePath, 'bcbb7c0cd9696068988953990ec5bd11')
             ]
         )
 
-        if (isVCPPMissing) {
-            await installReq('VC++', VCexePath, '/q');
-        }
-        
-        if (isDirectXMissing) {
-            await installReq('DirectX', DXexePath, '/Q');
+        if (isVCPP08Missing) {
+            await installReq('VC++ 2008 x86', VC08exePath, '');
         }
 
-        if (await checkDirectX() || await checkVCPP()) {
+        if (isVCPP19Missing) {
+            await installReq('VC++ 2019 x86', VC19exePath, '');
+        }
+
+        if (isDirectXMissing) {
+            await installReq('DirectX', DXexePath, '');
+        }
+
+        if (await checkDirectX() || await checkVCPP08() || await checkVCPP19()) {
             throw 'Requirements missing';
         }
     }
@@ -630,12 +652,12 @@ class AssetGuard extends EventEmitter {
         const result = {}
 
         const versionsPath = path.join(this.commonPath, 'versions')
-        const versionDirs = await defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb))
-        for(let versionDir of versionDirs) {
+        const versionDirs = await defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb))
+        for (let versionDir of versionDirs) {
             if (!versionDir.isDirectory())
                 continue
-            
-        
+
+
             const versionNumber = versionDir.name
             if (versionNumber === targetVersionData.id)
                 continue
@@ -651,7 +673,7 @@ class AssetGuard extends EventEmitter {
             const versionInfo = JSON.parse(versionData)
             const previousMoudles = versionInfo.downloads
 
-            for(let id of ids) {
+            for (let id of ids) {
                 const targetModule = modules[id]
                 if (targetModule.type !== 'File')
                     continue
@@ -662,7 +684,7 @@ class AssetGuard extends EventEmitter {
                 if (previousMoudle.type !== 'File')
                     continue
 
-                
+
                 if (AssetGuard._compareArtifactInfo(targetModule.artifact, previousMoudle.artifact)) {
                     let versions = result[id] || []
                     versions.push(versionNumber)
@@ -681,7 +703,7 @@ class AssetGuard extends EventEmitter {
      * @param {boolean} force Optional. If true, the version index will be downloaded even if it exists locally. Defaults to false.
      * @returns {Promise.<Object>} Promise which resolves to the version data object.
      */
-    loadVersionData(version, force = false){
+    loadVersionData(version, force = false) {
         const self = this
         return new Promise(async (resolve, reject) => {
             const versionPath = path.join(self.commonPath, 'versions', version.id)
@@ -692,11 +714,11 @@ class AssetGuard extends EventEmitter {
             }
 
             let fetch = force
-            if(!fetch){
+            if (!fetch) {
                 fs.ensureDirSync(versionPath)
                 fetch = !fs.existsSync(versionFile)
             }
-            if(!fetch){
+            if (!fetch) {
                 const stats = fs.statSync(versionFile)
                 customHeaders['If-Modified-Since'] = stats.mtime.toUTCString()
             }
@@ -713,18 +735,18 @@ class AssetGuard extends EventEmitter {
                     'bearer': authAcc.accessToken
                 }
             }
-            if (Object.keys(customHeaders).length > 0){
+            if (Object.keys(customHeaders).length > 0) {
                 opts.headers = customHeaders
             }
 
             request(opts, (error, resp, body) => {
                 console.info(`Downloading ${version.url}`)
-                if(error){
+                if (error) {
                     reject(error)
                     return
                 }
 
-                if(resp.statusCode ===  304){
+                if (resp.statusCode === 304) {
                     resolve(JSON.parse(fs.readFileSync(versionFile)))
                     return
                 }
@@ -733,7 +755,7 @@ class AssetGuard extends EventEmitter {
                     reject(resp.statusMessage || body || 'Failed to retive version data')
                     return
                 }
-                    
+
                 let data
                 try {
                     data = JSON.parse(body)
@@ -741,9 +763,9 @@ class AssetGuard extends EventEmitter {
                     reject(e)
                     return
                 }
-    
+
                 fs.writeFile(versionFile, body, 'utf-8', (err) => {
-                    if(!err){
+                    if (!err) {
                         resolve(data)
                     } else {
                         reject(err)
@@ -766,7 +788,7 @@ class AssetGuard extends EventEmitter {
      * @param {Object} reusableModules Information about same modules in the previous versions which were downloaded and can be reused
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
      */
-    validateVersion(versionData, reusableModules){
+    validateVersion(versionData, reusableModules) {
         const self = this
         return new Promise((resolve, reject) => {
 
@@ -779,28 +801,28 @@ class AssetGuard extends EventEmitter {
             // Check validity of each library. If the hashs don't match, download the library.
             async.eachLimit(ids, 5, (id, cb) => {
                 const lib = versionData.downloads[id]
-                if(!Library.validateRules(lib.rules, lib.natives)){
+                if (!Library.validateRules(lib.rules, lib.natives)) {
                     cb()
                     return
                 }
 
-                if(lib.type === 'File'){
-                    const artifact = (lib.natives == null) 
-                        ? lib.artifact 
+                if (lib.type === 'File') {
+                    const artifact = (lib.natives == null)
+                        ? lib.artifact
                         : lib.classifiers[lib.natives[Library.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
 
                     const checksum = artifact.checksum.split(':', 2)
                     const algo = checksum[0].toLowerCase()
                     const hash = checksum[1]
                     const libItm = new Library(
-                        id, 
-                        {'algo': algo, 'hash': hash},
+                        id,
+                        { 'algo': algo, 'hash': hash },
                         artifact.size,
                         artifact.urls,
                         path.join(libPath, artifact.path)
                     )
-                    
-                    if(!libItm._validateLocal()){
+
+                    if (!libItm._validateLocal()) {
                         const previousVersions = reusableModules[id]
                         if (previousVersions) {
                             for (let previousVersion of previousVersions) {
@@ -808,7 +830,7 @@ class AssetGuard extends EventEmitter {
                                 const previousPath = path.join(previousLibPath, artifact.path)
                                 const previousLib = new Library(
                                     id,
-                                    {'algo': algo, 'hash': hash},
+                                    { 'algo': algo, 'hash': hash },
                                     artifact.size,
                                     artifact.urls,
                                     previousPath
@@ -821,7 +843,7 @@ class AssetGuard extends EventEmitter {
                             }
                         }
 
-                        dlSize += (libItm.size*1)
+                        dlSize += (libItm.size * 1)
                         libDlQueue.push(libItm)
                     }
                 }
@@ -835,17 +857,17 @@ class AssetGuard extends EventEmitter {
 
     // #endregion
 
-    validateModifiers(versionData){
+    validateModifiers(versionData) {
         const self = this
         return new Promise((resolve, reject) => {
             const modifierDlQueue = []
             const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
             try {
                 if (versionData.modifiers) {
-                    for(let modifier of versionData.modifiers){
+                    for (let modifier of versionData.modifiers) {
                         const rules = []
-                        for(let rule of modifier.rules){
-                            switch(rule.type){
+                        for (let rule of modifier.rules) {
+                            switch (rule.type) {
                                 case 'xml':
                                     rules.push(new XmlModifierRule(rule.tree))
                                     break
@@ -873,7 +895,7 @@ class AssetGuard extends EventEmitter {
                 self.modifiers = modifierDlQueue
 
                 resolve()
-            } catch(err) {
+            } catch (err) {
                 reject(err)
             }
         })
@@ -897,7 +919,7 @@ class AssetGuard extends EventEmitter {
                 ))
 
                 resolve()
-            } catch(err) {
+            } catch (err) {
                 reject(err)
             }
         })
@@ -915,22 +937,22 @@ class AssetGuard extends EventEmitter {
      * @param {number} limit Optional. The number of async processes to run in parallel.
      * @returns {boolean} True if the process began, otherwise false.
      */
-    startAsyncProcess(identifier, limit = 5){
+    startAsyncProcess(identifier, limit = 5) {
 
         const self = this
         const dlTracker = this[identifier]
         const dlQueue = dlTracker.dlqueue
 
-        if(dlQueue.length <= 0){
+        if (dlQueue.length <= 0) {
             return false
         }
-        
+
         const authAcc = ConfigManager.getSelectedAccount()
 
         async.eachLimit(dlQueue, limit, (asset, cb) => {
 
             function afterLoad() {
-                if(dlTracker.callback != null){
+                if (dlTracker.callback != null) {
                     dlTracker.callback.apply(dlTracker, [asset, self])
                 }
 
@@ -975,14 +997,14 @@ class AssetGuard extends EventEmitter {
                 },
                 auth: {
                     'bearer': authAcc.accessToken
-                }   
+                }
             }
 
             let req = request(opt)
             req.pause()
 
             req.on('response', (resp) => {
-                if(resp.statusCode !== 200){
+                if (resp.statusCode !== 200) {
                     req.abort()
                     console.error(`Failed to download ${asset.id}(${typeof asset.from === 'object' ? asset.from.url : asset.from}). Response code ${resp.statusCode}`)
                     cb(`${asset.id}: ${resp.statusMessage}`)
@@ -991,7 +1013,7 @@ class AssetGuard extends EventEmitter {
 
                 const contentLength = parseInt(resp.headers['content-length'])
 
-                if(contentLength !== asset.size){
+                if (contentLength !== asset.size) {
                     console.log(`WARN: Got ${contentLength} bytes for ${asset.id}: Expected ${asset.size}`)
 
                     // Adjust download
@@ -1018,18 +1040,18 @@ class AssetGuard extends EventEmitter {
             })
 
         }, (err) => {
-            if(err){
+            if (err) {
                 const msg = 'An item in ' + identifier + ' failed to process: ' + err
                 console.log(msg)
                 self.emit('error', 'download', msg)
                 return
             }
-            
+
             console.log('All ' + identifier + ' have been processed successfully')
 
             self[identifier] = new DLTracker([], 0)
 
-            if(self.progress >= self.totaldlsize) {
+            if (self.progress >= self.totaldlsize) {
                 self.emit('complete', 'download')
             }
 
@@ -1049,7 +1071,7 @@ class AssetGuard extends EventEmitter {
      * @param {Server} server 
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
-    processDlQueues(server, identifiers = [{id:'assets', limit:20}, {id:'libraries', limit:5}, {id:'files', limit:5}, {id:'forge', limit:5}]){
+    processDlQueues(server, identifiers = [{ id: 'assets', limit: 20 }, { id: 'libraries', limit: 5 }, { id: 'files', limit: 5 }, { id: 'forge', limit: 5 }]) {
         const self = this
         return new Promise((resolve, reject) => {
             let shouldFire = true
@@ -1058,7 +1080,7 @@ class AssetGuard extends EventEmitter {
             this.totaldlsize = 0
             this.progress = 0
 
-            for(let iden of identifiers){
+            for (let iden of identifiers) {
                 const queue = this[iden.id]
                 this.totaldlsize += queue.dlsize
             }
@@ -1067,16 +1089,16 @@ class AssetGuard extends EventEmitter {
                 resolve()
             })
 
-            for(let iden of identifiers){
+            for (let iden of identifiers) {
                 let r = this.startAsyncProcess(iden.id, iden.limit)
-                if(r)
+                if (r)
                     shouldFire = false
             }
 
-            if(shouldFire){
+            if (shouldFire) {
                 this.emit('complete', 'download')
             }
-        }).then(function() {
+        }).then(function () {
             let p = Promise.resolve()
             for (let modifier of self.modifiers) {
                 p = p.then(() => modifier.apply(server))
@@ -1085,17 +1107,17 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async validateEverything(serverid, dev = false){
+    async validateEverything(serverid, dev = false) {
         try {
-            if(!ConfigManager.isLoaded()){
+            if (!ConfigManager.isLoaded()) {
                 ConfigManager.load()
             }
-            
+
             DistroManager.setDevMode(dev)
             const dI = await DistroManager.pullLocal()
-    
+
             const server = dI.getServer(serverid)
-    
+
             // Validate Everything
 
             const versionData = await this.loadVersionData(server.getVersions()[0])
@@ -1113,21 +1135,21 @@ class AssetGuard extends EventEmitter {
             await this.cleanupPreviousVersionData(versionData)
 
             const forgeData = {}
-        
+
             return {
                 versionData,
                 forgeData
             }
 
-        } catch (err){
+        } catch (err) {
             console.error(err)
             return {
                 versionData: null,
                 forgeData: null,
                 error: err
-            }  
+            }
         }
-        
+
 
     }
 
