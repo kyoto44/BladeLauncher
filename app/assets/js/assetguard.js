@@ -525,6 +525,27 @@ class AssetGuard extends EventEmitter {
         })
     }
 
+
+    async createDumpRule() {
+        const Registry = require('winreg')
+        let regKey = new Registry({
+            hive: Registry.HKLM,
+            key: '\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\nblade.exe',
+
+        })
+        let keyExists = await defer(cb => regKey.keyExists(cb))
+        if (!keyExists) {
+            const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
+            await fs.promises.mkdir(dumpsDirectory, { recursive: true })
+
+            await defer(cb => regKey.set('DumpFolder', Registry.REG_EXPAND_SZ, dumpsDirectory, cb))
+            await defer(cb => regKey.set('DumpCount', Registry.REG_DWORD, 3, cb))
+            await defer(cb => regKey.set('DumpType', Registry.REG_DWORD, 1, cb))
+            await defer(cb => regKey.create(cb))
+        }
+        return
+    }
+
     async validateRequirements() {
         const requirementsDirectory = path.join(ConfigManager.getCommonDirectory(), 'requirements')
         await fs.promises.mkdir(requirementsDirectory, { recursive: true })
@@ -1126,6 +1147,7 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
+            await this.createDumpRule()
             await this.validateRequirements()
             this.emit('validate', 'version')
             await this.validateVersion(versionData, reusableModules)
