@@ -35,7 +35,10 @@ builder.build({
             target: [
                 {
                     target: 'nsis',
-                    arch: 'x64'
+                    'arch': [
+                        'x64',
+                        'ia32'
+                    ]
                 }
             ],
             legalTrademarks: 'N-blade'

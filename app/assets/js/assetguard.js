@@ -9,6 +9,7 @@ const Registry = require('winreg')
 const request = require('request')
 const xml2js = require('xml2js')
 const url = require('url')
+const arch = require('arch')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -564,10 +565,20 @@ class AssetGuard extends EventEmitter {
 
         async function checkVCPP08() {
             const Registry = require('winreg')
-            let regKey = new Registry({
-                hive: Registry.HKLM,
-                key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
-            })
+            let regKey
+            if (arch() === 'x64') {
+                regKey = new Registry({
+                    hive: Registry.HKLM,
+                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
+                })
+                console.log('64bit system detected')
+            } else if (arch() === 'x86') {
+                regKey = new Registry({
+                    hive: Registry.HKLM,
+                    key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
+                })
+                console.log('32bit system detected')
+            }
             let keyExists = await defer(cb => regKey.keyExists(cb))
             if (!keyExists) {
                 console.log('VC++ 2008 x86 Missing!')
@@ -578,10 +589,20 @@ class AssetGuard extends EventEmitter {
 
         async function checkVCPP19() {
             const Registry = require('winreg')
-            let regKey = new Registry({
-                hive: Registry.HKLM,
-                key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
-            })
+            let regKey
+            if (arch() === 'x64') {
+                regKey = new Registry({
+                    hive: Registry.HKLM,
+                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
+                })
+                console.log('64bit system detected')
+            } else if (arch() === 'x86') {
+                regKey = new Registry({
+                    hive: Registry.HKLM,
+                    key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
+                })
+                console.log('32bit system detected')
+            }
             let keyExists = await defer(cb => regKey.keyExists(cb))
             if (!keyExists) {
                 console.log('VC++ 2019 x86 Missing!')
@@ -1147,8 +1168,10 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
-            await this.createDumpRule()
-            await this.validateRequirements()
+            if (process.platform === 'win32') {  //Install requirements and create rule only for windows 
+                await this.createDumpRule()
+                await this.validateRequirements()
+            }
             this.emit('validate', 'version')
             await this.validateVersion(versionData, reusableModules)
             this.emit('validate', 'libraries')
