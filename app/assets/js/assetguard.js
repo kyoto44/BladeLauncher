@@ -648,7 +648,14 @@ class AssetGuard extends EventEmitter {
                     }
                     if (error) {
                         console.log(`error: ${error.message}`)
-                        reject(error)
+                        if (error.code === 3010 || error.code === 2852126720) {
+                            //3010 means "The requested operation is successful. Changes will not be effective until the system is rebooted."
+                            //2852126720 for DXWEBSETUP
+                            console.log(`${reqName} Installation completed.`)
+                            resolve()
+                        } else {
+                            reject(error)
+                        }
                     } else {
                         console.log(`${reqName} Installation completed.`)
                         resolve()
@@ -674,11 +681,11 @@ class AssetGuard extends EventEmitter {
         )
 
         if (isVCPP08Missing) {
-            await installReq('VC++ 2008 x86', VC08exePath, '')
+            await installReq('VC++ 2008 x86', VC08exePath, '/qb')
         }
 
         if (isVCPP19Missing) {
-            await installReq('VC++ 2019 x86', VC19exePath, '')
+            await installReq('VC++ 2019 x86', VC19exePath, '/passive /norestart')
         }
 
         if (isDirectXMissing) {
