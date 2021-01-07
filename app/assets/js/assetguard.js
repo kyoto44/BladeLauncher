@@ -530,7 +530,7 @@ class AssetGuard extends EventEmitter {
     async createDumpRule() {
         const Registry = require('winreg')
         let regKey = new Registry({
-            hive: Registry.HKLM,
+            hive: Registry.HKCU,
             key: '\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\nblade.exe',
 
         })
