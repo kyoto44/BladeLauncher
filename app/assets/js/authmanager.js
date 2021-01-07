@@ -26,32 +26,22 @@ const loggerSuccess = LoggerUtil('%c[AuthManager]', 'color: #209b07; font-weight
  * @param {string} password The account password.
  * @returns {Promise.<Object>} Promise which resolves the resolved authenticated account object.
  */
-exports.addAccount = async function(username, password){
-    try {
-        const session = await Mojang.authenticate(username, password, ConfigManager.getClientToken())
-        if(session.selectedProfile != null){
-            const ret = ConfigManager.addAuthAccount(session.selectedProfile.id, session.accessToken, session.selectedProfile.login, session.selectedProfile.name)
-            if(ConfigManager.getClientToken() == null){
-                ConfigManager.setClientToken(session.clientToken)
-            }
-            ConfigManager.save()
-            return ret
-        } else {
-            throw new Error('Error during authentication')
-        }
-        
-    } catch (err){
-        return Promise.reject(err)
+exports.addAccount = async function(username, password) {
+    const session = await Mojang.authenticate(username, password, ConfigManager.getClientToken())
+    if (!session.selectedProfile) {
+        throw new Error('Error during authentication')
     }
+    const ret = ConfigManager.addAuthAccount(session.selectedProfile.id, session.accessToken, session.selectedProfile.login, session.selectedProfile.name)
+    if (ConfigManager.getClientToken() == null) {
+        ConfigManager.setClientToken(session.clientToken)
+    }
+    ConfigManager.save()
+    return ret
 }
 
-exports.registerAccount = async function(email){
-    return Promise.resolve({userid:123})
+exports.registerAccount = async function(email) {
+    return {userid:123}
 }
-
-// exports.authAccount = async function(username, password){   // TODO уточнить
-//     return Promise.resolve({userid:123})
-// }
 
 /**
  * Remove an account. This will invalidate the access token associated
@@ -60,18 +50,14 @@ exports.registerAccount = async function(email){
  * @param {string} uuid The UUID of the account to be removed.
  * @returns {Promise.<void>} Promise which resolves to void when the action is complete.
  */
-exports.removeAccount = async function(uuid){
-    try {
-        const authAcc = ConfigManager.getAuthAccount(uuid)
-        const clientToken = ConfigManager.getClientToken()
-        ConfigManager.removeAuthAccount(uuid)
-        ConfigManager.save()
+exports.removeAccount = async function(uuid) {
+    const account = ConfigManager.getAuthAccount(uuid)
+    const clientToken = ConfigManager.getClientToken()
+    ConfigManager.removeAuthAccount(uuid)
+    ConfigManager.save()
 
-        await Mojang.invalidate(authAcc.accessToken, clientToken)
-
-        return Promise.resolve()
-    } catch (err){
-        return Promise.reject(err)
+    if (account && account.accessToken) {
+        await Mojang.invalidate(account.accessToken, clientToken)
     }
 }
 
@@ -87,23 +73,29 @@ exports.removeAccount = async function(uuid){
  */
 exports.validateSelected = async function(){
     const current = ConfigManager.getSelectedAccount()
-    const isValid = await Mojang.validate(current.accessToken, ConfigManager.getClientToken())
-    if(isValid){
+    if (!current.token) {
+        return false
+    }
+    let isValid
+    if (current.token.expires < Date.now() / 1000) {
+        isValid = false
+    } else {
+        isValid = await Mojang.validate(current.accessToken, ConfigManager.getClientToken())
+    }
+    if (isValid) {
         loggerSuccess.log('Account access token validated.')
         return true
     }
+
     try {
         const session = await Mojang.refresh(current.accessToken, ConfigManager.getClientToken())
         ConfigManager.updateAuthAccount(current.uuid, session.accessToken)
         ConfigManager.save()
     } catch(err) {
-        logger.debug('Error while validating selected profile:', err)
-        if(err && err.error === 'ForbiddenOperationException'){
-            // What do we do?
-        }
+        logger.debug('Error while refreshig crrent profile token:', err)
         logger.log('Account access token is invalid.')
         return false
     }
-    loggerSuccess.log('Account access token validated.')
+    loggerSuccess.log('Account access token refreshed.')
     return true
 }

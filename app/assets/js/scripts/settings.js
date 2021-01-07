@@ -374,18 +374,19 @@ function processLogOut(val, isLastAccount){
             validateSelectedAccount()
         }
     }).catch(err => {
-        return new Promise((resolve, reject) => {
-            setOverlayContent(
-                'Failed to invalidate authentication token',
-                'Please contact support for details.',
-                'Okay'
-            )
-            setOverlayHandler(() => {
-                toggleOverlay(false)
-                resolve()
-            })
-            toggleOverlay(true)
-        })
+        console.error(err);
+        // return new Promise((resolve, reject) => {
+        //     setOverlayContent(
+        //         'Failed to invalidate authentication token',
+        //         'Please contact support for details.',
+        //         'Okay'
+        //     )
+        //     setOverlayHandler(() => {
+        //         toggleOverlay(false)
+        //         resolve()
+        //     })
+        //     toggleOverlay(true)
+        // })
     }).then(() => {
         $(parent).fadeOut(250, () => {
             parent.remove()

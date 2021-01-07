@@ -1,8 +1,6 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-
 <head>
-    <meta charset="utf-8" http-equiv="Content-Security-Policy"
-        content="script-src 'self' 'unsafe-inline' sha256-RFM2aD0joHdYC5jSbzmPfg2A5XnkwgEJKt2uMHjAfTk=" />
+    <meta charset="utf-8" http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-0BYiUUoXn5Q9Ltu5EuIYJV3zChRDRoKeL+l5rtLzR30='"/>
     <title>Blade Launcher</title>
     <script src="./assets/js/scripts/uicore.js"></script>
     <script src="./assets/js/scripts/uibinder.js"></script>
@@ -39,7 +37,7 @@
         <%- include('settings') %>
         <%- include('landing') %>
         <%- include('register') %>
-        <%- include('auth') %>
+        <%# include('auth') %>
         <%- include('rules') %>
         <%- include('agreement') %>
     </div>
@@ -59,7 +57,7 @@
             if (elem)
                 elem.innerHTML = Lang.query(`html.${key}`)
             else
-                console.error(`Failed to get element with Id ${key}`)
+                console.warn(`Failed to get element with Id ${key}`)
         }
     </script>
 </body>

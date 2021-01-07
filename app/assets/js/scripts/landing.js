@@ -787,6 +787,12 @@ function loadNews() {
     return new Promise((resolve, reject) => {
         const distroData = DistroManager.getDistribution()
         const newsFeed = distroData.getRSS()
+        if (!newsFeed) {
+            resolve({
+                articles: null
+            })
+            return
+        }
         const newsHost = new URL(newsFeed).origin + '/'
         $.ajax(
             {

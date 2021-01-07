@@ -522,7 +522,7 @@ class AssetGuard extends EventEmitter {
                         const configDirPath = toRemove[id]
                         return fs.remove(configDirPath)
                     })
-                    .then(cb, cb)
+                    .then(_ => cb(), cb)
             })
         })
     }
@@ -1178,7 +1178,11 @@ class AssetGuard extends EventEmitter {
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
             if (process.platform === 'win32') {  //Install requirements and create rule only for windows 
-                await this.createDumpRule()
+                try {
+                    await this.createDumpRule()
+                } catch (err) {
+                    console.warn(err)
+                }
                 await this.validateRequirements()
             }
             this.emit('validate', 'version')

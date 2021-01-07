@@ -183,7 +183,7 @@ function resolveError(err) {
             switch (err.error) {
                 case 'ForbiddenOperationException': {
                     if (err.errorMessage != null) {
-                        if (err.errorMessage === 'Invalid credentials. Invalid username or password.') {
+                        if (err.errorMessage === 'Invalid credentials. Invalid username or password.' || err.errorMessage === 'Invalid username/password.') {
                             return {
                                 title: Lang.queryJS('login.error.invalidCredentials.title'),
                                 desc: Lang.queryJS('login.error.invalidCredentials.desc')
@@ -195,6 +195,7 @@ function resolveError(err) {
                             }
                         }
                     }
+                    break
                 }
                 case 'Registration was not completed': {
                     if (err.errorMessage != null && err.errorMessage.startsWith('Please confirm you email address first.')) {
@@ -203,6 +204,7 @@ function resolveError(err) {
                             desc: Lang.queryJS('login.error.emailNotConfirmed.desc')
                         }
                     }
+                    break
                 }
             }
         } else {
@@ -234,7 +236,7 @@ function resolveError(err) {
     }
     return {
         title: Lang.queryJS('login.error.unknown.title'),
-        desc: Lang.queryJS('login.error.unknown.desk')
+        desc: Lang.queryJS('login.error.unknown.desc')
     }
 }
 

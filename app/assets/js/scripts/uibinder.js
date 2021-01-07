@@ -71,21 +71,27 @@ function showMainUI(){
     // If this is enabled in a development environment we'll get ratelimited.
     // The relaunch frequency is usually far too high.
     let validated
-    if(!isDev && isLoggedIn){
+    if (isDev && false) {
+        validated = Promise.resolve(true)
+    } else if(/*!isDev &&*/ isLoggedIn){
         validated = validateSelectedAccount()
     } else {
-        validated = Promise.resolve(true)
+        validated = Promise.resolve(false)
     }
 
     validated.then((isAccountValid) => {
 
         const data = DistroManager.getDistribution()
-        if (data != null) {
-            // Disable tabbing to the news container.
-            onDistroRefresh(data).then(() => {
-                $('#newsContainer *').attr('tabindex', '-1')
-            })
+        let distPromise
+        if (data === null) {
+            distPromise = DistroManager.refresh()
+        } else {
+            distPromise = Promise.resolve(data)
         }
+        // Disable tabbing to the news container.
+        distPromise.then(data => onDistroRefresh(data)).then(() => {
+            $('#newsContainer *').attr('tabindex', '-1')
+        })
     
         setTimeout(() => {
             document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'

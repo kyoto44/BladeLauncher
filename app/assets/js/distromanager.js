@@ -570,14 +570,18 @@ let data = null
 /**
  * @returns {Promise.<DistroIndex>}
  */
-exports.pullRemote = function(){
-    if(DEV_MODE){
+exports.pullRemote = function () {
+    if (DEV_MODE) {
         return exports.pullLocal()
     }
+    
+    const authAcc = ConfigManager.getSelectedAccount()
+    if (!authAcc) {
+        return Promise.reject('Unauthorized user can not fetch distribution information')
+    }
+
     return new Promise((resolve, reject) => {
         const distroURL = 'https://www.northernblade.ru/api/distribution'
-
-        const authAcc = ConfigManager.getSelectedAccount()
 
         const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
         // TODO: move version into config
@@ -594,22 +598,26 @@ exports.pullRemote = function(){
         }
 
         const fileExists = fs.existsSync(distroDest)
-        if(fileExists){
+        if (fileExists) {
             const stats = fs.statSync(distroDest)
             opts.headers['If-Modified-Since'] = stats.mtime.toUTCString()
         }
 
         request(opts, (error, resp, body) => {
-            if(error){
+            if (error) {
                 reject(error)
                 return
             }
 
-            if(resp.statusCode ===  304){
+            if (resp.statusCode === 304) {
                 resolve(exports.pullLocal())
                 return
             }
-                
+            if (resp.statusCode !== 200) {
+                reject(resp.statusMessage)
+                return
+            }
+
             try {
                 data = DistroIndex.fromJSON(JSON.parse(body))
             } catch (e) {
@@ -618,10 +626,10 @@ exports.pullRemote = function(){
             }
 
             fs.writeFile(distroDest, body, 'utf-8', (err) => {
-                if(!err){
-                    resolve(data)
-                } else {
+                if (err) {
                     reject(err)
+                } else {
+                    resolve(data)
                 }
             })
         })
