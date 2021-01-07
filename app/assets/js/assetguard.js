@@ -10,7 +10,6 @@ const request = require('request')
 const xml2js = require('xml2js')
 const url = require('url')
 const arch = require('arch')
-const admzip = require('adm-zip')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -580,6 +579,8 @@ class AssetGuard extends EventEmitter {
                     key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
                 })
                 console.log('32bit system detected')
+            } else {
+                throw 'Unknown architecture'
             }
             let keyExists = await defer(cb => regKey.keyExists(cb))
             if (!keyExists) {
@@ -604,6 +605,8 @@ class AssetGuard extends EventEmitter {
                     key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
                 })
                 console.log('32bit system detected')
+            } else {
+                throw 'Unknown architecture'
             }
             let keyExists = await defer(cb => regKey.keyExists(cb))
             if (!keyExists) {
