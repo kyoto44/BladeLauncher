@@ -35,13 +35,15 @@ builder.build({
             target: [
                 {
                     target: 'nsis',
-                    'arch': [
+                    arch: [
                         'x64',
                         'ia32'
                     ]
                 }
             ],
-            legalTrademarks: 'N-blade'
+            legalTrademarks: 'N-blade',
+            signAndEditExecutable: true,
+            signDlls: true
         },
         nsis: {
             oneClick: true,
