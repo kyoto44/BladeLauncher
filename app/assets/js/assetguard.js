@@ -10,6 +10,7 @@ const request = require('request')
 const xml2js = require('xml2js')
 const url = require('url')
 const arch = require('arch')
+const admzip = require('adm-zip')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -553,7 +554,8 @@ class AssetGuard extends EventEmitter {
 
         const VC08exePath = path.join(requirementsDirectory, 'vcredist_x86.exe')
         const VC19exePath = path.join(requirementsDirectory, 'VC_redist.x86.exe')
-        const DXexePath = path.join(requirementsDirectory, 'dxwebsetup.exe')
+        const DXRedistPath = path.join(requirementsDirectory, 'directx_Jun2010_redist.exe')
+        const DXSETUPexePath = path.join(requirementsDirectory, '/directx')
 
         async function checkDirectX() {
             if (!fs.existsSync('C:\\Windows\\System32\\D3DX9_43.dll')) {
@@ -648,9 +650,8 @@ class AssetGuard extends EventEmitter {
                     }
                     if (error) {
                         console.log(`error: ${error.message}`)
-                        if (error.code === 3010 || error.code === 2852126720) {
+                        if (error.code === 3010) {
                             //3010 means "The requested operation is successful. Changes will not be effective until the system is rebooted."
-                            //2852126720 for DXWEBSETUP
                             console.log(`${reqName} Installation completed.`)
                             resolve()
                         } else {
@@ -676,7 +677,7 @@ class AssetGuard extends EventEmitter {
             [
                 downloadReq('VC++ 2008 x86', 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', VC08exePath, '35da2bf2befd998980a495b6f4f55e60'),
                 downloadReq('VC++ 2019 x86', 'https://download.visualstudio.microsoft.com/download/pr/8ecb9800-52fd-432d-83ee-d6e037e96cc2/50A3E92ADE4C2D8F310A2812D46322459104039B9DEADBD7FDD483B5C697C0C8/VC_redist.x86.exe', VC19exePath, '69551a0aba9be450ef30813456bbfe58'),
-                downloadReq('DirectX', 'https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe', DXexePath, 'bcbb7c0cd9696068988953990ec5bd11')
+                downloadReq('DirectX', 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe', DXRedistPath, '7c1fc2021cf57fed3c25c9b03cd0c31a')
             ]
         )
 
@@ -689,7 +690,8 @@ class AssetGuard extends EventEmitter {
         }
 
         if (isDirectXMissing) {
-            await installReq('DirectX', DXexePath, '')
+            await installReq('DirectX Redist', DXRedistPath, `/Q /T:${DXSETUPexePath}`)
+            await installReq('DirectX Jun 2010', path.join(DXSETUPexePath, '/DXSETUP.exe'), '/silent')
         }
 
         if (await checkDirectX() || await checkVCPP08() || await checkVCPP19()) {
