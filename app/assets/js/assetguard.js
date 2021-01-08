@@ -27,7 +27,7 @@ const DistroManager = require('./distromanager')
 class Asset {
     /**
      * Create an asset.
-     * 
+     *
      * @param {any} id The id of the asset.
      * @param {string} hash The hash value of the asset.
      * @param {number} size The size in bytes of the asset.
@@ -42,7 +42,7 @@ class Asset {
         this.to = to
     }
 
-    _validateLocal() {
+    async _validateLocal() {
         return AssetGuard._validateLocal(this.to, this.type != null ? 'md5' : 'sha1', this.hash, this.size)
     }
 }
@@ -105,7 +105,7 @@ class DirectoryModifierRule extends ModifierRule {
     async ensure(path, server) {
         switch (this.mode) {
             case 'exists':
-                return await fs.promises.mkdir(path, { recursive: true })
+                return await fs.promises.mkdir(path, {recursive: true})
             default:
                 throw new Error('Unsupported rule type: ' + this.ensure)
         }
@@ -126,7 +126,7 @@ class XmlModifierRule extends ModifierRule {
         let json = {}
         if (exists === true) {
             const data = await defer(cb => fs.readFile(filePath, 'ascii', cb))
-            json = await defer(cb => xml2js.parseString(data, { explicitArray: false, trim: true }, cb))
+            json = await defer(cb => xml2js.parseString(data, {explicitArray: false, trim: true}, cb))
         }
 
         function isObject(obj) {
@@ -183,7 +183,7 @@ class XmlModifierRule extends ModifierRule {
         resolve(result)
 
         const dirname = path.dirname(filePath)
-        await fs.promises.mkdir(dirname, { recursive: true })
+        await fs.promises.mkdir(dirname, {recursive: true})
 
         const builder = new xml2js.Builder()
         const xml = builder.buildObject(result)
@@ -207,7 +207,7 @@ class EjsModifierRule extends ModifierRule {
         }
 
         const configDir = path.join(ConfigManager.getConfigDirectory(), 'temp')
-        await fs.promises.mkdir(configDir, { recursive: true })
+        await fs.promises.mkdir(configDir, {recursive: true})
 
         // TODO: quick hack
         const dirname = path.dirname(filePath)
@@ -226,8 +226,8 @@ class EjsModifierRule extends ModifierRule {
 
 class Modifier {
     /**
-     * @param {string} path 
-     * @param {Array<ModifierRule>} rules 
+     * @param {string} path
+     * @param {Array<ModifierRule>} rules
      */
     constructor(path, rules) {
         this.path = path
@@ -258,26 +258,30 @@ class Library extends Asset {
 
     /**
      * Validate that a file exists and matches a given hash value.
-     * 
+     *
      * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
      */
-    _validateLocal() {
-        if (!fs.existsSync(this.targetPath)) {
+    async _validateLocal() {
+        try {
+            if (!await fs.pathExists(this.targetPath)) {
+                return false
+            }
+            if (this.size != null) {
+                const stats = await fs.stat(this.targetPath)
+                const currentSize = stats.size
+                if (currentSize !== this.size)
+                    return false
+            }
+            if (this.checksum != null && this.checksum.hash != null) {
+                const currentHash = await AssetGuard._calculateHash(this.targetPath, this.checksum.algo)
+                if (currentHash !== this.checksum.hash)
+                    return false
+            }
+            return true
+        } catch (e) {
+            console.error(`Failed to validate library ${this.targetPath}`, e)
             return false
         }
-        if (this.size != null) {
-            const stats = fs.statSync(this.targetPath)
-            const calcdSize = stats.size
-            if (calcdSize !== this.size)
-                return false
-        }
-        if (this.checksum != null && this.checksum.hash != null) {
-            const buf = fs.readFileSync(this.targetPath)
-            const calcdhash = AssetGuard._calculateHash(buf, this.checksum.algo)
-            if (calcdhash !== this.checksum.hash)
-                return false
-        }
-        return true
     }
 
     /**
@@ -302,10 +306,10 @@ class Library extends Asset {
      * an OS specified, then the library can ONLY be downloaded on that OS. If the disallow
      * property has instead specified an OS, the library can be downloaded on any OS EXCLUDING
      * the one specified.
-     * 
+     *
      * If the rules are undefined, the natives property will be checked for a matching entry
      * for the current OS.
-     * 
+     *
      * @param {Array.<Object>} rules The Library's download rules.
      * @param {Object} natives The Library's natives object.
      * @returns {boolean} True if the Library follows the specified rules, otherwise false.
@@ -340,7 +344,7 @@ class DLTracker {
 
     /**
      * Create a DLTracker
-     * 
+     *
      * @param {Array.<Asset>} dlqueue An array containing assets queued for download.
      * @param {number} dlsize The combined size of each asset in the download queue array.
      * @param {function(Asset)} callback Optional callback which is called when an asset finishes downloading.
@@ -358,7 +362,7 @@ class Util {
     /**
      * Returns true if the actual version is greater than
      * or equal to the desired version.
-     * 
+     *
      * @param {string} desired The desired version.
      * @param {string} actual The actual version.
      */
@@ -382,7 +386,7 @@ class Util {
 
 /**
  * Central object class used for control flow. This object stores data about
- * categories of downloads. Each category is assigned an identifier with a 
+ * categories of downloads. Each category is assigned an identifier with a
  * DLTracker object as its value. Combined information is also stored, such as
  * the total size of all the queued files in each category. This event is used
  * to emit events so that external modules can listen into processing done in
@@ -394,7 +398,7 @@ class AssetGuard extends EventEmitter {
      * Create an instance of AssetGuard.
      * On creation the object's properties are never-null default
      * values. Each identifier is resolved to an empty DLTracker.
-     * 
+     *
      * @param {string} commonPath The common path for shared game files.
      * @param {string} launcherVersion The path to a java executable which will be used
      * to finalize installation.
@@ -423,19 +427,25 @@ class AssetGuard extends EventEmitter {
 
     /**
      * Calculates the hash for a file using the specified algorithm.
-     * 
-     * @param {Buffer} buf The buffer containing file data.
+     *
+     * @param {string} filepath The buffer containing file data.
      * @param {string} algo The hash algorithm.
-     * @returns {string} The calculated hash in hex.
+     * @returns {Promise} The calculated hash in hex.
      */
-    static _calculateHash(buf, algo) {
-        return crypto.createHash(algo).update(buf).digest('hex')
+    static _calculateHash(filepath, algo) {
+        return new Promise((resolve, reject) => {
+            let hash = crypto.createHash(algo)
+            let stream = fs.createReadStream(filepath)
+            stream.on('error', reject)
+            stream.on('data', chunk => hash.update(chunk))
+            stream.on('end', () => resolve(hash.digest('hex')))
+        })
     }
 
     /**
      * Used to parse a checksums file. This is specifically designed for
      * the checksums.sha1 files found inside the forge scala dependencies.
-     * 
+     *
      * @param {string} content The string content of the checksums file.
      * @returns {Object} An object with keys being the file names, and values being the hashes.
      */
@@ -454,29 +464,34 @@ class AssetGuard extends EventEmitter {
 
     /**
      * Validate that a file exists and matches a given hash value.
-     * 
+     *
      * @param {string} filePath The path of the file to validate.
      * @param {string} algo The hash algorithm to check against.
      * @param {string} hash The existing hash to check against.
+     * @param {number} sizeBytes The expected size of the file in byte.
      * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
      */
-    static _validateLocal(filePath, algo, hash, sizeBytes) {
-        if (!fs.existsSync(filePath)) {
+    static async _validateLocal(filePath, algo, hash, sizeBytes) {
+        try {
+            if (!await fs.pathExists(filePath)) {
+                return false
+            }
+            if (sizeBytes != null) {
+                const stats = await fs.stat(filePath)
+                const currentSize = stats.size
+                if (currentSize !== sizeBytes)
+                    return false
+            }
+            if (hash != null) {
+                const currentHash = await AssetGuard._calculateHash(filePath, algo)
+                if (currentHash !== hash)
+                    return false
+            }
+            return true
+        } catch (e) {
+            console.error(`Failed to validate file ${filePath}`, e)
             return false
         }
-        if (hash != null) {
-            const buf = fs.readFileSync(filePath)
-            const calcdhash = AssetGuard._calculateHash(buf, algo)
-            if (calcdhash !== hash)
-                return false
-        }
-        if (sizeBytes != null) {
-            const stats = fs.statSync(filePath)
-            const calcdSize = stats.size
-            if (calcdSize !== sizeBytes)
-                return false
-        }
-        return true
     }
 
     // #endregion
@@ -544,7 +559,6 @@ class AssetGuard extends EventEmitter {
             await defer(cb => regKey.set('DumpType', Registry.REG_DWORD, 1, cb))
             await defer(cb => regKey.create(cb))
         }
-        return
     }
 
     async validateRequirements() {
@@ -758,7 +772,7 @@ class AssetGuard extends EventEmitter {
 
     /**
      * Loads the version data for a given version.
-     * 
+     *
      * @param {DistroManager.Version} version The game version for which to load the index data.
      * @param {boolean} force Optional. If true, the version index will be downloaded even if it exists locally. Defaults to false.
      * @returns {Promise.<Object>} Promise which resolves to the version data object.
@@ -775,11 +789,11 @@ class AssetGuard extends EventEmitter {
 
             let fetch = force
             if (!fetch) {
-                fs.ensureDirSync(versionPath)
-                fetch = !fs.existsSync(versionFile)
+                await fs.ensureDir(versionPath)
+                fetch = !await fs.pathExists(versionFile)
             }
             if (!fetch) {
-                const stats = fs.statSync(versionFile)
+                const stats = await fs.stat(versionFile)
                 customHeaders['If-Modified-Since'] = stats.mtime.toUTCString()
             }
 
@@ -825,10 +839,10 @@ class AssetGuard extends EventEmitter {
                 }
 
                 fs.writeFile(versionFile, body, 'utf-8', (err) => {
-                    if (!err) {
-                        resolve(data)
-                    } else {
+                    if (err) {
                         reject(err)
+                    } else {
+                        resolve(data)
                     }
                 })
             })
@@ -843,7 +857,7 @@ class AssetGuard extends EventEmitter {
      * It will parse the version data, analyzing each library entry. In this analysis, it will
      * check to see if the local file exists and is valid. If not, it will be added to the download
      * queue for the 'libraries' identifier.
-     * 
+     *
      * @param {Object} versionData The version data for the assets.
      * @param {Object} reusableModules Information about same modules in the previous versions which were downloaded and can be reused
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
@@ -859,7 +873,7 @@ class AssetGuard extends EventEmitter {
             let dlSize = 0
 
             // Check validity of each library. If the hashs don't match, download the library.
-            async.eachLimit(ids, 5, (id, cb) => {
+            async.eachLimit(ids, 5, async (id, cb) => {
                 const lib = versionData.downloads[id]
                 if (!Library.validateRules(lib.rules, lib.natives)) {
                     cb()
@@ -882,7 +896,7 @@ class AssetGuard extends EventEmitter {
                         path.join(libPath, artifact.path)
                     )
 
-                    if (!libItm._validateLocal()) {
+                    if (!await libItm._validateLocal()) {
                         const previousVersions = reusableModules[id]
                         if (previousVersions) {
                             for (let previousVersion of previousVersions) {
@@ -895,7 +909,7 @@ class AssetGuard extends EventEmitter {
                                     artifact.urls,
                                     previousPath
                                 )
-                                if (previousLib._validateLocal()) {
+                                if (await previousLib._validateLocal()) {
                                     const localUrl = url.pathToFileURL(previousPath).href
                                     libItm.urls.unshift(localUrl)
                                     break
@@ -992,7 +1006,7 @@ class AssetGuard extends EventEmitter {
 
     /**
      * Initiate an async download process for an AssetGuard DLTracker.
-     * 
+     *
      * @param {string} identifier The identifier of the AssetGuard DLTracker.
      * @param {number} limit Optional. The number of async processes to run in parallel.
      * @returns {boolean} True if the process began, otherwise false.
@@ -1011,12 +1025,12 @@ class AssetGuard extends EventEmitter {
 
         async.eachLimit(dlQueue, limit, (asset, cb) => {
 
-            function afterLoad() {
+            async function afterLoad() {
                 if (dlTracker.callback != null) {
                     dlTracker.callback.apply(dlTracker, [asset, self])
                 }
 
-                const v = asset._validateLocal()
+                const v = await asset._validateLocal()
                 if (v) {
                     cb()
                     return
@@ -1033,7 +1047,7 @@ class AssetGuard extends EventEmitter {
             for (let alternative of alternatives) {
                 const urlObj = new URL(alternative)
                 if (urlObj.protocol === 'file:') {
-                    fs.copyFile(url.fileURLToPath(alternative), asset.to, (err) => {
+                    fs.copyFile(url.fileURLToPath(alternative), asset.to, async (err) => {
                         if (err) {
                             cb(err)
                             return
@@ -1042,7 +1056,7 @@ class AssetGuard extends EventEmitter {
                         self.progress += asset.size
                         self.emit('progress', 'download', self.progress, self.totaldlsize)
 
-                        afterLoad()
+                        await afterLoad()
                     })
                     return
                 }
@@ -1082,8 +1096,8 @@ class AssetGuard extends EventEmitter {
                 }
 
                 let writeStream = fs.createWriteStream(asset.to)
-                writeStream.on('close', () => {
-                    afterLoad()
+                writeStream.on('close', async () => {
+                    await afterLoad()
                 })
                 req.pipe(writeStream)
                 req.resume()
@@ -1128,10 +1142,10 @@ class AssetGuard extends EventEmitter {
      * immediately. Once all downloads are complete, this function will fire the 'complete' event on the
      * global object instance.
      *
-     * @param {Server} server 
+     * @param {Server} server
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
-    processDlQueues(server, identifiers = [{ id: 'assets', limit: 20 }, { id: 'libraries', limit: 5 }, { id: 'files', limit: 5 }, { id: 'forge', limit: 5 }]) {
+    processDlQueues(server, identifiers = [{id: 'assets', limit: 20}, {id: 'libraries', limit: 5}, {id: 'files', limit: 5}, {id: 'forge', limit: 5}]) {
         const self = this
         return new Promise((resolve, reject) => {
             let shouldFire = true
@@ -1183,7 +1197,7 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
-            if (process.platform === 'win32') {  //Install requirements and create rule only for windows 
+            if (process.platform === 'win32') {  //Install requirements and create rule only for windows
                 try {
                     await this.createDumpRule()
                 } catch (err) {
