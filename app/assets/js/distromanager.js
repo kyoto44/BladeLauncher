@@ -673,13 +673,12 @@ exports.getDistribution = function(){
     return data
 }
 
-exports.refresh = async function(){
+exports.refresh = async function() {
     try {
         const d = await exports.pullRemote()
         logger.log('Loaded distribution index.')
         return d
-    }
-    catch (err) {
+    } catch (err) {
         logger.error('Failed to load distribution index.', err)
     }
     logger.log('Attempting to load an older version of the distribution index.')
@@ -687,13 +686,12 @@ exports.refresh = async function(){
         const local = await exports.pullLocal()
         logger.log('Successfully loaded an older version of the distribution index.')
         return local
-    }
-    catch (er) {
+    } catch (er) {
         logger.error('Failed to load an older version of the distribution index.', er)
     }
     if (data != null) {
         return data
     }
 
-    return Promise.reject('Failed to load distribution index.')
+    throw new Error('Failed to load distribution index.')
 }

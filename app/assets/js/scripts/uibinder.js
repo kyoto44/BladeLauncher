@@ -55,15 +55,17 @@ function getCurrentView(){
     return currentView
 }
 
-function showMainUI(){
+function showMainUI() {
+    
+    // Load ConfigManager
+    ConfigManager.load()
 
-    if(!isDev){
+    if (!isDev) {
         loggerAutoUpdater.log('Initializing..')
         ipcRenderer.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
     }
 
     prepareSettings(true)
-
 
     const isLoggedIn = ConfigManager.getSelectedAccount() != null
     //Object.keys(ConfigManager.getAuthAccounts()).length > 0

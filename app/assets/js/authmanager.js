@@ -73,15 +73,10 @@ exports.removeAccount = async function(uuid) {
  */
 exports.validateSelected = async function(){
     const current = ConfigManager.getSelectedAccount()
-    if (!current.token) {
+    if (!current || !current.accessToken) {
         return false
     }
-    let isValid
-    if (current.token.expires < Date.now() / 1000) {
-        isValid = false
-    } else {
-        isValid = await Mojang.validate(current.accessToken, ConfigManager.getClientToken())
-    }
+    let isValid = await Mojang.validate(current.accessToken, ConfigManager.getClientToken())
     if (isValid) {
         loggerSuccess.log('Account access token validated.')
         return true

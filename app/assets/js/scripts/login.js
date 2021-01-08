@@ -126,7 +126,7 @@ register.addEventListener('click', (e) => {
  */
 function loginDisabled(v) {
     if (loginButton.disabled !== v) {
-        //loginButton.disabled = v //Make sure loginButton will be always active
+        loginButton.disabled = v //Make sure loginButton will be always active
     }
 }
 
