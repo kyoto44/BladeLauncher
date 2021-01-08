@@ -551,6 +551,9 @@ class AssetGuard extends EventEmitter {
         const requirementsDirectory = path.join(ConfigManager.getCommonDirectory(), 'requirements')
         await fs.promises.mkdir(requirementsDirectory, { recursive: true })
 
+        const screenshotsDirectory = path.join(ConfigManager.getCommonDirectory(), 'screenshots')
+        await fs.promises.mkdir(screenshotsDirectory, { recursive: true })
+
         const VC08exePath = path.join(requirementsDirectory, 'vcredist_x86.exe')
         const VC19exePath = path.join(requirementsDirectory, 'VC_redist.x86.exe')
         const DXRedistPath = path.join(requirementsDirectory, 'directx_Jun2010_redist.exe')
