@@ -531,7 +531,7 @@ class AssetGuard extends EventEmitter {
 
 
                 const versionNumber = versionDir.name
-                if (distroIndex.has(versionNumber))
+                if (requiredVersion.has(versionNumber))
                     continue
 
                 toRemove[versionNumber] = path.join(versionsPath, versionNumber)
@@ -1227,7 +1227,11 @@ class AssetGuard extends EventEmitter {
             this.emit('validate', 'files')
             await this.processDlQueues(server)
             //this.emit('complete', 'download')
-            await this.cleanupPreviousVersionData(dI)
+            try {
+                await this.cleanupPreviousVersionData(dI)
+            } catch (err) {
+                console.warn(err)
+            }
 
             const forgeData = {}
 
