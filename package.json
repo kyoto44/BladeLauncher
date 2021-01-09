@@ -1,6 +1,6 @@
 {
   "name": "bladelauncher",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "productName": "Blade Launcher",
   "description": "Northern Blade Launcher",
   "author": "N-Blade LCC",
@@ -25,7 +25,7 @@
     "node": "12.x.x"
   },
   "dependencies": {
-    "@kaciras-blog/nativelib": "github:kaciras-blog/nativelib",
+    "@kaciras-blog/nativelib": "github:kaciras-blog/nativelib#v0.2.4",
     "adm-zip": "^0.5.1",
     "arch": "^2.2.0",
     "async": "^3.2.0",

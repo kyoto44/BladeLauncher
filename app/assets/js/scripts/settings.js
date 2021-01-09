@@ -97,35 +97,39 @@ function initSettingsValidators(){
 /**
  * Load configuration values onto the UI. This is an automated process.
  */
-function initSettingsValues(){
+function initSettingsValues() {
     const sEls = document.getElementById('settingsContainer').querySelectorAll('[cValue]')
     Array.from(sEls).map((v, index, arr) => {
         const cVal = v.getAttribute('cValue')
         const gFn = ConfigManager['get' + cVal]
-        if(typeof gFn === 'function'){
-            if(v.tagName === 'INPUT'){
-                if(v.type === 'number' || v.type === 'text'){
+        if (typeof gFn !== 'function') {
+            return
+        }
+        switch (v.tagName) {
+            case 'INPUT':
+                if (v.type === 'number' || v.type === 'text') {
                     // Special Conditions
-                    if(cVal === 'JavaExecutable'){
+                    if (cVal === 'JavaExecutable') {
                         // populateJavaExecDetails(v.value)
                         v.value = gFn()
-                    } else if (cVal === 'DataDirectory'){
+                    } else if (cVal === 'DataDirectory') {
                         v.value = gFn()
-                    } else if(cVal === 'JVMOptions'){
+                    } else if (cVal === 'JVMOptions') {
                         v.value = gFn().join(' ')
                     } else {
                         v.value = gFn()
                     }
-                } else if(v.type === 'checkbox'){
+                } else if (v.type === 'checkbox') {
                     v.checked = gFn()
                 }
-            } else if(v.tagName === 'DIV'){
-                if(v.classList.contains('rangeSlider')){
+                break
+            case 'DIV':
+                if (v.classList.contains('rangeSlider')) {
                     // Special Conditions
-                    if(cVal === 'MinRAM' || cVal === 'MaxRAM'){
+                    if (cVal === 'MinRAM' || cVal === 'MaxRAM') {
                         let val = gFn()
-                        if(val.endsWith('M')){
-                            val = Number(val.substring(0, val.length-1))/1000
+                        if (val.endsWith('M')) {
+                            val = Number(val.substring(0, val.length - 1)) / 1000
                         } else {
                             val = Number.parseFloat(val)
                         }
@@ -135,7 +139,7 @@ function initSettingsValues(){
                         v.setAttribute('value', Number.parseFloat(gFn()))
                     }
                 }
-            }
+                break
         }
 
     })

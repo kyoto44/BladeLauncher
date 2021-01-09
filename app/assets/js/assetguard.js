@@ -537,31 +537,27 @@ class AssetGuard extends EventEmitter {
 
         const versionsPath = path.join(this.commonPath, 'versions')
 
-        return defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb)).then((versionDirs) => {
-            const toRemove = {}
+        let versionDirs = await fs.readdir(versionsPath, { withFileTypes: true })
 
-            for (let versionDir of versionDirs) {
-                if (!versionDir.isDirectory())
-                    continue
+        const toRemove = {}
+        for (let versionDir of versionDirs) {
+            if (!versionDir.isDirectory())
+                continue
 
 
-                const versionNumber = versionDir.name
-                if (requiredVersion.has(versionNumber))
-                    continue
+            const versionNumber = versionDir.name
+            if (requiredVersion.has(versionNumber))
+                continue
 
-                toRemove[versionNumber] = path.join(versionsPath, versionNumber)
-            }
+            toRemove[versionNumber] = path.join(versionsPath, versionNumber)
+        }
 
-            const ids = Object.keys(toRemove)
-            return async.eachLimit(ids, 5, (id, cb) => {
-                const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), id)
-                fs.remove(previousLibPath)
-                    .then(() => {
-                        const configDirPath = toRemove[id]
-                        return fs.remove(configDirPath)
-                    })
-                    .then(_ => cb(), cb)
-            })
+        const ids = Object.keys(toRemove)
+        await async.eachLimit(ids, 5, async (id) => {
+            const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), id)
+            await fs.remove(previousLibPath)
+            const configDirPath = toRemove[id]
+            await fs.remove(configDirPath)
         })
     }
 
@@ -579,7 +575,6 @@ class AssetGuard extends EventEmitter {
     }
 
     async sendDumps() {
-
         // const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
         // const tree = dirTree(dumpsDirectory, { attributes: ['mtime'], extensions: /\.dmp/ }).children
         // let dumpsData = []
@@ -1272,7 +1267,11 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
-            await this.sendDumps()
+            try {
+                await this.sendDumps()
+            } catch (err) {
+                console.warn(err)
+            }
             if (process.platform === 'win32') {  //Install requirements and create rule only for windows 
                 try {
                     await this.createDumpRule()
