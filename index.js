@@ -8,6 +8,10 @@ const path = require('path')
 const semver = require('semver')
 const url = require('url')
 
+try {
+    require('electron-reloader')(module)
+} catch (_) { }
+
 // Setup auto updater.
 function initAutoUpdater(event, data) {
 

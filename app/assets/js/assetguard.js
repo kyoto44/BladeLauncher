@@ -9,7 +9,12 @@ const Registry = require('winreg')
 const request = require('request')
 const xml2js = require('xml2js')
 const url = require('url')
+const os = require('os')
 const arch = require('arch')
+const si = require('systeminformation')
+const { createXXH3_128 } = require('@kaciras-blog/nativelib')
+const FormData = require('form-data')
+const dirTree = require('directory-tree')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -105,7 +110,7 @@ class DirectoryModifierRule extends ModifierRule {
     async ensure(path, server) {
         switch (this.mode) {
             case 'exists':
-                return await fs.promises.mkdir(path, {recursive: true})
+                return await fs.promises.mkdir(path, { recursive: true })
             default:
                 throw new Error('Unsupported rule type: ' + this.ensure)
         }
@@ -126,7 +131,7 @@ class XmlModifierRule extends ModifierRule {
         let json = {}
         if (exists === true) {
             const data = await defer(cb => fs.readFile(filePath, 'ascii', cb))
-            json = await defer(cb => xml2js.parseString(data, {explicitArray: false, trim: true}, cb))
+            json = await defer(cb => xml2js.parseString(data, { explicitArray: false, trim: true }, cb))
         }
 
         function isObject(obj) {
@@ -183,7 +188,7 @@ class XmlModifierRule extends ModifierRule {
         resolve(result)
 
         const dirname = path.dirname(filePath)
-        await fs.promises.mkdir(dirname, {recursive: true})
+        await fs.promises.mkdir(dirname, { recursive: true })
 
         const builder = new xml2js.Builder()
         const xml = builder.buildObject(result)
@@ -207,7 +212,7 @@ class EjsModifierRule extends ModifierRule {
         }
 
         const configDir = path.join(ConfigManager.getConfigDirectory(), 'temp')
-        await fs.promises.mkdir(configDir, {recursive: true})
+        await fs.promises.mkdir(configDir, { recursive: true })
 
         // TODO: quick hack
         const dirname = path.dirname(filePath)
@@ -434,11 +439,21 @@ class AssetGuard extends EventEmitter {
      */
     static _calculateHash(filepath, algo) {
         return new Promise((resolve, reject) => {
-            let hash = crypto.createHash(algo)
-            let stream = fs.createReadStream(filepath)
-            stream.on('error', reject)
-            stream.on('data', chunk => hash.update(chunk))
-            stream.on('end', () => resolve(hash.digest('hex')))
+            if (algo === 'sha512' || algo === 'md5') {
+                let hash = crypto.createHash(algo)
+                let stream = fs.createReadStream(filepath)
+                stream.on('error', reject)
+                stream.on('data', chunk => hash.update(chunk))
+                stream.on('end', () => resolve(hash.digest('hex')))
+            } else if (algo === 'xxh128') {
+                const hash = new createXXH3_128()
+                const stream = fs.createReadStream(filepath)
+                stream.on('error', reject)
+                stream.on('data', chunk => hash.update(chunk))
+                stream.on('end', () => {
+                    resolve(hash.digest('hex'))
+                })
+            }
         })
     }
 
@@ -510,7 +525,7 @@ class AssetGuard extends EventEmitter {
         return true
     }
 
-    cleanupPreviousVersionData(distroIndex) {
+    async cleanupPreviousVersionData(distroIndex) {
         const requiredVersion = new Set()
         const servers = distroIndex.getServers()
         for (const server of servers) {
@@ -522,7 +537,7 @@ class AssetGuard extends EventEmitter {
 
         const versionsPath = path.join(this.commonPath, 'versions')
 
-        return defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb)).then((versionDirs) => {
+        return defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb)).then((versionDirs) => {
             const toRemove = {}
 
             for (let versionDir of versionDirs) {
@@ -550,6 +565,52 @@ class AssetGuard extends EventEmitter {
         })
     }
 
+    async gatherSystemInfo() {
+        const sysinfo = {
+            'accountid': ConfigManager.getSelectedAccount().uuid,
+            'cpumodel': os.cpus()[0].model,
+            'ostype': os.platform() + arch(),
+            'osversion': os.release(),
+            'ramsize': Math.round(os.totalmem() / 1024 / 1024 / 1024) + 'GB',
+            'gpu': (await si.graphics()).controllers[0].model
+        }
+        //console.log(sysinfo)
+        return sysinfo
+    }
+
+    async sendDumps() {
+
+        // const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
+        // const tree = dirTree(dumpsDirectory, { attributes: ['mtime'], extensions: /\.dmp/ }).children
+        // let dumpsData = []
+        // let dumpForm = new FormData()
+        // //Check for new dumps & and push them
+        // for (let i = 0; i < tree.length; i++) {
+        //     dumpsData.push({ 'dumpPath': tree[i].path })
+        //     dumpForm.append(`dumpfile${i}`, fs.createReadStream(tree[i].path), tree[i].name)
+        // }
+        // dumpForm.append('sysinfo', JSON.stringify(await this.gatherSystemInfo()))
+        // console.log(dumpsData)
+        // console.log(dumpForm)
+        // //Send dump 
+        // let isSubmitted
+        // dumpForm.submit('https://www.northernblade.ru/api/submit/support/request', function (err, res) {
+        //     if (err) throw err
+        //     if (res === '200') {
+        //         isSubmitted = true
+        //     }
+        //     console.log('Dumps successfully submitted!')
+        // })
+
+        // //Cleanup
+        // if (isSubmitted) {
+        //     for (let i = 0; i < dumpsData.length; i++) {
+        //         await fs.unlink(dumpsData[i].dumpPath)
+        //         console.log(`${dumpsData[i].dumpPath}`)
+        //     }
+        // }
+
+    }
 
     async createDumpRule() {
         const Registry = require('winreg')
@@ -561,7 +622,7 @@ class AssetGuard extends EventEmitter {
         let keyExists = await defer(cb => regKey.keyExists(cb))
         if (!keyExists) {
             const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
-            await fs.promises.mkdir(dumpsDirectory, {recursive: true})
+            await fs.promises.mkdir(dumpsDirectory, { recursive: true })
 
             await defer(cb => regKey.set('DumpFolder', Registry.REG_EXPAND_SZ, dumpsDirectory, cb))
             await defer(cb => regKey.set('DumpCount', Registry.REG_DWORD, 3, cb))
@@ -572,10 +633,10 @@ class AssetGuard extends EventEmitter {
 
     async validateRequirements() {
         const requirementsDirectory = path.join(ConfigManager.getCommonDirectory(), 'requirements')
-        await fs.promises.mkdir(requirementsDirectory, {recursive: true})
+        await fs.promises.mkdir(requirementsDirectory, { recursive: true })
 
         const screenshotsDirectory = path.join(ConfigManager.getCommonDirectory(), 'screenshots')
-        await fs.promises.mkdir(screenshotsDirectory, {recursive: true})
+        await fs.promises.mkdir(screenshotsDirectory, { recursive: true })
 
         const VC08exePath = path.join(requirementsDirectory, 'vcredist_x86.exe')
         const VC19exePath = path.join(requirementsDirectory, 'VC_redist.x86.exe')
@@ -735,7 +796,7 @@ class AssetGuard extends EventEmitter {
         const result = {}
 
         const versionsPath = path.join(this.commonPath, 'versions')
-        const versionDirs = await defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb))
+        const versionDirs = await defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb))
         for (let versionDir of versionDirs) {
             if (!versionDir.isDirectory())
                 continue
@@ -898,7 +959,7 @@ class AssetGuard extends EventEmitter {
                     const hash = checksum[1]
                     const libItm = new Library(
                         id,
-                        {'algo': algo, 'hash': hash},
+                        { 'algo': algo, 'hash': hash },
                         artifact.size,
                         artifact.urls,
                         path.join(libPath, artifact.path)
@@ -912,7 +973,7 @@ class AssetGuard extends EventEmitter {
                                 const previousPath = path.join(previousLibPath, artifact.path)
                                 const previousLib = new Library(
                                     id,
-                                    {'algo': algo, 'hash': hash},
+                                    { 'algo': algo, 'hash': hash },
                                     artifact.size,
                                     artifact.urls,
                                     previousPath
@@ -1155,10 +1216,10 @@ class AssetGuard extends EventEmitter {
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
     processDlQueues(server, identifiers = [
-        {id: 'assets', limit: 20},
-        {id: 'libraries', limit: 5},
-        {id: 'files', limit: 5},
-        {id: 'forge', limit: 5}
+        { id: 'assets', limit: 20 },
+        { id: 'libraries', limit: 5 },
+        { id: 'files', limit: 5 },
+        { id: 'forge', limit: 5 }
     ]) {
         const self = this
         return new Promise((resolve, reject) => {
@@ -1211,7 +1272,8 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
-            if (process.platform === 'win32') {  //Install requirements and create rule only for windows
+            await this.sendDumps()
+            if (process.platform === 'win32') {  //Install requirements and create rule only for windows 
                 try {
                     await this.createDumpRule()
                 } catch (err) {
