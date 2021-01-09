@@ -510,10 +510,19 @@ class AssetGuard extends EventEmitter {
         return true
     }
 
-    cleanupPreviousVersionData(targetVersionData) {
+    cleanupPreviousVersionData(distroIndex) {
+        const requiredVersion = new Set()
+        const servers = distroIndex.getServers()
+        for (const server of servers) {
+            const versions = server.getVersions()
+            for (const version of versions) {
+                requiredVersion.add(version.id)
+            }
+        }
+
         const versionsPath = path.join(this.commonPath, 'versions')
 
-        return defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb)).then((versionDirs) => {
+        return defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb)).then((versionDirs) => {
             const toRemove = {}
 
             for (let versionDir of versionDirs) {
@@ -522,7 +531,7 @@ class AssetGuard extends EventEmitter {
 
 
                 const versionNumber = versionDir.name
-                if (versionNumber === targetVersionData.id)
+                if (distroIndex.has(versionNumber))
                     continue
 
                 toRemove[versionNumber] = path.join(versionsPath, versionNumber)
@@ -552,7 +561,7 @@ class AssetGuard extends EventEmitter {
         let keyExists = await defer(cb => regKey.keyExists(cb))
         if (!keyExists) {
             const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
-            await fs.promises.mkdir(dumpsDirectory, { recursive: true })
+            await fs.promises.mkdir(dumpsDirectory, {recursive: true})
 
             await defer(cb => regKey.set('DumpFolder', Registry.REG_EXPAND_SZ, dumpsDirectory, cb))
             await defer(cb => regKey.set('DumpCount', Registry.REG_DWORD, 3, cb))
@@ -563,10 +572,10 @@ class AssetGuard extends EventEmitter {
 
     async validateRequirements() {
         const requirementsDirectory = path.join(ConfigManager.getCommonDirectory(), 'requirements')
-        await fs.promises.mkdir(requirementsDirectory, { recursive: true })
+        await fs.promises.mkdir(requirementsDirectory, {recursive: true})
 
         const screenshotsDirectory = path.join(ConfigManager.getCommonDirectory(), 'screenshots')
-        await fs.promises.mkdir(screenshotsDirectory, { recursive: true })
+        await fs.promises.mkdir(screenshotsDirectory, {recursive: true})
 
         const VC08exePath = path.join(requirementsDirectory, 'vcredist_x86.exe')
         const VC19exePath = path.join(requirementsDirectory, 'VC_redist.x86.exe')
@@ -726,7 +735,7 @@ class AssetGuard extends EventEmitter {
         const result = {}
 
         const versionsPath = path.join(this.commonPath, 'versions')
-        const versionDirs = await defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb))
+        const versionDirs = await defer(cb => fs.readdir(versionsPath, {withFileTypes: true}, cb))
         for (let versionDir of versionDirs) {
             if (!versionDir.isDirectory())
                 continue
@@ -873,10 +882,9 @@ class AssetGuard extends EventEmitter {
             let dlSize = 0
 
             // Check validity of each library. If the hashs don't match, download the library.
-            async.eachLimit(ids, 5, async (id, cb) => {
+            async.eachLimit(ids, 5, async (id) => {
                 const lib = versionData.downloads[id]
                 if (!Library.validateRules(lib.rules, lib.natives)) {
-                    cb()
                     return
                 }
 
@@ -890,7 +898,7 @@ class AssetGuard extends EventEmitter {
                     const hash = checksum[1]
                     const libItm = new Library(
                         id,
-                        { 'algo': algo, 'hash': hash },
+                        {'algo': algo, 'hash': hash},
                         artifact.size,
                         artifact.urls,
                         path.join(libPath, artifact.path)
@@ -904,7 +912,7 @@ class AssetGuard extends EventEmitter {
                                 const previousPath = path.join(previousLibPath, artifact.path)
                                 const previousLib = new Library(
                                     id,
-                                    { 'algo': algo, 'hash': hash },
+                                    {'algo': algo, 'hash': hash},
                                     artifact.size,
                                     artifact.urls,
                                     previousPath
@@ -921,8 +929,11 @@ class AssetGuard extends EventEmitter {
                         libDlQueue.push(libItm)
                     }
                 }
-                cb()
             }, (err) => {
+                if (err) {
+                    reject(err)
+                    return
+                }
                 self.libraries = new DLTracker(libDlQueue, dlSize)
                 resolve()
             })
@@ -1104,9 +1115,7 @@ class AssetGuard extends EventEmitter {
 
             })
 
-            req.on('error', (err) => {
-                self.emit('error', 'download', err)
-            })
+            req.on('error', cb)
 
             req.on('data', (chunk) => {
                 self.progress += chunk.length
@@ -1145,7 +1154,12 @@ class AssetGuard extends EventEmitter {
      * @param {Server} server
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
-    processDlQueues(server, identifiers = [{id: 'assets', limit: 20}, {id: 'libraries', limit: 5}, {id: 'files', limit: 5}, {id: 'forge', limit: 5}]) {
+    processDlQueues(server, identifiers = [
+        {id: 'assets', limit: 20},
+        {id: 'libraries', limit: 5},
+        {id: 'files', limit: 5},
+        {id: 'forge', limit: 5}
+    ]) {
         const self = this
         return new Promise((resolve, reject) => {
             let shouldFire = true
@@ -1213,7 +1227,7 @@ class AssetGuard extends EventEmitter {
             this.emit('validate', 'files')
             await this.processDlQueues(server)
             //this.emit('complete', 'download')
-            await this.cleanupPreviousVersionData(versionData)
+            await this.cleanupPreviousVersionData(dI)
 
             const forgeData = {}
 

@@ -576,7 +576,7 @@ exports.pullRemote = function () {
     }
     
     const authAcc = ConfigManager.getSelectedAccount()
-    if (!authAcc) {
+    if (!authAcc || !authAcc.accessToken) {
         return Promise.reject('Unauthorized user can not fetch distribution information')
     }
 

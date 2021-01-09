@@ -71,17 +71,6 @@ function resolveMinRAM(){
  */
 const DEFAULT_CONFIG = {
     settings: {
-        java: {
-            minRAM: resolveMinRAM(),
-            maxRAM: resolveMaxRAM(), // Dynamic
-            executable: null,
-            jvmOptions: [
-                '-XX:+UseConcMarkSweepGC',
-                '-XX:+CMSIncrementalMode',
-                '-XX:-UseAdaptiveSizePolicy',
-                '-Xmn128M'
-            ],
-        },
         game: {
             resWidth: 1280,
             resHeight: 720,
