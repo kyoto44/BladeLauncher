@@ -275,12 +275,12 @@ function dlAsync(login = true) {
                 case 'librariesInstall':
                     setLaunchPercentage(30, 100)
                     loggerLaunchSuite.log('Libraries Install Required!')
-                    setLaunchDetails('Installing libraries..')
+                    setLaunchDetails('Установка библиотек..')
                     break
                 case 'version':
                     setLaunchPercentage(40, 100)
                     loggerLaunchSuite.log('Version data loaded.')
-                    setLaunchDetails('Validating asset integrity..')
+                    setLaunchDetails('Проверка целостности ресурсов..')
                     break
                 case 'assets':
                     setLaunchPercentage(60, 100)
@@ -295,7 +295,7 @@ function dlAsync(login = true) {
                 case 'files':
                     setLaunchPercentage(100, 100)
                     loggerLaunchSuite.log('File validation complete.')
-                    setLaunchDetails('Downloading files..')
+                    setLaunchDetails('Скачивание игровых ресурсов..')
                     break
             }
         } else if (m.context === 'progress') {
@@ -399,7 +399,7 @@ function dlAsync(login = true) {
                 const authUser = ConfigManager.getSelectedAccount()
                 loggerLaunchSuite.log(`Sending selected account (${authUser.displayName}) to ProcessBuilder.`)
                 pb = new ProcessBuilder(serv, versionData, forgeData, authUser, remote.app.getVersion())
-                setLaunchDetails('Launching game..')
+                setLaunchDetails('Запуск игры..')
 
                 const gameGlobalErrorListener = function (err) {
                     loggerLaunchSuite.error('Game launch failed', err)
@@ -427,7 +427,7 @@ function dlAsync(login = true) {
                     }
 
                     pb.build()
-                    setLaunchDetails('Done. Enjoy the game!')
+                    setLaunchDetails('Клиент запущен, приятной игры!')
 
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)

@@ -43,7 +43,8 @@ p {
 
 /* Set default font and color. */
 body, button {
-    font-family: 'Avenir Book';
+    font-family: Avenir Next Cyr;
+    font-weight: 500;
     color: white;
 }
 
@@ -111,7 +112,7 @@ body, button {
 }
 #frameTitleText {
     font-size: 14px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     letter-spacing: 0.5px;
 }
 
@@ -284,7 +285,7 @@ body, button {
 }
 
 #welcomeHeader {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     text-align: center;
     color: white;
     margin-bottom: 25px;
@@ -310,7 +311,6 @@ body, button {
 /* Login button styles. */
 #welcomeButton {
     background: none;
-    font-weight: bold;
     letter-spacing: 2px;
     border: none;
     padding: 15px 5px;
@@ -373,7 +373,6 @@ body, button {
 .loginSpanDim {
     font-size: 12px;
     color: #848484;
-    font-weight: bold;
 }
 
 /* Main login container. */
@@ -471,7 +470,6 @@ body, button {
 #loginForm a {
     font-size: 12px;
     color: #848484;
-    font-weight: bold;
     text-decoration: none;
     transition: 0.25s ease;
 }
@@ -497,11 +495,10 @@ body, button {
 
 /* Header on login view. */
 #loginSubheader {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     margin-bottom: 25px;
     font-size: 1em;
     letter-spacing: 1px;
-    font-weight: bold;
 }
 
 /* Container to organize login field elements. */
@@ -522,8 +519,7 @@ body, button {
 
 /* Span which displays errors related to login field content. */
 .loginErrorSpan {
-    font-family: 'Avenir Medium';
-    font-weight: bold;
+    font-family: 'Avenir Next Cyr';
     font-size: 0.7em;
     color: #ff1b0c;
     width: 100%;
@@ -567,7 +563,6 @@ body, button {
     margin-bottom: 20px;
     border-color: #fff;
     color: rgba(255, 255, 255, 0.75);
-    font-weight: bold;
     text-align: center;
     box-sizing: border-box;
     padding: 7.5px;
@@ -585,7 +580,6 @@ body, button {
     font-size: 10px;
     letter-spacing: 1px;
     text-align: center;
-    font-weight: bold;
 }
 .loginField:focus::-webkit-input-placeholder {
     color: transparent;
@@ -612,7 +606,6 @@ body, button {
 /* Login button styles. */
 #loginButton {
     background: none;
-    font-weight: bold;
     letter-spacing: 2px;
     border: none;
     padding: 15px 5px;
@@ -784,7 +777,6 @@ body, button {
 .loginDisclaimerText {
     font-size: 7px;
     color: #848484;
-    font-weight: bold;
     text-align: center;
 }
 
@@ -1049,7 +1041,7 @@ body, button {
 }
 .settingsTabHeaderText {
     font-size: 20px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
 }
 .settingsTabHeaderDesc {
     font-size: 12px;
@@ -1096,7 +1088,7 @@ body, button {
 }
 .settingsFieldTitle {
     font-size: 14px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     color: rgba(255, 255, 255, 0.95);
 }
 .settingsFieldDesc {
@@ -1267,7 +1259,7 @@ input:checked + .toggleSwitchSlider:before {
     width: 89%;
 }
 .settingsFileSelDesc strong {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
 }
 
 /* * *
@@ -1354,8 +1346,7 @@ input:checked + .toggleSwitchSlider:before {
 .settingsAuthAccountDetailTitle {
     font-size: 12px;
     color: grey;
-    font-weight: bold;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
 }
 .settingsAuthAccountDetailValue {
     font-size: 14px;
@@ -1377,7 +1368,7 @@ input:checked + .toggleSwitchSlider:before {
     border: none;
     white-space: nowrap;
     background: none;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     outline: none;
     transition: 0.25s ease;
 }
@@ -1402,7 +1393,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     font-size: 12px;
     border-radius: 3px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     transition: 0.25s ease;
     cursor: pointer;
     outline: none;
@@ -1486,7 +1477,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     font-size: 12px;
     border-radius: 3px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     transition: 0.25s ease;
     cursor: pointer;
     outline: none;
@@ -1649,7 +1640,6 @@ input:checked + .toggleSwitchSlider:before {
     text-align: left;
     padding: 0px;
     color: #c32625;
-    font-weight: bold;
     cursor: pointer;
     outline: none;
     transition: 0.25s ease;
@@ -1668,7 +1658,6 @@ input:checked + .toggleSwitchSlider:before {
     font-size: 10px;
     margin: 10px 0px;
     color: lightgrey;
-    font-weight: bold;
     width: 89%;
 }
 
@@ -1875,7 +1864,6 @@ input:checked + .toggleSwitchSlider:before {
 .settingsMemoryStatusTitle {
     font-size: 12px;
     color: grey;
-    font-weight: bold;
 }
 .settingsMemoryStatusValue {
     color: lightgrey;
@@ -1887,12 +1875,10 @@ input:checked + .toggleSwitchSlider:before {
     font-size: 10px;
     margin: 20px 0px;
     color: lightgrey;
-    font-weight: bold;
 }
 
 /* Status text which displays details on the selected executable. */
 #settingsJavaExecDetails {
-    font-weight: bold;
     color: grey;
     font-size: 12px;
 }
@@ -1929,7 +1915,6 @@ input:checked + .toggleSwitchSlider:before {
     font-size: 10px;
     margin: 20px 0px;
     color: lightgrey;
-    font-weight: bold;
     width: 89%;
 }
 
@@ -1993,7 +1978,6 @@ input:checked + .toggleSwitchSlider:before {
     border-radius: 50%;
     background: #23aa23;
     text-align: center;
-    font-weight: bold;
     margin: 11px 12px;
     color: white;
     height: 15px;
@@ -2010,16 +1994,15 @@ input:checked + .toggleSwitchSlider:before {
 /* Release type text. */
 #settingsAboutCurrentVersionTitle {
     font-size: 12px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     color: #23aa23;
-    font-weight: bold;
 }
 
 /* Current version text. */
 #settingsAboutCurrentVersionLine {
     font-size: 10px;
     color: grey;
-    font-weight: bold;
+    
 }
 
 /* About information links. */
@@ -2074,7 +2057,6 @@ input:checked + .toggleSwitchSlider:before {
 .settingsChangelogLabel {
     font-size: 12px;
     color: grey;
-    font-weight: bold;
 }
 
 /* Changelog text content container. */
@@ -2119,7 +2101,6 @@ input:checked + .toggleSwitchSlider:before {
     background-color: white;
     border-radius: 3px;
     color: black;
-    font-weight: bold;
 }
 .settingsChangelogText a.commit-link:hover tt {
     text-decoration: underline;
@@ -2176,7 +2157,6 @@ input:checked + .toggleSwitchSlider:before {
 #settingsUpdateTitle {
     font-size: 16px;
     padding-left: 10px;
-    font-weight: bold;
 }
 
 /* Update version container. */
@@ -2192,7 +2172,6 @@ input:checked + .toggleSwitchSlider:before {
     border-radius: 50%;
     background: #23aa23;
     text-align: center;
-    font-weight: bold;
     margin: 11px 12px;
     color: white;
     height: 15px;
@@ -2209,23 +2188,20 @@ input:checked + .toggleSwitchSlider:before {
 /* Release type text. */
 #settingsUpdateVersionTitle {
     font-size: 12px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     color: #23aa23;
-    font-weight: bold;
 }
 
 /* Current version text. */
 #settingsUpdateVersionLine {
     font-size: 10px;
     color: grey;
-    font-weight: bold;
 }
 
 /* Update action container. */
 #settingsUpdateActionContainer {
     padding-top: 10px;
     font-size: 14px;
-    font-weight: bold;
 }
 
 /* Update action button styles. */
@@ -2236,7 +2212,6 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: none;
     font-size: 14px;
-    font-weight: bold;
     cursor: pointer;
     outline: none;
     text-align: left;
@@ -2407,8 +2382,7 @@ input:checked + .toggleSwitchSlider:before {
 /* News article title styles. */
 #newsArticleTitle {
     font-size: 18px;
-    font-weight: bold;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     color: white;
     text-decoration: none;
     transition: 0.25s ease;
@@ -2443,7 +2417,6 @@ input:checked + .toggleSwitchSlider:before {
     display: inline-block;
     font-size: 10px;
     padding: 0px 5px;
-    font-weight: bold;
     border-radius: 2px;
 }
 
@@ -2642,7 +2615,6 @@ input:checked + .toggleSwitchSlider:before {
 /* News error retry button styles. */
 #newsErrorRetry {
     font-size: 12px;
-    font-weight: bold;
     cursor: pointer;
     background: none;
     border: none;
@@ -2725,7 +2697,7 @@ input:checked + .toggleSwitchSlider:before {
     z-index: 1;
     top: 115%;
     left: -17.5px;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     font-size: 12px;
     transition: visibility 0s linear 0.25s, opacity 0.25s ease;
 }
@@ -2808,7 +2780,6 @@ input:checked + .toggleSwitchSlider:before {
     justify-content: center;
     align-items: center;
     transition: 0.25s ease;
-    font-weight: bold;
     letter-spacing: 2px;
     background-color: rgba(0, 0, 0, 0.35);
     -webkit-user-select: none;
@@ -2830,7 +2801,7 @@ input:checked + .toggleSwitchSlider:before {
 #user_text {
     font-size: 12px;
     min-width: 135px;
-    font-weight: 900;
+    font-weight: 500;
     letter-spacing: 1px;
     text-shadow: 0px 0px 20px black;
     position: absolute;
@@ -2998,7 +2969,6 @@ input:checked + .toggleSwitchSlider:before {
 .bot_label {
     font-size: 9px;
     letter-spacing: 1px;
-    font-weight: bold;
     text-shadow: 0px 0px 0px #bebcbb;
 }
 
@@ -3057,7 +3027,7 @@ input:checked + .toggleSwitchSlider:before {
     border-radius: 4px;
     padding: 5px 10px;
     z-index: 1;
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     font-size: 12px;
     transition: visibility 0s linear 0.25s, opacity 0.25s ease;
     bottom: calc(100% + 15px);
@@ -3213,7 +3183,8 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: none;
     cursor: pointer;
-    font-weight: 900;
+    font-family: Avenir Next Cyr;
+    font-weight: 500;
     letter-spacing: 2px;
     text-shadow: 0px 0px 0px #bebcbb;
     font-size: 20px;
@@ -3249,7 +3220,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Span which displays percentage complete. */
 #launch_progress_label {
-    font-weight: 900;
+    font-weight: 500;
     letter-spacing: 1px;
     text-shadow: 0px 0px 0px #bebcbb;
     font-size: 20px;
@@ -3299,10 +3270,12 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Span which displays information about the status of the launch process. */
 #launch_details_text {
+    font-family: Avenir Next Cyr;
+    font-weight: 500;
     font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
-    overflow: hidden;
+    /*overflow: hidden;*/
 }
 
 /*******************************************************************************
@@ -3372,9 +3345,8 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Overlay title styles. */
 #overlayTitle {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     font-size: 20px;
-    font-weight: bold;
     letter-spacing: 1px;
     -webkit-user-select: initial;
 }
@@ -3382,7 +3354,6 @@ input:checked + .toggleSwitchSlider:before {
 /* Overlay description styles. */
 #overlayDesc {
     font-size: 12px;
-    font-weight: bold;
     -webkit-user-select: initial;
 }
 
@@ -3398,8 +3369,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: 1px solid #ffffff;
     color: white;
-    font-family: 'Avenir Medium';
-    font-weight: bold;
+    font-family: 'Avenir Next Cyr';
     border-radius: 2px;
     padding: 0px 8.1px;
     cursor: pointer;
@@ -3417,7 +3387,6 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Overlay dismiss option styles. */
 #overlayDismiss {
-    font-weight: bold;
     font-size: 10px;
     text-decoration: none;
     padding-top: 2.5px;
@@ -3450,9 +3419,8 @@ input:checked + .toggleSwitchSlider:before {
 /* Server selection header. */
 #serverSelectHeader,
 #accountSelectHeader {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     font-size: 20px;
-    font-weight: bold;
     color: #fff;
     margin-bottom: 25px;
 }
@@ -3579,14 +3547,12 @@ input:checked + .toggleSwitchSlider:before {
 /* The name of the server listing. */
 .serverListingName {
     font-size: 14px;
-    font-weight: bold;
 }
 
 /* Description for the server listing. */
 .serverListingDescription {
     font-size: 10px;
     line-height: 10px;
-    font-weight: bold;
 }
 
 /* Content container for the server listing's information. */
@@ -3672,8 +3638,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: 1px solid #ffffff;
     color: white;
-    font-family: 'Avenir Medium';
-    font-weight: bold;
+    font-family: 'Avenir Next Cyr';
     border-radius: 2px;
     padding: 0px 8.1px;
     cursor: pointer;
@@ -3696,7 +3661,6 @@ input:checked + .toggleSwitchSlider:before {
 /* Server selection cancel button styles. */
 #serverSelectCancel,
 #accountSelectCancel {
-    font-weight: bold;
     font-size: 10px;
     text-decoration: none;
     padding-top: 2.5px;
@@ -3792,7 +3756,6 @@ input:checked + .toggleSwitchSlider:before {
 .registerSpanDim {
     font-size: 12px;
     color: #848484;
-    font-weight: bold;
 }
 
 /* Main register container. */
@@ -3890,7 +3853,6 @@ input:checked + .toggleSwitchSlider:before {
 #registerForm a {
     font-size: 12px;
     color: #848484;
-    font-weight: bold;
     text-decoration: none;
     transition: 0.25s ease;
 }
@@ -3916,11 +3878,10 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Header on register view. */
 #registerSubheader {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     margin-bottom: 25px;
     font-size: 12px;
     letter-spacing: 1px;
-    font-weight: bold;
 }
 
 /* Container to organize register field elements. */
@@ -3941,8 +3902,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Span which displays errors related to register field content. */
 .registerErrorSpan {
-    font-family: 'Avenir Medium';
-    font-weight: bold;
+    font-family: 'Avenir Next Cyr';
     font-size: 0.7em;
     color: #ff1b0c;
     width: 100%;
@@ -3963,7 +3923,6 @@ input:checked + .toggleSwitchSlider:before {
     margin-bottom: 20px;
     border-color: #fff;
     color: rgba(255, 255, 255, 0.75);
-    font-weight: bold;
     text-align: center;
     box-sizing: border-box;
     padding: 7.5px;
@@ -3981,7 +3940,6 @@ input:checked + .toggleSwitchSlider:before {
     font-size: 10px;
     letter-spacing: 1px;
     text-align: center;
-    font-weight: bold;
 }
 .registerField:focus::-webkit-input-placeholder {
     color: transparent;
@@ -4003,7 +3961,6 @@ input:checked + .toggleSwitchSlider:before {
 /* register button styles. */
 #registerButton{
     background: none;
-    font-weight: bold;
     letter-spacing: 2px;
     border: none;
     padding: 15px 5px;
@@ -4090,7 +4047,6 @@ input:checked + .toggleSwitchSlider:before {
 .registerDisclaimerText {
     font-size: 7px;
     color: #848484;
-    font-weight: bold;
     text-align: center;
 }
 
@@ -4185,7 +4141,6 @@ input:checked + .toggleSwitchSlider:before {
 .authSpanDim {
     font-size: 12px;
     color: #848484;
-    font-weight: bold;
 }
 
 /* Main auth container. */
@@ -4283,7 +4238,6 @@ input:checked + .toggleSwitchSlider:before {
 #authForm a {
     font-size: 12px;
     color: #848484;
-    font-weight: bold;
     text-decoration: none;
     transition: 0.25s ease;
 }
@@ -4309,11 +4263,10 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Header on auth view. */
 #authSubheader {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     margin-bottom: 25px;
     font-size: 12px;
     letter-spacing: 1px;
-    font-weight: bold;
 }
 
 /* Container to organize auth field elements. */
@@ -4334,8 +4287,7 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Span which displays errors related to auth field content. */
 .authErrorSpan {
-    font-family: 'Avenir Medium';
-    font-weight: bold;
+    font-family: 'Avenir Next Cyr';
     font-size: 0.7em;
     color: #ff1b0c;
     width: 100%;
@@ -4356,7 +4308,6 @@ input:checked + .toggleSwitchSlider:before {
     margin-bottom: 20px;
     border-color: #fff;
     color: rgba(255, 255, 255, 0.75);
-    font-weight: bold;
     text-align: center;
     box-sizing: border-box;
     padding: 7.5px;
@@ -4374,7 +4325,6 @@ input:checked + .toggleSwitchSlider:before {
     font-size: 10px;
     letter-spacing: 1px;
     text-align: center;
-    font-weight: bold;
 }
 .authField:focus::-webkit-input-placeholder {
     color: transparent;
@@ -4396,7 +4346,6 @@ input:checked + .toggleSwitchSlider:before {
 /* auth button styles. */
 #authButton {
     background: none;
-    font-weight: bold;
     letter-spacing: 2px;
     border: none;
     padding: 15px 5px;
@@ -4476,7 +4425,6 @@ input:checked + .toggleSwitchSlider:before {
 .authDisclaimerText {
     font-size: 7px;
     color: #848484;
-    font-weight: bold;
     text-align: center;
 }
 
@@ -4665,9 +4613,8 @@ input:checked + .toggleSwitchSlider:before {
 
 /* rules title styles. */
 #rulesTitle {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     font-size: 20px;
-    font-weight: bold;
     letter-spacing: 1px;
     -webkit-user-select: initial;
 }
@@ -4675,7 +4622,6 @@ input:checked + .toggleSwitchSlider:before {
 /* rules description styles. */
 #rulesDesc {
     font-size: 12px;
-    font-weight: bold;
     -webkit-user-select: initial;
 }
 
@@ -4691,8 +4637,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: 1px solid #ffffff;
     color: white;
-    font-family: 'Avenir Medium';
-    font-weight: bold;
+    font-family: 'Avenir Next Cyr';
     border-radius: 2px;
     padding: 0px 8.1px;
     cursor: pointer;
@@ -4711,7 +4656,6 @@ input:checked + .toggleSwitchSlider:before {
 
 /* rules dismiss option styles. */
 #rulesDismiss {
-    font-weight: bold;
     font-size: 10px;
     text-decoration: none;
     padding-top: 2.5px;
@@ -4818,9 +4762,8 @@ input:checked + .toggleSwitchSlider:before {
 
 /* agreement title styles. */
 #agreementTitle {
-    font-family: 'Avenir Medium';
+    font-family: 'Avenir Next Cyr';
     font-size: 20px;
-    font-weight: bold;
     letter-spacing: 1px;
     -webkit-user-select: initial;
 }
@@ -4828,7 +4771,6 @@ input:checked + .toggleSwitchSlider:before {
 /* agreement description styles. */
 #agreementDesc {
     font-size: 12px;
-    font-weight: bold;
     -webkit-user-select: initial;
 }
 
@@ -4844,8 +4786,7 @@ input:checked + .toggleSwitchSlider:before {
     background: none;
     border: 1px solid #ffffff;
     color: white;
-    font-family: 'Avenir Medium';
-    font-weight: bold;
+    font-family: 'Avenir Next Cyr';
     border-radius: 2px;
     padding: 0px 8.1px;
     cursor: pointer;
@@ -4864,7 +4805,6 @@ input:checked + .toggleSwitchSlider:before {
 
 /* agreement dismiss option styles. */
 #agreementDismiss {
-    font-weight: bold;
     font-size: 10px;
     text-decoration: none;
     padding-top: 2.5px;

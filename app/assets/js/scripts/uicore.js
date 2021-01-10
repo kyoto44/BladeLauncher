@@ -59,7 +59,7 @@ if (!isDev) {
             case 'update-downloaded':
                 loggerAutoUpdaterSuccess.log('Update ' + info.version + ' ready to be installed.')
                 latestDownloadedVersion = info.version
-                settingsUpdateButtonStatus('Install Now', false, () => {
+                settingsUpdateButtonStatus('Установить обновление', false, () => {
                     if (!isDev) {
                         ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
                     }
@@ -68,7 +68,7 @@ if (!isDev) {
                 break
             case 'update-not-available':
                 loggerAutoUpdater.log('No new update found.')
-                settingsUpdateButtonStatus('Check for Updates')
+                settingsUpdateButtonStatus('Проверка обновлений')
                 break
             case 'ready':
                 updateCheckListener = setInterval(() => {
