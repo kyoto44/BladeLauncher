@@ -300,6 +300,10 @@ function dlAsync(login = true) {
             }
         } else if (m.context === 'progress') {
             switch (m.data) {
+                case 'validating': {
+                    setDownloadPercentage(m.value, m.total, m.percent)
+                    break
+                }
                 case 'assets': {
                     const perc = (m.value / m.total) * 20
                     setLaunchPercentage(40 + perc, 100, parseInt(40 + perc))

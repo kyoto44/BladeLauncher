@@ -936,6 +936,7 @@ class AssetGuard extends EventEmitter {
 
             const libDlQueue = []
             let dlSize = 0
+            let currentid = 0
 
             // Check validity of each library. If the hashs don't match, download the library.
             async.eachLimit(ids, 5, async (id) => {
@@ -985,6 +986,8 @@ class AssetGuard extends EventEmitter {
                         libDlQueue.push(libItm)
                     }
                 }
+                currentid++
+                self.emit('progress', 'validating', currentid, ids.length)
             }, (err) => {
                 if (err) {
                     reject(err)
