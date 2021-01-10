@@ -270,7 +270,7 @@ function dlAsync(login = true) {
                 case 'distribution':
                     setLaunchPercentage(20, 100)
                     loggerLaunchSuite.log('Validated distibution index.')
-                    setLaunchDetails('Loading version information..')
+                    setLaunchDetails('Загрузка информации о версии игры..')
                     break
                 case 'librariesInstall':
                     setLaunchPercentage(30, 100)
@@ -444,7 +444,7 @@ function dlAsync(login = true) {
     // Begin Validations
 
     // Validate Forge files.
-    setLaunchDetails('Loading server information..')
+    setLaunchDetails('Получение информации о сервере..')
 
     DistroManager.refresh()
         .then((data) => {

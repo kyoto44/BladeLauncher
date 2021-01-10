@@ -561,6 +561,11 @@ class AssetGuard extends EventEmitter {
         })
     }
 
+    async syncSettings(type) {
+
+
+    }
+
     async gatherSystemInfo() {
         const sysinfo = {
             'accountid': ConfigManager.getSelectedAccount().uuid,
@@ -575,36 +580,42 @@ class AssetGuard extends EventEmitter {
     }
 
     async sendDumps() {
-        // const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
-        // const tree = dirTree(dumpsDirectory, { attributes: ['mtime'], extensions: /\.dmp/ }).children
-        // let dumpsData = []
-        // let dumpForm = new FormData()
-        // //Check for new dumps & and push them
-        // for (let i = 0; i < tree.length; i++) {
-        //     dumpsData.push({ 'dumpPath': tree[i].path })
-        //     dumpForm.append(`dumpfile${i}`, fs.createReadStream(tree[i].path), tree[i].name)
-        // }
-        // dumpForm.append('sysinfo', JSON.stringify(await this.gatherSystemInfo()))
-        // console.log(dumpsData)
-        // console.log(dumpForm)
-        // //Send dump 
-        // let isSubmitted
-        // dumpForm.submit('https://www.northernblade.ru/api/submit/support/request', function (err, res) {
-        //     if (err) throw err
-        //     if (res === '200') {
-        //         isSubmitted = true
-        //     }
-        //     console.log('Dumps successfully submitted!')
-        // })
+        const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
+        const tree = dirTree(dumpsDirectory, { extensions: /\.dmp/ }).children
+        let dumpsData = []
+        let dumpForm = new FormData()
+        //Check for new dumps & and push them
+        const meta = {
+            'username': ConfigManager.getSelectedAccount().username,
+            'section': 'technical',
+            'subsection': 'launching',
+            'description': 'crush dumps'
+        }
+        dumpForm.append('meta', JSON.stringify(meta), { contentType: 'application/json; charset=utf-8' })
+        for (let i = 0; i < tree.length; i++) {
+            dumpsData.push({ 'dumpPath': tree[i].path })
+            dumpForm.append(`dumpfile${i}`, fs.createReadStream(tree[i].path), tree[i].name)
+        }
+        if (dumpsData.length !== 0) {
+            dumpForm.append('sysinfo', JSON.stringify(await this.gatherSystemInfo()), { filename: 'sysinfo.json' })
+            console.log(dumpsData)
+            console.log(dumpForm)
+            //Send dump 
+            let isSubmitted
+            dumpForm.submit('https://www.northernblade.ru/api/submit/support/request', function (err, res) {
+                if (err) throw err
+                if (res.statusCode === '204') {
+                    isSubmitted = true
+                }
+            })
 
-        // //Cleanup
-        // if (isSubmitted) {
-        //     for (let i = 0; i < dumpsData.length; i++) {
-        //         await fs.unlink(dumpsData[i].dumpPath)
-        //         console.log(`${dumpsData[i].dumpPath}`)
-        //     }
-        // }
-
+            //Cleanup
+            if (isSubmitted) {
+                for (let i = 0; i < dumpsData.length; i++) {
+                    fs.unlink(dumpsData[i].dumpPath)
+                }
+            }
+        }
     }
 
     async createDumpRule() {
@@ -1270,14 +1281,15 @@ class AssetGuard extends EventEmitter {
             const versionData = await this.loadVersionData(server.getVersions()[0])
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
-            try {
-                await this.sendDumps()
-            } catch (err) {
-                console.warn(err)
-            }
-            if (process.platform === 'win32') {  //Install requirements and create rule only for windows 
+            //await this.syncSettings('download')
+            if (process.platform === 'win32') {  //Install requirements/create rule/send dumps only for windows 
                 try {
                     await this.createDumpRule()
+                } catch (err) {
+                    console.warn(err)
+                }
+                try {
+                    await this.sendDumps()
                 } catch (err) {
                     console.warn(err)
                 }
