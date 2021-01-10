@@ -86,7 +86,11 @@ function showMainUI() {
         const data = DistroManager.getDistribution()
         let distPromise
         if (data === null) {
-            distPromise = DistroManager.refresh()
+            if (isAccountValid) {
+                distPromise = DistroManager.refresh()
+            } else {
+                distPromise = Promise.reject('No authorized account')
+            }
         } else {
             distPromise = Promise.resolve(data)
         }
