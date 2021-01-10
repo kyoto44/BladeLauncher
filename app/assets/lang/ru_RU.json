@@ -1,11 +1,9 @@
 {
     "html": {
-
         "avatarOverlay": "Править",
         "newsButtonText": "НОВОСТИ",
         "launch_button": "ИГРАТЬ",
         "settingsTooltip": "Настройки",
-
         "loginCancelText": "Отмена",
         "updateAvailableTooltip": "Обновление",
         "landingPlayerLabel": "СЕРВЕР",
@@ -16,7 +14,6 @@
         "launch_details_text": "Ожидание..",
         "nEFailedSpan": "Ошибка загрузки новостей",
         "nENoneSpan": "Нет новостей",
-
         "serverSelectHeader": "Доступные серверы",
         "serverSelectConfirm": "Выбрать",
         "serverSelectCancel": "Отмена",
@@ -27,21 +24,19 @@
         "overlayDesc": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud..",
         "overlayAcknowledge": "Conare Iterum",
         "overlayDismiss": "Dismiss",
-
         "settingsNavHeaderText": "Настройки",
         "settingsNavAccount": "Аккаунт",
         "settingsNavTabMinecraft": "Minecraft",
         "settingsNavTabMods": "Моды",
         "settingsNavTabJava": "Java",
         "settingsNavItemLauncher": "Лаунчер",
-        "settingsNavUpdate":"О продукте",
+        "settingsNavUpdate": "О продукте",
         "settingsNavTabUpdate": "Обновления",
         "settingsNavDone": "Готово",
         "settingsTabAccountHeaderText": "Настройки аккаунта",
         "settingsAccountTabHeaderDesc": "Добавить новую учетную запись или редактировать существующую.",
         "settingsAddAccountText": "Добавить аккаунт",
         "settingsFieldTitleCurrentAccount": "Текущий аккаунт",
-
         "settingsTabHeaderTextMinecraftId": "Настройки Minecraft",
         "settingsTabHeaderDescMinecraftId": "Options related to game launch.",
         "settingsFieldTitleResolution": "Разрешение экрана",
@@ -49,7 +44,6 @@
         "settingsAutoConnect": "Автоматически подключаться к серверу при запуске.",
         "settingsGameWithoutLauncher": "Запуск игры отдельно от лаунчера.",
         "settingsCloseAllSwitcher": "If the game is not detached, closing the launcher will also close the game.",
-
         "settingsTabHeaderTextModsId": "Настройки модов",
         "settingsTabHeaderDescModsId": "Включить или выключить мод.",
         "settingsSwitchServerButton": "Переключить",
@@ -58,7 +52,6 @@
         "settingsDropInModsId": "Drop-in Mods",
         "settingsDropinFileSystemButton": "+ Add Mods",
         "settingsDropinRefreshNote": "(F5 to Refresh)???",
-        
         "settingsTabHeaderTextJavaSettingsId": "Java Settings",
         "settingsTabHeaderDescJavaSettingsId": "Manage the Java configuration (advanced).",
         "settingsMemoryTitle": "Memory",
@@ -77,7 +70,6 @@
         "settingsJavaPathId": "The Java executable is validated before game launch. <strong>Requires Java 8 x64.</strong><br>The path should end with <strong>bin<%= process.platform === 'win32' ? '\\javaw.exe' : '/java' %></strong>.",
         "settingsJVMOptsTitle": "Additional JVM Options",
         "settingsJVMOptsDesc": "Options to be provided to the JVM at runtime. <em>-Xms</em> and <em>-Xmx</em> should notbe included.<br><a href=\"https://docs.oracle.com/javase/8/docs/technotes/tools/<%= process.platform === 'win32' ? 'windows' : 'unix' %>/java.html\">Available Options for Java 8</a>.",
-        
         "settingsTabHeaderTextlauncherId": "Настройки лаунчера",
         "settingsTabHeaderDesclauncherId": "Список параметров для конфигурирования лаунчера",
         "settingsPreReleaseHeadId": "Allow Pre-Release Updates.",
@@ -85,10 +77,8 @@
         "settingsDataDirTitle": "Расположение игровых файлов",
         "settingsChoosingFolderId": "Выбрать каталог",
         "settingsInstallInfoId": "Все игровые файлы и скриншоты будут находиться в указанной директории.",
-
         "settingsTabHeaderTextAboutId": "О продукте",
         "settingsTabHeaderDescAboutId": "Информация о версии и наличии обновлений лаунчера.",
-        
         "settingsUpdateVersionValue": "0.0.1-alpha.18",
         "settingsUpdateActionButton": "Проверить наличие обновлений",
         "settingsAboutSourceButton": "Оригинальные исходники разработаны Daniel Scalzi (GitHub)",
@@ -97,20 +87,17 @@
         "settingsNoReleaseNotesId": "No Release Notes",
         "settingsChangeLogLabelId": "Примечания к выпуску",
         "settingsChangelogTitleId": "Changelog",
-        "settingsChangelogTextId": "No Release Notes",    
-
+        "settingsChangelogTextId": "No Release Notes",
         "settingsTabHeaderTextLauncherUpdateId": "Обновить лаунчер",
         "settingsTabHeaderDescLauncherUpdateId": "Скачать, установить и просмотреть обновления.",
-
         "loginSubheader": "Вход",
-        "loginEmailError":"* Отсутствует",
-        "loginPasswordError":"* Обязательное поле",
-        "forgotPassId":"Забыли пароль?",
-        "loginButtonContent":"ВОЙТИ",
-        "needAccountId":"Зарегистрироваться?",
-        "passNotStored":"Ваш пароль будет отправлен непосредственно на сервер и нигде сохранен не будет.",
-        "launcherNotAfillAcc":"Blade Launcher не связан с аккаунтом NorthernBlade."        
-        
+        "loginEmailError": "* Отсутствует",
+        "loginPasswordError": "* Обязательное поле",
+        "forgotPassId": "Забыли пароль?",
+        "loginButtonContent": "ВОЙТИ",
+        "needAccountId": "Зарегистрироваться?",
+        "passNotStored": "Ваш пароль будет отправлен непосредственно на сервер и нигде сохранен не будет.",
+        "launcherNotAfillAcc": "Blade Launcher не связан с аккаунтом NorthernBlade."
     },
     "js": {
         "login": {
@@ -140,7 +127,7 @@
                 },
                 "emailNotConfirmed": {
                     "title": "Регистрация вашего аккаунта не была завершена",
-                    "desc": "Для входа в систему необходимо завершить регистрацию подтвердив ваш емейл адрес. Для этого пожалуйста <a href=\"https://www.northernblade.ru/auth/confirm/?err=1\">перейдите по ссылке</a> " 
+                    "desc": "Для входа в систему необходимо завершить регистрацию подтвердив ваш емейл адрес. Для этого пожалуйста <a href=\"https://www.northernblade.ru/auth/confirm/?err=1\">перейдите по ссылке</a> "
                 },
                 "notPaid": {
                     "title": "Error During Login:<br>Game Not Purchased",
@@ -152,7 +139,7 @@
                 }
             },
             "loginUsername": "ЛОГИН ИЛИ EMAIL",
-            "loginPassword":"ПАРОЛЬ",
+            "loginPassword": "ПАРОЛЬ",
             "login": "ВОЙТИ",
             "loggingIn": "АВТОРИЗАЦИЯ",
             "success": "УСПЕШНО",
@@ -164,10 +151,10 @@
             }
         },
         "settings": {
-            "tabAccount":{
+            "tabAccount": {
                 "settingsLogOut": "Выйти",
                 "settingsUsername": "Имя пользователя",
-                "settingsUUID": "Идентификатор учетоной записи",
+                "settingsUUID": "Идентификатор учетной записи",
                 "settingsSelectedAccount": "Выбрать аккаунт"
             },
             "tabAbout": {
@@ -182,15 +169,15 @@
             "overlayWarningAccept": "Да",
             "overlayWarningDecline": "Отмена"
         },
-        "register":{
-            "error":{
+        "register": {
+            "error": {
                 "requiredValue": "* Обязательное поле",
                 "invalidEmail": "* Некорректный email"
             }
         },
-        "auth":{
-            "error":{
-                "rateLimit":{
+        "auth": {
+            "error": {
+                "rateLimit": {
                     "title": "Ошибка авторизации"
                 },
                 "requiredValue": "* Обязательное поле",
