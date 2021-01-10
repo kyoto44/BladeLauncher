@@ -566,9 +566,10 @@ class AssetGuard extends EventEmitter {
 
     }
 
-    async gatherSystemInfo() {
+    async gatherSystemInfo(versionData) {
         const sysinfo = {
             'accountid': ConfigManager.getSelectedAccount().uuid,
+            'clientversion': versionData.id,
             'cpumodel': os.cpus()[0].model,
             'ostype': os.platform() + arch(),
             'osversion': os.release(),
@@ -579,7 +580,7 @@ class AssetGuard extends EventEmitter {
         return sysinfo
     }
 
-    async sendDumps() {
+    async sendDumps(versionData) {
         const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
         const tree = dirTree(dumpsDirectory, { extensions: /\.dmp/ }).children
         let dumpsData = []
@@ -597,7 +598,7 @@ class AssetGuard extends EventEmitter {
             dumpForm.append(`dumpfile${i}`, fs.createReadStream(tree[i].path), tree[i].name)
         }
         if (dumpsData.length !== 0) {
-            dumpForm.append('sysinfo', JSON.stringify(await this.gatherSystemInfo()), { filename: 'sysinfo.json' })
+            dumpForm.append('sysinfo', JSON.stringify(await this.gatherSystemInfo(versionData)), { filename: 'sysinfo.json' })
             console.log(dumpsData)
             console.log(dumpForm)
             //Send dump 
@@ -608,7 +609,6 @@ class AssetGuard extends EventEmitter {
                     isSubmitted = true
                 }
             })
-
             //Cleanup
             if (isSubmitted) {
                 for (let i = 0; i < dumpsData.length; i++) {
@@ -1289,7 +1289,7 @@ class AssetGuard extends EventEmitter {
                     console.warn(err)
                 }
                 try {
-                    await this.sendDumps()
+                    await this.sendDumps(versionData)
                 } catch (err) {
                     console.warn(err)
                 }
