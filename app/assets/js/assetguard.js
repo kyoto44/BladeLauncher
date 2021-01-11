@@ -584,8 +584,9 @@ class AssetGuard extends EventEmitter {
         const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
         const tree = dirTree(dumpsDirectory, { extensions: /\.dmp/ }).children
         let dumpsData = []
-        let dumpForm = new FormData()
-        //Check for new dumps & and push them
+        let dumpForm = new FormData({})
+
+        // Check for new dumps & and push them
         const meta = {
             'username': ConfigManager.getSelectedAccount().username,
             'section': 'technical',
@@ -593,27 +594,24 @@ class AssetGuard extends EventEmitter {
             'description': 'crush dumps'
         }
         dumpForm.append('meta', JSON.stringify(meta), { contentType: 'application/json; charset=utf-8' })
-        for (let i = 0; i < tree.length; i++) {
+        for (let i = 0; i < tree.length && i < 2; i++) {
             dumpsData.push({ 'dumpPath': tree[i].path })
             dumpForm.append(`dumpfile${i}`, fs.createReadStream(tree[i].path), tree[i].name)
         }
         if (dumpsData.length !== 0) {
-            dumpForm.append('sysinfo', JSON.stringify(await this.gatherSystemInfo(versionData)), { filename: 'sysinfo.json' })
-            console.log(dumpsData)
-            console.log(dumpForm)
-            //Send dump 
-            let isSubmitted
-            dumpForm.submit('https://www.northernblade.ru/api/submit/support/request', function (err, res) {
-                if (err) throw err
-                if (res.statusCode === '204') {
-                    isSubmitted = true
-                }
-            })
-            //Cleanup
-            if (isSubmitted) {
+            const sysinfo = await this.gatherSystemInfo(versionData)
+            dumpForm.append('sysinfo', JSON.stringify(sysinfo), { filename: 'sysinfo.json' })
+
+            // Send dump
+            const res = await defer(cb => dumpForm.submit('https://www.northernblade.ru/api/submit/support/request', cb))
+
+            // Cleanup
+            if (res.statusCode === '204') {
+                const unlinkResults = []
                 for (let i = 0; i < dumpsData.length; i++) {
-                    fs.unlink(dumpsData[i].dumpPath)
+                    unlinkResults.push(fs.unlink(dumpsData[i].dumpPath))
                 }
+                await Promise.allSettled(unlinkResults)
             }
         }
     }
