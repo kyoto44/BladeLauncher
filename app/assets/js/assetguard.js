@@ -895,7 +895,7 @@ class AssetGuard extends EventEmitter {
                 }
 
                 if (resp.statusCode === 304) {
-                    resolve(JSON.parse(fs.readFileSync(versionFile)))
+                    fs.readFile(versionFile).then(JSON.parse).then(resolve, reject)
                     return
                 }
 
@@ -923,8 +923,15 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    // Library (Category=''') Validation Functions
-    // #region
+    async validateLauncherVersion(versionData) {
+        let requiredVersion = versionData.minimumLauncherVersion
+        if (!isNaN(requiredVersion)) {
+            requiredVersion = '' + requiredVersion
+        }
+        if(!Util.mcVersionAtLeast(requiredVersion, this.launcherVersion)) {
+            throw `Required launcher version: ${requiredVersion}`
+        }
+    }
 
     /**
      * Public library validation function. This function will handle the validation of libraries.
@@ -936,152 +943,123 @@ class AssetGuard extends EventEmitter {
      * @param {Object} reusableModules Information about same modules in the previous versions which were downloaded and can be reused
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
      */
-    validateVersion(versionData, reusableModules) {
+    async validateVersion(versionData, reusableModules) {
         const self = this
-        return new Promise((resolve, reject) => {
 
-            const ids = Object.keys(versionData.downloads)
-            const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
+        const ids = Object.keys(versionData.downloads)
+        const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
 
-            const libDlQueue = []
-            let dlSize = 0
-            let currentid = 0
+        const libDlQueue = []
+        let dlSize = 0
+        let currentid = 0
 
-            // Check validity of each library. If the hashs don't match, download the library.
-            async.eachLimit(ids, 5, async (id) => {
-                const lib = versionData.downloads[id]
-                if (!Library.validateRules(lib.rules, lib.natives)) {
-                    return
-                }
+        // Check validity of each library. If the hashs don't match, download the library.
+        await async.eachLimit(ids, 5, async (id) => {
+            const lib = versionData.downloads[id]
+            if (!Library.validateRules(lib.rules, lib.natives)) {
+                return
+            }
 
-                if (lib.type === 'File') {
-                    const artifact = (lib.natives == null)
-                        ? lib.artifact
-                        : lib.classifiers[lib.natives[Library.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
+            if (lib.type === 'File') {
+                const artifact = (lib.natives == null)
+                    ? lib.artifact
+                    : lib.classifiers[lib.natives[Library.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
 
-                    const checksum = artifact.checksum.split(':', 2)
-                    const algo = checksum[0].toLowerCase()
-                    const hash = checksum[1]
-                    const libItm = new Library(
-                        id,
-                        { 'algo': algo, 'hash': hash },
-                        artifact.size,
-                        artifact.urls,
-                        path.join(libPath, artifact.path)
-                    )
+                const checksum = artifact.checksum.split(':', 2)
+                const algo = checksum[0].toLowerCase()
+                const hash = checksum[1]
+                const libItm = new Library(
+                    id,
+                    {'algo': algo, 'hash': hash},
+                    artifact.size,
+                    artifact.urls,
+                    path.join(libPath, artifact.path)
+                )
 
-                    if (!await libItm._validateLocal()) {
-                        const previousVersions = reusableModules[id]
-                        if (previousVersions) {
-                            for (let previousVersion of previousVersions) {
-                                const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), previousVersion)
-                                const previousPath = path.join(previousLibPath, artifact.path)
-                                const previousLib = new Library(
-                                    id,
-                                    { 'algo': algo, 'hash': hash },
-                                    artifact.size,
-                                    artifact.urls,
-                                    previousPath
-                                )
-                                if (await previousLib._validateLocal()) {
-                                    const localUrl = url.pathToFileURL(previousPath).href
-                                    libItm.urls.unshift(localUrl)
-                                    break
-                                }
+                if (!await libItm._validateLocal()) {
+                    const previousVersions = reusableModules[id]
+                    if (previousVersions) {
+                        for (let previousVersion of previousVersions) {
+                            const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), previousVersion)
+                            const previousPath = path.join(previousLibPath, artifact.path)
+                            const previousLib = new Library(
+                                id,
+                                {'algo': algo, 'hash': hash},
+                                artifact.size,
+                                artifact.urls,
+                                previousPath
+                            )
+                            if (await previousLib._validateLocal()) {
+                                const localUrl = url.pathToFileURL(previousPath).href
+                                libItm.urls.unshift(localUrl)
+                                break
                             }
                         }
-
-                        dlSize += (libItm.size * 1)
-                        libDlQueue.push(libItm)
                     }
+
+                    dlSize += (libItm.size * 1)
+                    libDlQueue.push(libItm)
                 }
-                currentid++
-                self.emit('progress', 'validating', currentid, ids.length)
-            }, (err) => {
-                if (err) {
-                    reject(err)
-                    return
-                }
-                self.libraries = new DLTracker(libDlQueue, dlSize)
-                resolve()
-            })
-        })
-    }
-
-    // #endregion
-
-    validateModifiers(versionData) {
-        const self = this
-        return new Promise((resolve, reject) => {
-            const modifierDlQueue = []
-            const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
-            try {
-                if (versionData.modifiers) {
-                    for (let modifier of versionData.modifiers) {
-                        const rules = []
-                        for (let rule of modifier.rules) {
-                            switch (rule.type) {
-                                case 'xml':
-                                    rules.push(new XmlModifierRule(rule.tree))
-                                    break
-                                case 'dir':
-                                    rules.push(new DirectoryModifierRule(rule.ensure))
-                                    break
-                                case 'ejs':
-                                    rules.push(new EjsModifierRule(path.join(libPath, rule.src)))
-                                    break
-                                case 'compat':
-                                    if (process.platform === 'win32') {
-                                        // TODO: temporary ignore this modifier because it prevents passing of envs
-                                        // rules.push(new WinCompatibilityModeModifierRule(rule.mode))
-                                    }
-                                    break
-                            }
-                        }
-                        modifierDlQueue.push(new Modifier(
-                            path.join(libPath, modifier.path),
-                            rules
-                        ))
-                    }
-                }
-
-                self.modifiers = modifierDlQueue
-
-                resolve()
-            } catch (err) {
-                reject(err)
             }
+            currentid++
+            self.emit('progress', 'validating', currentid, ids.length)
         })
+
+        self.libraries = new DLTracker(libDlQueue, dlSize)
     }
 
-    validateConfig() {
-        const self = this
-        return new Promise((resolve, reject) => {
-            const configPath = ConfigManager.getGameConfigPath()
-            try {
-                const rules = [new XmlModifierRule({
-                    'root': {
-                        'scriptsPreferences': {
-                            'server': '${server_address}'
+
+    async validateModifiers(versionData) {
+        const modifierDlQueue = []
+        this.modifiers = modifierDlQueue
+
+        if (!versionData.modifiers) {
+            return
+        }
+
+        const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
+        for (let modifier of versionData.modifiers) {
+            const rules = []
+            for (let rule of modifier.rules) {
+                switch (rule.type) {
+                    case 'xml':
+                        rules.push(new XmlModifierRule(rule.tree))
+                        break
+                    case 'dir':
+                        rules.push(new DirectoryModifierRule(rule.ensure))
+                        break
+                    case 'ejs':
+                        rules.push(new EjsModifierRule(path.join(libPath, rule.src)))
+                        break
+                    case 'compat':
+                        if (process.platform === 'win32') {
+                            // TODO: temporary ignore this modifier because it prevents passing of envs
+                            // rules.push(new WinCompatibilityModeModifierRule(rule.mode))
                         }
-                    }
-                })]
-                self.modifiers.push(new Modifier(
-                    configPath,
-                    rules
-                ))
-
-                resolve()
-            } catch (err) {
-                reject(err)
+                        break
+                }
             }
-        })
+            modifierDlQueue.push(new Modifier(
+                path.join(libPath, modifier.path),
+                rules
+            ))
+        }
     }
 
-    // #endregion
-
-    // Control Flow Functions
-    // #region
+    async validateConfig() {
+        const configPath = ConfigManager.getGameConfigPath()
+        const rules = [new XmlModifierRule({
+            'root': {
+                'scriptsPreferences': {
+                    'server': '${server_address}'
+                }
+            }
+        })]
+        this.modifiers.push(new Modifier(
+            configPath,
+            rules
+        ))
+    }
 
     /**
      * Initiate an async download process for an AssetGuard DLTracker.
@@ -1277,10 +1255,13 @@ class AssetGuard extends EventEmitter {
             // Validate Everything
 
             const versionData = await this.loadVersionData(server.getVersions()[0])
+
+            await this.validateLauncherVersion(versionData)
+
             const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
 
             //await this.syncSettings('download')
-            if (process.platform === 'win32') {  //Install requirements/create rule/send dumps only for windows 
+            if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
                 try {
                     await this.createDumpRule()
                 } catch (err) {
@@ -1326,7 +1307,6 @@ class AssetGuard extends EventEmitter {
 
     }
 
-    // #endregion
 
 }
 

@@ -57,7 +57,7 @@ if (!isDev) {
                 populateSettingsUpdateInformation(info)
                 break
             case 'update-downloaded':
-                loggerAutoUpdaterSuccess.log('Update ' + info.version + ' ready to be installed.')
+                loggerAutoUpdaterSuccess.log(`Update ${info.version} ready to be installed.`)
                 latestDownloadedVersion = info.version
                 settingsUpdateButtonStatus('Установить обновление', false, () => {
                     if (!isDev) {
