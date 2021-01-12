@@ -27,7 +27,7 @@ const loggerLanding = LoggerUtil('%c[Landing]', 'color: #000668; font-weight: bo
 
 /**
  * Show/hide the loading area.
- * 
+ *
  * @param {boolean} loading True if the loading area should be shown, otherwise false.
  */
 function toggleLaunchArea(loading) {
@@ -42,7 +42,7 @@ function toggleLaunchArea(loading) {
 
 /**
  * Set the details text of the loading area.
- * 
+ *
  * @param {string} details The new text for the loading details.
  */
 function setLaunchDetails(details) {
@@ -51,7 +51,7 @@ function setLaunchDetails(details) {
 
 /**
  * Set the value of the loading progress bar and display that value.
- * 
+ *
  * @param {number} value The progress value.
  * @param {number} max The total size.
  * @param {number|string} percent Optional. The percentage to display on the progress label.
@@ -64,7 +64,7 @@ function setLaunchPercentage(value, max, percent = ((value / max) * 100)) {
 
 /**
  * Set the value of the OS progress bar and display that on the UI.
- * 
+ *
  * @param {number} value The progress value.
  * @param {number} max The total download size.
  * @param {number|string} percent Optional. The percentage to display on the progress label.
@@ -76,7 +76,7 @@ function setDownloadPercentage(value, max, percent = ((value / max) * 100)) {
 
 /**
  * Enable or disable the launch button.
- * 
+ *
  * @param {boolean} val True to enable, false to disable.
  */
 function setLaunchEnabled(val) {
@@ -121,6 +121,7 @@ function updateSelectedAccount(authUser) {
     }
     user_text.innerHTML = username
 }
+
 updateSelectedAccount(ConfigManager.getSelectedAccount())
 
 // Bind selected server
@@ -178,17 +179,17 @@ refreshMojangStatuses()
 
 /**
  * Shows an error overlay, toggles off the launch area.
- * 
+ *
  * @param {string} title The overlay title.
  * @param {string} desc The overlay description.
  */
-function showLaunchFailure(title, desc, accept = 'Okay') {
+function showLaunchFailure(title, desc, accept = 'Okay', handler = null) {
     setOverlayContent(
         title,
         desc,
         accept
     )
-    setOverlayHandler(null)
+    setOverlayHandler(handler)
     toggleOverlay(true)
     toggleLaunchArea(false)
 }
@@ -270,7 +271,7 @@ function dlAsync(login = true) {
                 case 'distribution':
                     setLaunchPercentage(20, 100)
                     loggerLaunchSuite.log('Validated distibution index.')
-                    setLaunchDetails('Loading version information..')
+                    setLaunchDetails('Загрузка информации о версии игры..')
                     break
                 case 'librariesInstall':
                     setLaunchPercentage(30, 100)
@@ -369,33 +370,49 @@ function dlAsync(login = true) {
             }
         } else if (m.context === 'validateEverything') {
 
-            let allGood = true
+            if (typeof m.result.error === 'string' && m.result.error.startsWith('Required launcher version: ')) {
+                const requiredLauncherVersion = m.result.error.replace('Required launcher version: ', '')
 
-            //Workaround for missing requirements
-            if (m.result.error == 'Requirements missing') {
+                showLaunchFailure(
+                    'Требуется обновить лаунчер',
+                    'Для запуска необходима более новая версия лаунчера. Пожалуйста обновитесь',
+                    'Хорошо',
+                    () => {
+                        ipcRenderer.send('autoUpdateAction', 'installUpdateNow')
+                        toggleOverlay(false)
+                    }
+                )
+                switchView(getCurrentView(), VIEWS.settings, 500, 500, () => {
+                    settingsNavItemListener(document.getElementById('settingsNavUpdate'), false)
+                })
+                aEx.disconnect()
+                
+                return
+            }
+
+            // Workaround for missing requirements
+            if (m.result.error === 'Requirements missing') {
                 showLaunchFailure(
                     Lang.queryJS('requirements.title'),
                     Lang.queryJS('requirements.desc'),
                     Lang.queryJS('requirements.accept')
                 )
-                allGood = false
                 aEx.disconnect()
                 return
             }
             // If these properties are not defined it's likely an error.
             if (m.result.forgeData == null || m.result.versionData == null) {
-                loggerLaunchSuite.error('Error during validation:', m.result)
-
-                loggerLaunchSuite.error('Error during launch', m.result.error)
+                loggerLaunchSuite.error('Error during validation:', m.result.error)
                 showLaunchFailure('Error During Launch', 'Please check the console (CTRL + Shift + i) for more details.')
 
-                allGood = false
+                aEx.disconnect()
+                return
             }
 
             forgeData = m.result.forgeData
             versionData = m.result.versionData
 
-            if (login && allGood) {
+            if (login) {
                 const authUser = ConfigManager.getSelectedAccount()
                 loggerLaunchSuite.log(`Sending selected account (${authUser.displayName}) to ProcessBuilder.`)
                 pb = new ProcessBuilder(serv, versionData, forgeData, authUser, remote.app.getVersion())
@@ -444,13 +461,17 @@ function dlAsync(login = true) {
     // Begin Validations
 
     // Validate Forge files.
-    setLaunchDetails('Loading server information..')
+    setLaunchDetails('Получение информации о сервере..')
 
     DistroManager.refresh()
         .then((data) => {
             return onDistroRefresh(data).then(() => {
                 serv = data.getServer(ConfigManager.getSelectedServer())
-                aEx.send({ task: 'execute', function: 'validateEverything', argsArr: [ConfigManager.getSelectedServer(), DistroManager.isDevMode()] })
+                aEx.send({
+                    task: 'execute',
+                    function: 'validateEverything',
+                    argsArr: [ConfigManager.getSelectedServer(), DistroManager.isDevMode()]
+                })
             })
         }, (err) => {
             loggerLaunchSuite.error('Unable to refresh distribution index.', err)
@@ -479,8 +500,8 @@ let newsGlideCount = 0
 
 /**
  * Show the news UI via a slide animation.
- * 
- * @param {boolean} up True to slide up, otherwise false. 
+ *
+ * @param {boolean} up True to slide up, otherwise false.
  */
 function slide_(up) {
     const lCUpper = document.querySelector('#landingContainer > #upper')
@@ -554,7 +575,7 @@ let newsLoadingListener = null
 
 /**
  * Set the news loading animation.
- * 
+ *
  * @param {boolean} val True to set loading animation, otherwise false.
  */
 function setNewsLoading(val) {
@@ -596,7 +617,7 @@ newsArticleContentScrollable.onscroll = (e) => {
 
 /**
  * Reload the news without restarting.
- * 
+ *
  * @returns {Promise.<void>} A promise which resolves when the news
  * content has finished loading and transitioning.
  */
@@ -624,7 +645,7 @@ function showNewsAlert() {
 /**
  * Initialize News UI. This will load the news and prepare
  * the UI accordingly.
- * 
+ *
  * @returns {Promise.<void>} A promise which resolves when the news
  * content has finished loading and transitioning.
  */
@@ -714,8 +735,12 @@ function initNews() {
                     displayArticle(newsArr[nxtArt], nxtArt + 1)
                 }
 
-                document.getElementById('newsNavigateRight').onclick = () => { switchHandler(true) }
-                document.getElementById('newsNavigateLeft').onclick = () => { switchHandler(false) }
+                document.getElementById('newsNavigateRight').onclick = () => {
+                    switchHandler(true)
+                }
+                document.getElementById('newsNavigateLeft').onclick = () => {
+                    switchHandler(false)
+                }
 
                 $('#newsErrorContainer').fadeOut(250, () => {
                     displayArticle(newsArr[0], 1)
@@ -756,7 +781,7 @@ document.addEventListener('keydown', (e) => {
 
 /**
  * Display a news article on the UI.
- * 
+ *
  * @param {Object} articleObject The article meta object.
  * @param {number} index The article index.
  */
@@ -810,7 +835,13 @@ function loadNews() {
                         const el = $(items[i])
 
                         // Resolve date.
-                        const date = new Date(el.find('pubDate').text()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' })
+                        const date = new Date(el.find('pubDate').text()).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: 'numeric'
+                        })
 
                         // Resolve comments.
                         let comments = el.find('slash\\:comments').text() || '0'

@@ -3,17 +3,17 @@
  */
 
 // register Elements
-const registerCancelContainer  = document.getElementById('registerCancelContainer')
+const registerCancelContainer = document.getElementById('registerCancelContainer')
 // const registerCancelButton     = document.getElementById('registerCancelButton')
-const registerEmailError       = document.getElementById('registerEmailError')
-const registerUsername         = document.getElementById('registerUsername')
-const registerPasswordError    = document.getElementById('registerPasswordError')
-const registerPassword         = document.getElementById('registerPassword')
+const registerEmailError = document.getElementById('registerEmailError')
+const registerUsername = document.getElementById('registerUsername')
+const registerPasswordError = document.getElementById('registerPasswordError')
+const registerPassword = document.getElementById('registerPassword')
 // const checkmarkContainer    = document.getElementById('checkmarkContainer')
-const registerRememberOption   = document.getElementById('registerRememberOption')
-const registerButton           = document.getElementById('registerButton')
-const registerForm             = document.getElementById('registerForm')
-const cancelRegister           = document.getElementById('cancelRegister')
+const registerRememberOption = document.getElementById('registerRememberOption')
+const registerButton = document.getElementById('registerButton')
+const registerForm = document.getElementById('registerForm')
+const cancelRegister = document.getElementById('cancelRegister')
 
 // Control variables.
 // let lu = false, lp = false
@@ -27,7 +27,7 @@ const loggerregister = LoggerUtil('%c[register]', 'color: #000668; font-weight: 
  * @param {HTMLElement} element The element on which to display the error.
  * @param {string} value The error text.
  */
-function showError(element, value){
+function showError(element, value) {
     element.innerHTML = value
     element.style.opacity = 1
 }
@@ -37,8 +37,8 @@ function showError(element, value){
  * 
  * @param {HTMLElement} element The element to shake.
  */
-function shakeError(element){
-    if(element.style.opacity == 1){
+function shakeError(element) {
+    if (element.style.opacity == 1) {
         element.classList.remove('shake')
         void element.offsetWidth
         element.classList.add('shake')
@@ -50,9 +50,9 @@ function shakeError(element){
  * 
  * @param {string} value The email value.
  */
-function validateRegEmail(value){
-    if(value){
-        if(!basicEmail.test(value)){
+function validateRegEmail(value) {
+    if (value) {
+        if (!basicEmail.test(value)) {
             showError(registerEmailError, Lang.queryJS('register.error.invalidEmail'))
             registerDisabled(true)
             lu = false
@@ -78,7 +78,7 @@ registerUserMail.addEventListener('focusout', (e) => {
 
 cancelRegister.addEventListener('click', (e) => {
     $('#loginContainer').show()
-    $('#registerContainer').hide()    
+    $('#registerContainer').hide()
 })
 
 /**
@@ -87,8 +87,8 @@ cancelRegister.addEventListener('click', (e) => {
  * @param {boolean} v True to enable, false to disable.
  */
 
-function registerDisabled(v){
-    if(registerButton.disabled !== v){
+function registerDisabled(v) {
+    if (registerButton.disabled !== v) {
         registerButton.disabled = v
     }
 }
@@ -98,8 +98,8 @@ function registerDisabled(v){
  * 
  * @param {boolean} v True to enable, false to disable.
  */
-function registerLoading(v){
-    if(v){
+function registerLoading(v) {
+    if (v) {
         registerButton.setAttribute('loading', v)
         registerButton.innerHTML = registerButton.innerHTML.replace(Lang.queryJS('register.register'), Lang.queryJS('register.loggingIn'))
     } else {
@@ -133,16 +133,16 @@ function registerLoading(v){
  * @param {Error | {cause: string, error: string, errorMessage: string}} err A Node.js
  * error or Mojang error response.
  */
-function resolveError(err){
+function resolveError(err) {
     // Mojang Response => err.cause | err.error | err.errorMessage
     // Node error => err.code | err.message
-    if(err.cause != null && err.cause === 'UserMigratedException') {
+    if (err.cause != null && err.cause === 'UserMigratedException') {
         return {
             title: Lang.queryJS('register.error.userMigrated.title'),
             desc: Lang.queryJS('register.error.userMigrated.desc')
         }
     } else {
-        if(err.error != null){
+        if (err.error != null) {
             switch (err.error) {
                 case 'ForbiddenOperationException': {
                     if (err.errorMessage != null) {
@@ -151,7 +151,7 @@ function resolveError(err){
                                 title: Lang.queryJS('register.error.invalidCredentials.title'),
                                 desc: Lang.queryJS('register.error.invalidCredentials.desc')
                             }
-                        } else if(err.errorMessage === 'Invalid credentials.') {
+                        } else if (err.errorMessage === 'Invalid credentials.') {
                             return {
                                 title: Lang.queryJS('register.error.rateLimit.title'),
                                 desc: Lang.queryJS('register.error.rateLimit.desc')
@@ -159,6 +159,7 @@ function resolveError(err){
                         }
                     }
                 }
+                    break
                 case 'Registration was not completed': {
                     if (err.errorMessage != null && err.errorMessage.startsWith('Please confirm you email address first.')) {
                         return {
@@ -167,17 +168,18 @@ function resolveError(err){
                         }
                     }
                 }
+                    break
             }
         } else {
             // Request errors (from Node).
-            if(err.code != null){
-                if(err.code === 'ENOENT'){
+            if (err.code != null) {
+                if (err.code === 'ENOENT') {
                     // No Internet.
                     return {
                         title: Lang.queryJS('register.error.noInternet.title'),
                         desc: Lang.queryJS('register.error.noInternet.desc')
                     }
-                } else if(err.code === 'ENOTFOUND'){
+                } else if (err.code === 'ENOTFOUND') {
                     // Could not reach server.
                     return {
                         title: Lang.queryJS('register.error.authDown.title'),
@@ -187,8 +189,8 @@ function resolveError(err){
             }
         }
     }
-    if(err.message != null){
-        if(err.message === 'NotPaidAccount'){
+    if (err.message != null) {
+        if (err.message === 'NotPaidAccount') {
             return {
                 title: Lang.queryJS('register.error.notPaid.title'),
                 desc: Lang.queryJS('register.error.notPaid.desc')
@@ -205,8 +207,8 @@ let registerViewOnSuccess = VIEWS.landing
 let registerViewOnCancel = VIEWS.settings
 let registerViewCancelHandler
 
-function registerCancelEnabled(val){
-    if(val){
+function registerCancelEnabled(val) {
+    if (val) {
         $(registerCancelContainer).show()
     } else {
         $(registerCancelContainer).hide()
@@ -239,9 +241,9 @@ registerButton.addEventListener('click', () => {
     AuthManager.registerAccount(registerUserMail.value)
         .then((value) => {
             // return DistroManager.refresh()
-                // .then((d) => onDistroRefresh(d))
-                // .then(() => value)
-        })    
+            // .then((d) => onDistroRefresh(d))
+            // .then(() => value)
+        })
         .then((value) => {
             updateSelectedAccount(value)
             registerButton.innerHTML = registerButton.innerHTML.replace(Lang.queryJS('register.loggingIn'), Lang.queryJS('register.success'))
@@ -250,7 +252,7 @@ registerButton.addEventListener('click', () => {
             setTimeout(() => {
                 switchView(VIEWS.register, registerViewOnSuccess, 500, 500, () => {
                     // Temporary workaround
-                    if(registerViewOnSuccess === VIEWS.settings){
+                    if (registerViewOnSuccess === VIEWS.settings) {
                         prepareSettings()
                     }
                     registerViewOnSuccess = VIEWS.landing // Reset this for good measure.
@@ -270,7 +272,7 @@ registerButton.addEventListener('click', () => {
             $('#authContainer').show()
             $('#registerContainer').hide()
             $('#authUsername').focus()
-        })        
+        })
         .catch((err) => {
             registerLoading(false)
             const errF = resolveError(err)
