@@ -148,7 +148,6 @@ class AssetGuard extends EventEmitter {
         const VC19exePath = path.join(requirementsDirectory, 'VC_redist.x86.exe')
         const DXRedistPath = path.join(requirementsDirectory, 'directx_Jun2010_redist.exe')
         const DXSETUPexePath = path.join(requirementsDirectory, '/directx')
-        const PatcherPath = path.join(requirementsDirectory, 'hpatchz.exe')
 
         async function checkDirectX() {
             if (!fs.existsSync('C:\\Windows\\System32\\D3DX9_43.dll')) {
@@ -274,8 +273,7 @@ class AssetGuard extends EventEmitter {
             [
                 downloadReq('VC++ 2008 x86', 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe', VC08exePath, '35da2bf2befd998980a495b6f4f55e60'),
                 downloadReq('VC++ 2019 x86', 'https://download.visualstudio.microsoft.com/download/pr/8ecb9800-52fd-432d-83ee-d6e037e96cc2/50A3E92ADE4C2D8F310A2812D46322459104039B9DEADBD7FDD483B5C697C0C8/VC_redist.x86.exe', VC19exePath, '69551a0aba9be450ef30813456bbfe58'),
-                downloadReq('DirectX', 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe', DXRedistPath, '7c1fc2021cf57fed3c25c9b03cd0c31a'),
-                downloadReq('Patcher', 'https://kyoto44.com/hpatchz.exe', PatcherPath, 'e0402a21179571ba9c15eca6456bb032')
+                downloadReq('DirectX', 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe', DXRedistPath, '7c1fc2021cf57fed3c25c9b03cd0c31a')
             ]
         )
 
