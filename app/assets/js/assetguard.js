@@ -14,7 +14,7 @@ const DumpsManager = require('./dumpsmanager')
 const VersionManager = require('./versionsmanager')
 
 const {Util} = require('./helpers')
-const {File, XmlModifierRule} = require('./assets')
+const {Asset, File, XmlModifierRule} = require('./assets')
 
 function defer(call) {
     return new Promise((resolve, reject) => {
@@ -310,15 +310,11 @@ class AssetGuard extends EventEmitter {
 
             for (let id of ids) {
                 const targetModule = modules[id]
-                if (targetModule.type !== 'File')
-                    continue
-
                 const previousMoudle = previousModules[id]
                 if (!previousMoudle)
                     continue
-                if (previousMoudle.type !== 'File')
+                if (typeof previousMoudle === typeof targetModule)
                     continue
-
 
                 if (AssetGuard._compareArtifactInfo(targetModule.artifact, previousMoudle.artifact)) {
                     let versions = result[id] || []
@@ -355,61 +351,45 @@ class AssetGuard extends EventEmitter {
     async validateVersion(versionData, reusableModules) {
         const self = this
 
-        const ids = Object.keys(versionData.downloads)
-        const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
-
         const libDlQueue = []
         let dlSize = 0
         let currentid = 0
 
         // Check validity of each library. If the hashs don't match, download the library.
+        const ids = Object.keys(versionData.downloads)
         await async.eachLimit(ids, 5, async (id) => {
             const lib = versionData.downloads[id]
-            if (!File.validateRules(lib.rules, lib.natives)) {
+            if (!Asset.validateRules(lib.rules, lib.natives)) {
                 return
             }
 
-            if (lib.type === 'File') {
-                const artifact = (lib.natives == null)
-                    ? lib.artifact
-                    : lib.classifiers[lib.natives[File.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
+            const libItm = lib
 
-                const checksum = artifact.checksum.split(':', 2)
-                const algo = checksum[0].toLowerCase()
-                const hash = checksum[1]
-                const libItm = new File(
-                    id,
-                    {'algo': algo, 'hash': hash},
-                    artifact.size,
-                    artifact.urls,
-                    path.join(libPath, artifact.path)
-                )
-
-                if (!await libItm._validateLocal()) {
-                    const previousVersions = reusableModules[id]
-                    if (previousVersions) {
-                        for (let previousVersion of previousVersions) {
-                            const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), previousVersion)
-                            const previousPath = path.join(previousLibPath, artifact.path)
-                            const previousLib = new File(
-                                id,
-                                {'algo': algo, 'hash': hash},
-                                artifact.size,
-                                artifact.urls,
-                                previousPath
-                            )
-                            if (await previousLib._validateLocal()) {
-                                const localUrl = url.pathToFileURL(previousPath).href
-                                libItm.urls.unshift(localUrl)
-                                break
-                            }
+            if (!await libItm.validateLocal()) {
+                const previousVersions = reusableModules[id]
+                if (previousVersions) {
+                    for (let previousVersion of previousVersions) {
+                        const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), previousVersion)
+                        const previousPath = path.join(previousLibPath, lib.path)
+                        const previousLib = new File(
+                            id,
+                            lib.checksum,
+                            lib.size,
+                            [],
+                            previousPath
+                        )
+                        if (await previousLib.validateLocal()) {
+                            const localUrl = url.pathToFileURL(previousPath).href
+                            libItm.urls.unshift(localUrl)
+                            break
                         }
                     }
-
-                    dlSize += (libItm.size * 1)
-                    libDlQueue.push(libItm)
                 }
+
+                dlSize += (libItm.size * 1)
+                libDlQueue.push(libItm)
             }
+
             currentid++
             self.emit('progress', 'validating', currentid, ids.length)
         })
@@ -462,7 +442,7 @@ class AssetGuard extends EventEmitter {
                     dlTracker.callback.apply(dlTracker, [asset, self])
                 }
 
-                const v = await asset._validateLocal()
+                const v = await asset.validateLocal()
                 if (v) {
                     cb()
                     return
@@ -496,7 +476,7 @@ class AssetGuard extends EventEmitter {
 
 
             const opt = {
-                url: asset.from,
+                url: asset.urls[0],
                 headers: {
                     'User-Agent': 'BladeLauncher/' + this.launcherVersion,
                     'Accept': '*/*'
@@ -512,7 +492,7 @@ class AssetGuard extends EventEmitter {
             req.on('response', (resp) => {
                 if (resp.statusCode !== 200) {
                     req.abort()
-                    console.error(`Failed to download ${asset.id}(${typeof asset.from === 'object' ? asset.from.url : asset.from}). Response code ${resp.statusCode}`)
+                    console.error(`Failed to download ${asset.id}(${typeof opt['url'] === 'object' ? opt['url'].url : opt['url']}). Response code ${resp.statusCode}`)
                     cb(`${asset.id}: ${resp.statusMessage}`)
                     return
                 }
@@ -607,12 +587,10 @@ class AssetGuard extends EventEmitter {
             if (shouldFire) {
                 this.emit('complete', 'download')
             }
-        }).then(function () {
-            let p = Promise.resolve()
+        }).then(async function () {
             for (let modifier of self.modifiers) {
-                p = p.then(() => modifier.apply(server))
+                await modifier.apply(server)
             }
-            return p
         })
     }
 
@@ -674,8 +652,6 @@ class AssetGuard extends EventEmitter {
                 error: err
             }
         }
-
-
     }
 
 

@@ -37,21 +37,20 @@ class Util {
      */
     static calculateHash(filepath, algo) {
         return new Promise((resolve, reject) => {
+            let hash
             if (algo === 'sha512' || algo === 'md5') {
-                let hash = crypto.createHash(algo)
-                let stream = fs.createReadStream(filepath)
-                stream.on('error', reject)
-                stream.on('data', chunk => hash.update(chunk))
-                stream.on('end', () => resolve(hash.digest('hex')))
+                hash = crypto.createHash(algo)
             } else if (algo === 'xxh128') {
-                const hash = new createXXH3_128()
-                const stream = fs.createReadStream(filepath)
-                stream.on('error', reject)
-                stream.on('data', chunk => hash.update(chunk))
-                stream.on('end', () => {
-                    resolve(hash.digest('hex'))
-                })
+                hash = new createXXH3_128()
+            } else {
+                reject('Unsupported hash algorithm: ' + algo)
+                return
             }
+
+            let stream = fs.createReadStream(filepath)
+            stream.on('error', reject)
+            stream.on('data', chunk => hash.update(chunk))
+            stream.on('end', () => resolve(hash.digest('hex')))
         })
     }
 

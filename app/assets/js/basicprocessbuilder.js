@@ -1,17 +1,17 @@
-const child_process         = require('child_process')
-const crypto                = require('crypto')
-const fs                    = require('fs-extra')
-const os                    = require('os')
-const path                  = require('path')
+const child_process = require('child_process')
+const crypto = require('crypto')
+const fs = require('fs-extra')
+const os = require('os')
+const path = require('path')
 
-const ConfigManager            = require('./configmanager')
-const LoggerUtil               = require('./loggerutil')
+const ConfigManager = require('./configmanager')
+const LoggerUtil = require('./loggerutil')
 
 const logger = LoggerUtil('%c[BasicProcessBuilder]', 'color: #003996; font-weight: bold')
 
 class ProcessBuilder {
 
-    constructor(distroServer, versionData, forgeData, authUser, launcherVersion){
+    constructor(distroServer, versionData, forgeData, authUser, launcherVersion) {
         this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroServer.getID())
         this._configPath = ConfigManager.getGameConfigPath()
         this.versionData = versionData
@@ -23,7 +23,7 @@ class ProcessBuilder {
         this._useShell = false
         this._proc = null
     }
-    
+
     addErrorListener(listener) {
         this._errorListeners.push(listener)
         return this
@@ -41,7 +41,7 @@ class ProcessBuilder {
         fs.ensureDirSync(this.gameDir)
         const tempNativePath = path.join(os.tmpdir(), ConfigManager.getTempNativeFolder(), crypto.pseudoRandomBytes(16).toString('hex'))
         process.throwDeprecation = true
-        
+
 
         let launchExecutable = this.resolveLaunchExecutable()
         let wd = path.dirname(launchExecutable)
@@ -57,7 +57,7 @@ class ProcessBuilder {
 
         const detached = ConfigManager.getLaunchDetached()
         const env = {...process.env}
-        env['LOGIN'] = this.authUser.username 
+        env['LOGIN'] = this.authUser.username
         env['TOKEN'] = this.authUser.accessToken
 
         const options = {
@@ -95,7 +95,7 @@ class ProcessBuilder {
         child.on('close', (code, signal) => {
             logger.log('Exited with code', code)
             fs.remove(tempNativePath, (err) => {
-                if(err){
+                if (err) {
                     logger.warn('Error while deleting temp dir', err)
                 } else {
                     logger.log('Temp dir deleted successfully.')
@@ -111,8 +111,8 @@ class ProcessBuilder {
         child.on('error', (err) => {
             logger.error('Failed to spawn process', err)
             if (err.code === 'EACCES' && process.platform === 'win32') {
-                // TODO: this ungly code tries to start proccess one more time because for some reason we get EACCES on win because of some bug with checking PATH
-                if (!this._useShell)  {
+                // TODO: this ungly code tries to start process one more time because for some reason we get EACCES on win because of some bug with checking PATH
+                if (!this._useShell) {
                     blockListeners = true
                     this._useShell = true
                     this.build()
@@ -124,18 +124,16 @@ class ProcessBuilder {
                 listener(err)
             }
         })
-
     }
 
-    resolveLaunchExecutable(){
+    resolveLaunchExecutable() {
         const gameManifest = this.versionData.manifest.game
         const launchModuleId = gameManifest.launchModuleId
 
         const launchModule = this.versionData.downloads[launchModuleId]
-        if(launchModule){
+        if (launchModule) {
             // TODO: check type and lib.natives == null 
-            const artifact = launchModule.artifact
-            return path.join(this.libPath, artifact.path)
+            return launchModule.targetPath
         }
         throw new Error('Failed to determinate launch module') // TODO: check this on creation
     }

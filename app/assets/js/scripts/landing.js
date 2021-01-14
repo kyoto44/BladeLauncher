@@ -238,7 +238,7 @@ function dlAsync(login = true) {
         remote.app.getVersion()
     ], {
         env: forkEnv,
-        execArgv:['--inspect-brk'],
+        //execArgv:['--inspect-brk'],
         stdio: 'pipe'
     })
     // Stdout

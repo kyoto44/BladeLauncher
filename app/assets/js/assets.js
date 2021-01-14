@@ -16,62 +16,19 @@ class Asset {
      * @param {any} id The id of the asset.
      * @param {string} hash The hash value of the asset.
      * @param {number} size The size in bytes of the asset.
-     * @param {string} from The url where the asset can be found.
      * @param {string} to The absolute local file path of the asset.
      */
-    constructor(id, hash, size, from, to) {
+    constructor(id, hash, size, to) {
         this.id = id
         this.hash = hash
         this.size = size
-        this.from = from
         this.to = to
     }
 
-    async _validateLocal() {
+    async validateLocal() {
         return Util.validateLocal(this.to, this.type != null ? 'md5' : 'sha1', this.hash, this.size)
     }
-}
 
-
-/** Class representing a library. */
-class File extends Asset {
-
-    constructor(id, checksum, size, urls, targetPath) {
-        super(id, checksum.hash, size, urls[0], targetPath)
-        this.id = id
-        this.checksum = checksum
-        this.size = size
-        this.urls = urls
-        this.targetPath = targetPath
-    }
-
-    /**
-     * Validate that a file exists and matches a given hash value.
-     *
-     * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
-     */
-    async _validateLocal() {
-        try {
-            if (!await fs.pathExists(this.targetPath)) {
-                return false
-            }
-            if (this.size != null) {
-                const stats = await fs.stat(this.targetPath)
-                const currentSize = stats.size
-                if (currentSize !== this.size)
-                    return false
-            }
-            if (this.checksum != null && this.checksum.hash != null) {
-                const currentHash = await Util.calculateHash(this.targetPath, this.checksum.algo)
-                if (currentHash !== this.checksum.hash)
-                    return false
-            }
-            return true
-        } catch (e) {
-            console.error(`Failed to validate library ${this.targetPath}`, e)
-            return false
-        }
-    }
 
     /**
      * Converts the process.platform OS names to match mojang's OS names.
@@ -122,6 +79,49 @@ class File extends Asset {
             }
         }
         return true
+    }
+}
+
+
+/** Class representing a library. */
+class File extends Asset {
+
+    constructor(id, checksum, size, urls, path, targetPath) {
+        super(id, checksum.hash, size, targetPath)
+        this.id = id
+        this.checksum = checksum
+        this.size = size
+        this.urls = urls
+        this.path = path
+        this.targetPath = targetPath
+    }
+
+    /**
+     * Validate that a file exists and matches a given hash value.
+     *
+     * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
+     */
+    async validateLocal() {
+        try {
+            if (!await fs.pathExists(this.targetPath)) {
+                return false
+            }
+            if (this.size != null) {
+                const stats = await fs.stat(this.targetPath)
+                const currentSize = stats.size
+                if (currentSize !== this.size)
+                    return false
+            }
+            if (this.checksum != null && this.checksum.hash != null) {
+                const currentHash = await Util.calculateHash(this.targetPath, this.checksum.algo)
+                if (currentHash !== this.checksum.hash)
+                    return false
+            }
+            return true
+        } catch (e) {
+            console.error(`Failed to validate library ${this.targetPath}`, e)
+            return false
+        }
     }
 }
 

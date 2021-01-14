@@ -5,6 +5,8 @@ const request = require('request')
 
 const ConfigManager = require('./configmanager')
 const {
+    File,
+
     WinCompatibilityModeModifierRule,
     DirectoryModifierRule,
     XmlModifierRule,
@@ -50,8 +52,40 @@ class Manifest {
 
 
 class Downloads {
-    static fromJSON(json) {
-        return Object.assign(new Downloads(), json)
+    static fromJSON(json, versionStoragePath) {
+        const assets = {}
+        for (const assetId in json) {
+            // if (!json.hasOwnProperty(assetId))
+            //     continue
+            const asset = json[assetId]
+            if (asset.type === 'File') {
+                const artifact = (asset.natives == null)
+                    ? asset.artifact
+                    : asset.classifiers[asset.natives[File.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
+
+                const checksum = artifact.checksum.split(':', 2)
+                const algo = checksum[0].toLowerCase()
+                const hash = checksum[1]
+                const file = new File(
+                    assetId,
+                    {'algo': algo, 'hash': hash},
+                    artifact.size,
+                    artifact.urls,
+                    artifact.path,
+                    path.join(versionStoragePath, artifact.path)
+                )
+                assets[assetId] = file
+            } else {
+                logger.warn('Unsupported asset type', asset)
+            }
+        }
+
+
+        return new Downloads(assets)
+    }
+
+    constructor(assets) {
+        Object.assign(this, assets)
     }
 }
 
@@ -127,9 +161,9 @@ class Version {
             throw new Error('Unsupported version type: ' + type)
         }
         const manifest = Manifest.fromJSON(json.manifest)
-        const downloads = Downloads.fromJSON(json.downloads)
 
         const versionStoragePath = path.join(ConfigManager.getInstanceDirectory(), json.id)
+        const downloads = Downloads.fromJSON(json.downloads, versionStoragePath)
         const modifiers = Version._resolveModifiers(json.modifiers, versionStoragePath)
         return new Version(json.id, json.type, json.minimumLauncherVersion, manifest, downloads, modifiers, fetchTime)
     }
