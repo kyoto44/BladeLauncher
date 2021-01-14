@@ -1,5 +1,5 @@
-const fs   = require('fs-extra')
-const os   = require('os')
+const fs = require('fs-extra')
+const os = require('os')
 const path = require('path')
 
 const logger = require('./loggerutil')('%c[ConfigManager]', 'color: #a02d2a; font-weight: bold')
@@ -15,7 +15,7 @@ const launcherDir = process.env.CONFIG_DIRECT_PATH || require('electron').remote
  *
  * @returns {string} The absolute path of the launcher directory.
  */
-exports.getLauncherDirectory = function(){
+exports.getLauncherDirectory = function () {
     return launcherDir
 }
 
@@ -25,7 +25,7 @@ exports.getLauncherDirectory = function(){
  *
  * @returns {string} The absolute path of the launcher's data directory.
  */
-exports.getDataDirectory = function(def = false){
+exports.getDataDirectory = function (def = false) {
     return !def ? config.settings.launcher.dataDirectory : DEFAULT_CONFIG.settings.launcher.dataDirectory
 }
 
@@ -34,30 +34,30 @@ exports.getDataDirectory = function(def = false){
  *
  * @param {string} dataDirectory The new data directory.
  */
-exports.setDataDirectory = function(dataDirectory){
+exports.setDataDirectory = function (dataDirectory) {
     config.settings.launcher.dataDirectory = dataDirectory
 }
 
 const configPath = path.join(exports.getLauncherDirectory(), 'config.json')
 const firstLaunch = !fs.existsSync(configPath)
 
-exports.getAbsoluteMinRAM = function(){
+exports.getAbsoluteMinRAM = function () {
     const mem = os.totalmem()
     return mem >= 6000000000 ? 3 : 2
 }
 
-exports.getAbsoluteMaxRAM = function(){
+exports.getAbsoluteMaxRAM = function () {
     const mem = os.totalmem()
-    const gT16 = mem-16000000000
-    return Math.floor((mem-1000000000-(gT16 > 0 ? (Number.parseInt(gT16/8) + 16000000000/4) : mem/4))/1000000000)
+    const gT16 = mem - 16000000000
+    return Math.floor((mem - 1000000000 - (gT16 > 0 ? (Number.parseInt(gT16 / 8) + 16000000000 / 4) : mem / 4)) / 1000000000)
 }
 
-function resolveMaxRAM(){
+function resolveMaxRAM() {
     const mem = os.totalmem()
     return mem >= 8000000000 ? '4G' : (mem >= 6000000000 ? '3G' : '2G')
 }
 
-function resolveMinRAM(){
+function resolveMinRAM() {
     return resolveMaxRAM()
 }
 
@@ -100,7 +100,7 @@ let config = null
 /**
  * Save the current configuration to a file.
  */
-exports.save = function(){
+exports.save = function () {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'UTF-8')
 }
 
@@ -144,7 +144,7 @@ exports.load = function () {
 /**
  * @returns {boolean} Whether or not the manager has been loaded.
  */
-exports.isLoaded = function(){
+exports.isLoaded = function () {
     return config != null
 }
 
@@ -156,16 +156,16 @@ exports.isLoaded = function(){
  * @param {Object} destObj The destination object.
  * @returns {Object} A validated destination object.
  */
-function validateKeySet(srcObj, destObj){
-    if(srcObj == null){
+function validateKeySet(srcObj, destObj) {
+    if (srcObj == null) {
         srcObj = {}
     }
     const validationBlacklist = ['authenticationDatabase']
     const keys = Object.keys(srcObj)
-    for(let i=0; i<keys.length; i++){
-        if(typeof destObj[keys[i]] === 'undefined'){
+    for (let i = 0; i < keys.length; i++) {
+        if (typeof destObj[keys[i]] === 'undefined') {
             destObj[keys[i]] = srcObj[keys[i]]
-        } else if(typeof srcObj[keys[i]] === 'object' && srcObj[keys[i]] != null && !(srcObj[keys[i]] instanceof Array) && validationBlacklist.indexOf(keys[i]) === -1){
+        } else if (typeof srcObj[keys[i]] === 'object' && srcObj[keys[i]] != null && !(srcObj[keys[i]] instanceof Array) && validationBlacklist.indexOf(keys[i]) === -1) {
             destObj[keys[i]] = validateKeySet(srcObj[keys[i]], destObj[keys[i]])
         }
     }
@@ -178,7 +178,7 @@ function validateKeySet(srcObj, destObj){
  *
  * @returns {boolean} True if this is the first launch, otherwise false.
  */
-exports.isFirstLaunch = function(){
+exports.isFirstLaunch = function () {
     return firstLaunch
 }
 
@@ -188,7 +188,7 @@ exports.isFirstLaunch = function(){
  *
  * @returns {string} The name of the folder.
  */
-exports.getTempNativeFolder = function(){
+exports.getTempNativeFolder = function () {
     return 'WCNatives'
 }
 
@@ -200,7 +200,7 @@ exports.getTempNativeFolder = function(){
  *
  * @returns {Object} The news cache object.
  */
-exports.getNewsCache = function(){
+exports.getNewsCache = function () {
     return config.newsCache
 }
 
@@ -209,7 +209,7 @@ exports.getNewsCache = function(){
  *
  * @param {Object} newsCache The new news cache object.
  */
-exports.setNewsCache = function(newsCache){
+exports.setNewsCache = function (newsCache) {
     config.newsCache = newsCache
 }
 
@@ -218,7 +218,7 @@ exports.setNewsCache = function(newsCache){
  *
  * @param {boolean} dismissed Whether or not the news has been dismissed (checked).
  */
-exports.setNewsCacheDismissed = function(dismissed){
+exports.setNewsCacheDismissed = function (dismissed) {
     config.newsCache.dismissed = dismissed
 }
 
@@ -228,11 +228,11 @@ exports.setNewsCacheDismissed = function(dismissed){
  *
  * @returns {string} The launcher's common directory.
  */
-exports.getCommonDirectory = function(){
+exports.getCommonDirectory = function () {
     return path.join(exports.getDataDirectory(), 'common')
 }
 
-exports.getCrashDumpDirectory = function() {
+exports.getCrashDumpDirectory = function () {
     return path.join(exports.getCommonDirectory(), 'dumps')
 }
 
@@ -242,17 +242,17 @@ exports.getCrashDumpDirectory = function() {
  *
  * @returns {string} The launcher's instance directory.
  */
-exports.getInstanceDirectory = function(){
+exports.getInstanceDirectory = function () {
     return path.join(exports.getDataDirectory(), 'instances')
 }
 
-exports.getConfigDirectory = function(){
+exports.getConfigDirectory = function () {
 
     return path.join(exports.getCommonDirectory(), 'config')
 }
 
-exports.getGameConfigPath = function(){
-    return path.join(exports.getConfigDirectory(), 'preferences.xml')
+exports.getGameConfigPath = function () {
+    return path.join(exports.getConfigDirectory(), exports.getSelectedAccount().uuid, 'preferences.xml')
 }
 
 /**
@@ -261,7 +261,7 @@ exports.getGameConfigPath = function(){
  *
  * @returns {string} The launcher's Client Token.
  */
-exports.getClientToken = function(){
+exports.getClientToken = function () {
     return config.clientToken
 }
 
@@ -270,7 +270,7 @@ exports.getClientToken = function(){
  *
  * @param {string} clientToken The launcher's new Client Token.
  */
-exports.setClientToken = function(clientToken){
+exports.setClientToken = function (clientToken) {
     config.clientToken = clientToken
 }
 
@@ -280,7 +280,7 @@ exports.setClientToken = function(clientToken){
  * @param {boolean} def Optional. If true, the default value will be returned.
  * @returns {string} The ID of the selected serverpack.
  */
-exports.getSelectedServer = function(def = false){
+exports.getSelectedServer = function (def = false) {
     return !def ? config.selectedServer : DEFAULT_CONFIG.clientToken
 }
 
@@ -289,7 +289,7 @@ exports.getSelectedServer = function(def = false){
  *
  * @param {string} serverID The ID of the new selected serverpack.
  */
-exports.setSelectedServer = function(serverID){
+exports.setSelectedServer = function (serverID) {
     config.selectedServer = serverID
 }
 
@@ -298,7 +298,7 @@ exports.setSelectedServer = function(serverID){
  *
  * @returns {Array.<Object>} An array of each stored authenticated account.
  */
-exports.getAuthAccounts = function(){
+exports.getAuthAccounts = function () {
     return config.authenticationDatabase
 }
 
@@ -309,7 +309,7 @@ exports.getAuthAccounts = function(){
  * @param {string} uuid The uuid of the authenticated account.
  * @returns {Object} The authenticated account with the given uuid.
  */
-exports.getAuthAccount = function(uuid){
+exports.getAuthAccount = function (uuid) {
     return config.authenticationDatabase[uuid]
 }
 
@@ -321,7 +321,7 @@ exports.getAuthAccount = function(uuid){
  *
  * @returns {Object} The authenticated account object created by this action.
  */
-exports.updateAuthAccount = function(uuid, accessToken){
+exports.updateAuthAccount = function (uuid, accessToken) {
     config.authenticationDatabase[uuid].accessToken = accessToken
     return config.authenticationDatabase[uuid]
 }
@@ -336,7 +336,7 @@ exports.updateAuthAccount = function(uuid, accessToken){
  *
  * @returns {Object} The authenticated account object created by this action.
  */
-exports.addAuthAccount = function(uuid, accessToken, username, displayName){
+exports.addAuthAccount = function (uuid, accessToken, username, displayName) {
     config.selectedAccount = uuid
     config.authenticationDatabase[uuid] = {
         accessToken,
@@ -356,12 +356,12 @@ exports.addAuthAccount = function(uuid, accessToken, username, displayName){
  *
  * @returns {boolean} True if the account was removed, false if it never existed.
  */
-exports.removeAuthAccount = function(uuid){
-    if(config.authenticationDatabase[uuid] != null){
+exports.removeAuthAccount = function (uuid) {
+    if (config.authenticationDatabase[uuid] != null) {
         delete config.authenticationDatabase[uuid]
-        if(config.selectedAccount === uuid){
+        if (config.selectedAccount === uuid) {
             const keys = Object.keys(config.authenticationDatabase)
-            if(keys.length > 0){
+            if (keys.length > 0) {
                 config.selectedAccount = keys[0]
             } else {
                 config.selectedAccount = null
@@ -378,7 +378,7 @@ exports.removeAuthAccount = function(uuid){
  *
  * @returns {Object} The selected authenticated account.
  */
-exports.getSelectedAccount = function(){
+exports.getSelectedAccount = function () {
     return config.authenticationDatabase[config.selectedAccount]
 }
 
@@ -390,9 +390,9 @@ exports.getSelectedAccount = function(){
  *
  * @returns {Object} The selected authenticated account.
  */
-exports.setSelectedAccount = function(uuid){
+exports.setSelectedAccount = function (uuid) {
     const authAcc = config.authenticationDatabase[uuid]
-    if(authAcc != null) {
+    if (authAcc != null) {
         config.selectedAccount = uuid
     }
     return authAcc
@@ -403,7 +403,7 @@ exports.setSelectedAccount = function(uuid){
  *
  * @returns {Array.<Object>} An array of each stored mod configuration.
  */
-exports.getModConfigurations = function(){
+exports.getModConfigurations = function () {
     return config.modConfigurations
 }
 
@@ -412,7 +412,7 @@ exports.getModConfigurations = function(){
  *
  * @param {Array.<Object>} configurations An array of mod configurations.
  */
-exports.setModConfigurations = function(configurations){
+exports.setModConfigurations = function (configurations) {
     config.modConfigurations = configurations
 }
 
@@ -422,10 +422,10 @@ exports.setModConfigurations = function(configurations){
  * @param {string} serverid The id of the server.
  * @returns {Object} The mod configuration for the given server.
  */
-exports.getModConfiguration = function(serverid){
+exports.getModConfiguration = function (serverid) {
     const cfgs = config.modConfigurations
-    for(let i=0; i<cfgs.length; i++){
-        if(cfgs[i].id === serverid){
+    for (let i = 0; i < cfgs.length; i++) {
+        if (cfgs[i].id === serverid) {
             return cfgs[i]
         }
     }
@@ -438,10 +438,10 @@ exports.getModConfiguration = function(serverid){
  * @param {string} serverid The id of the server for the given mod configuration.
  * @param {Object} configuration The mod configuration for the given server.
  */
-exports.setModConfiguration = function(serverid, configuration){
+exports.setModConfiguration = function (serverid, configuration) {
     const cfgs = config.modConfigurations
-    for(let i=0; i<cfgs.length; i++){
-        if(cfgs[i].id === serverid){
+    for (let i = 0; i < cfgs.length; i++) {
+        if (cfgs[i].id === serverid) {
             cfgs[i] = configuration
             return
         }
@@ -459,7 +459,7 @@ exports.setModConfiguration = function(serverid, configuration){
  * @param {boolean} def Optional. If true, the default value will be returned.
  * @returns {number} The width of the game window.
  */
-exports.getGameWidth = function(def = false){
+exports.getGameWidth = function (def = false) {
     return !def ? config.settings.game.resWidth : DEFAULT_CONFIG.settings.game.resWidth
 }
 
@@ -468,7 +468,7 @@ exports.getGameWidth = function(def = false){
  *
  * @param {number} resWidth The new width of the game window.
  */
-exports.setGameWidth = function(resWidth){
+exports.setGameWidth = function (resWidth) {
     config.settings.game.resWidth = Number.parseInt(resWidth)
 }
 
@@ -478,7 +478,7 @@ exports.setGameWidth = function(resWidth){
  * @param {number} resWidth The width value to validate.
  * @returns {boolean} Whether or not the value is valid.
  */
-exports.validateGameWidth = function(resWidth){
+exports.validateGameWidth = function (resWidth) {
     const nVal = Number.parseInt(resWidth)
     return Number.isInteger(nVal) && nVal >= 0
 }
@@ -489,7 +489,7 @@ exports.validateGameWidth = function(resWidth){
  * @param {boolean} def Optional. If true, the default value will be returned.
  * @returns {number} The height of the game window.
  */
-exports.getGameHeight = function(def = false){
+exports.getGameHeight = function (def = false) {
     return !def ? config.settings.game.resHeight : DEFAULT_CONFIG.settings.game.resHeight
 }
 
@@ -498,7 +498,7 @@ exports.getGameHeight = function(def = false){
  *
  * @param {number} resHeight The new height of the game window.
  */
-exports.setGameHeight = function(resHeight){
+exports.setGameHeight = function (resHeight) {
     config.settings.game.resHeight = Number.parseInt(resHeight)
 }
 
@@ -508,7 +508,7 @@ exports.setGameHeight = function(resHeight){
  * @param {number} resHeight The height value to validate.
  * @returns {boolean} Whether or not the value is valid.
  */
-exports.validateGameHeight = function(resHeight){
+exports.validateGameHeight = function (resHeight) {
     const nVal = Number.parseInt(resHeight)
     return Number.isInteger(nVal) && nVal >= 0
 }
@@ -519,7 +519,7 @@ exports.validateGameHeight = function(resHeight){
  * @param {boolean} def Optional. If true, the default value will be returned.
  * @returns {boolean} Whether or not the game is set to launch in fullscreen mode.
  */
-exports.getFullscreen = function(def = false){
+exports.getFullscreen = function (def = false) {
     return !def ? config.settings.game.fullscreen : DEFAULT_CONFIG.settings.game.fullscreen
 }
 
@@ -528,7 +528,7 @@ exports.getFullscreen = function(def = false){
  *
  * @param {boolean} fullscreen Whether or not the game should launch in fullscreen mode.
  */
-exports.setFullscreen = function(fullscreen){
+exports.setFullscreen = function (fullscreen) {
     config.settings.game.fullscreen = fullscreen
 }
 
@@ -538,7 +538,7 @@ exports.setFullscreen = function(fullscreen){
  * @param {boolean} def Optional. If true, the default value will be returned.
  * @returns {boolean} Whether or not the game should auto connect to servers.
  */
-exports.getAutoConnect = function(def = false){
+exports.getAutoConnect = function (def = false) {
     return !def ? config.settings.game.autoConnect : DEFAULT_CONFIG.settings.game.autoConnect
 }
 
@@ -547,7 +547,7 @@ exports.getAutoConnect = function(def = false){
  *
  * @param {boolean} autoConnect Whether or not the game should auto connect to servers.
  */
-exports.setAutoConnect = function(autoConnect){
+exports.setAutoConnect = function (autoConnect) {
     config.settings.game.autoConnect = autoConnect
 }
 
@@ -557,7 +557,7 @@ exports.setAutoConnect = function(autoConnect){
  * @param {boolean} def Optional. If true, the default value will be returned.
  * @returns {boolean} Whether or not the game will launch as a detached process.
  */
-exports.getLaunchDetached = function(def = false){
+exports.getLaunchDetached = function (def = false) {
     return !def ? config.settings.game.launchDetached : DEFAULT_CONFIG.settings.game.launchDetached
 }
 
@@ -566,7 +566,7 @@ exports.getLaunchDetached = function(def = false){
  *
  * @param {boolean} launchDetached Whether or not the game should launch as a detached process.
  */
-exports.setLaunchDetached = function(launchDetached){
+exports.setLaunchDetached = function (launchDetached) {
     config.settings.game.launchDetached = launchDetached
 }
 
@@ -578,7 +578,7 @@ exports.setLaunchDetached = function(launchDetached){
  * @param {boolean} def Optional. If true, the default value will be returned.
  * @returns {boolean} Whether or not the launcher should download prerelease versions.
  */
-exports.getAllowPrerelease = function(def = false){
+exports.getAllowPrerelease = function (def = false) {
     return !def ? config.settings.launcher.allowPrerelease : DEFAULT_CONFIG.settings.launcher.allowPrerelease
 }
 
@@ -587,6 +587,6 @@ exports.getAllowPrerelease = function(def = false){
  *
  * @param {boolean} allowPrerelease Whether or not the launcher should download prerelease versions.
  */
-exports.setAllowPrerelease = function(allowPrerelease){
+exports.setAllowPrerelease = function (allowPrerelease) {
     config.settings.launcher.allowPrerelease = allowPrerelease
 }
