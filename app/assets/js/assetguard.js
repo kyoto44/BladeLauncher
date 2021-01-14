@@ -1,57 +1,20 @@
-// Requirements
 const async = require('async')
 const child_process = require('child_process')
 const crypto = require('crypto')
 const EventEmitter = require('events')
 const fs = require('fs-extra')
 const path = require('path')
-const Registry = require('winreg')
 const request = require('request')
-const xml2js = require('xml2js')
 const url = require('url')
-const os = require('os')
 const arch = require('arch')
-const si = require('systeminformation')
-const { createXXH3_128 } = require('@kaciras-blog/nativelib')
-const FormData = require('form-data')
-const dirTree = require('directory-tree')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
+const DumpsManager = require('./dumpsmanager')
+const VersionManager = require('./versionsmanager')
 
-// Constants
-// const PLATFORM_MAP = {
-//     win32: '-windows-x64.tar.gz',
-//     darwin: '-macosx-x64.tar.gz',
-//     linux: '-linux-x64.tar.gz'
-// }
-
-// Classes
-
-/** Class representing a base asset. */
-class Asset {
-    /**
-     * Create an asset.
-     *
-     * @param {any} id The id of the asset.
-     * @param {string} hash The hash value of the asset.
-     * @param {number} size The size in bytes of the asset.
-     * @param {string} from The url where the asset can be found.
-     * @param {string} to The absolute local file path of the asset.
-     */
-    constructor(id, hash, size, from, to) {
-        this.id = id
-        this.hash = hash
-        this.size = size
-        this.from = from
-        this.to = to
-    }
-
-    async _validateLocal() {
-        return AssetGuard._validateLocal(this.to, this.type != null ? 'md5' : 'sha1', this.hash, this.size)
-    }
-}
-
+const {Util} = require('./helpers')
+const {File, XmlModifierRule} = require('./assets')
 
 function defer(call) {
     return new Promise((resolve, reject) => {
@@ -65,281 +28,6 @@ function defer(call) {
     })
 }
 
-class ModifierRule {
-
-    /**
-     * @param {string} path
-     * @param {Server} server
-     */
-    async ensure(path, server) {
-        throw new Error('Method is not implemented')
-    }
-}
-
-
-class WinCompatibilityModeModifierRule extends ModifierRule {
-
-    constructor(mode) {
-        super()
-        this._mode = mode
-    }
-
-    async ensure(path, server) {
-        let regKey = new Registry({
-            hive: Registry.HKCU,
-            key: '\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-        })
-
-        let keyExists = await defer(cb => regKey.keyExists(cb))
-        if (!keyExists) {
-            await defer(cb => regKey.create(cb))
-        }
-        let mode = this._mode
-        await defer(cb => regKey.set(path, Registry.REG_SZ, mode, cb))
-    }
-}
-
-
-class DirectoryModifierRule extends ModifierRule {
-
-    constructor(mode) {
-        super()
-        this.mode = mode
-    }
-
-    async ensure(path, server) {
-        switch (this.mode) {
-            case 'exists':
-                return await fs.promises.mkdir(path, { recursive: true })
-            default:
-                throw new Error('Unsupported rule type: ' + this.ensure)
-        }
-    }
-}
-
-class XmlModifierRule extends ModifierRule {
-
-    constructor(tree) {
-        super()
-        this.tree = tree
-    }
-
-    async ensure(filePath, server) {
-        const tree = this.tree
-
-        const exists = await defer(cb => fs.pathExists(filePath, cb))
-        let json = {}
-        if (exists === true) {
-            const data = await defer(cb => fs.readFile(filePath, 'ascii', cb))
-            json = await defer(cb => xml2js.parseString(data, { explicitArray: false, trim: true }, cb))
-        }
-
-        function isObject(obj) {
-            const type = typeof obj
-            return type === 'object' && !!obj
-        }
-
-        function merge(a, b) {
-            if (!isObject(b))
-                return b
-            if (!isObject(a))
-                return a
-
-            const result = {}
-
-            Object.keys(a).concat(Object.keys(b)).forEach(k => {
-                if (!Object.prototype.hasOwnProperty.call(result, k)) {
-                    if (!Object.prototype.hasOwnProperty.call(a, k)) {
-                        result[k] = b[k]
-                    } else if (!Object.prototype.hasOwnProperty.call(b, k)) {
-                        result[k] = a[k]
-                    } else {
-                        result[k] = merge(a[k], b[k])
-                    }
-                }
-            })
-            return result
-        }
-
-        const result = merge(json, tree)
-
-        function resolve(value) {
-            const argDiscovery = /\${*(.*)}/
-            if (!value) {
-                return
-            }
-            const keys = Object.keys(value)
-            for (let key of keys) {
-                const v = value[key]
-                if (argDiscovery.test(v)) {
-                    const identifier = v.match(argDiscovery)[1]
-                    switch (identifier) {
-                        case 'server_address':
-                            value[key] = server.getAddress()
-                            continue
-                    }
-                } else if (isObject(v)) {
-                    resolve(v)
-                }
-            }
-
-        }
-
-        resolve(result)
-
-        const dirname = path.dirname(filePath)
-        await fs.promises.mkdir(dirname, { recursive: true })
-
-        const builder = new xml2js.Builder()
-        const xml = builder.buildObject(result)
-        return defer(cb => fs.writeFile(filePath, xml, 'ascii', cb))
-    }
-}
-
-
-class EjsModifierRule extends ModifierRule {
-
-    constructor(src) {
-        super()
-        this._src = src
-    }
-
-    async ensure(filePath, server) {
-
-        const exists = await defer(cb => fs.pathExists(this._src, cb))
-        if (!exists) {
-            throw new Error('Source does not exists: ' + this._src)
-        }
-
-        const configDir = path.join(ConfigManager.getConfigDirectory(), 'temp')
-        await fs.promises.mkdir(configDir, { recursive: true })
-
-        // TODO: quick hack
-        const dirname = path.dirname(filePath)
-        const relativeConfigDirPath = path.relative(dirname, configDir)
-
-        const ejs = require('ejs')
-        const result = await defer(cb => ejs.renderFile(this._src, {
-            server_address: server.getAddress(),
-            config_dir: relativeConfigDirPath
-        }, cb))
-
-        return defer(cb => fs.writeFile(filePath, result, 'ascii', cb))
-    }
-}
-
-
-class Modifier {
-    /**
-     * @param {string} path
-     * @param {Array<ModifierRule>} rules
-     */
-    constructor(path, rules) {
-        this.path = path
-        this.rules = rules
-    }
-
-    /**
-     * @param {Server} server
-     */
-    async apply(server) {
-        for (let rule of this.rules) {
-            await rule.ensure(this.path, server)
-        }
-    }
-}
-
-/** Class representing a mojang library. */
-class Library extends Asset {
-
-    constructor(id, checksum, size, urls, targetPath) {
-        super(id, checksum.hash, size, urls[0], targetPath)
-        this.id = id
-        this.checksum = checksum
-        this.size = size
-        this.urls = urls
-        this.targetPath = targetPath
-    }
-
-    /**
-     * Validate that a file exists and matches a given hash value.
-     *
-     * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
-     */
-    async _validateLocal() {
-        try {
-            if (!await fs.pathExists(this.targetPath)) {
-                return false
-            }
-            if (this.size != null) {
-                const stats = await fs.stat(this.targetPath)
-                const currentSize = stats.size
-                if (currentSize !== this.size)
-                    return false
-            }
-            if (this.checksum != null && this.checksum.hash != null) {
-                const currentHash = await AssetGuard._calculateHash(this.targetPath, this.checksum.algo)
-                if (currentHash !== this.checksum.hash)
-                    return false
-            }
-            return true
-        } catch (e) {
-            console.error(`Failed to validate library ${this.targetPath}`, e)
-            return false
-        }
-    }
-
-    /**
-     * Converts the process.platform OS names to match mojang's OS names.
-     */
-    static mojangFriendlyOS() {
-        const opSys = process.platform
-        if (opSys === 'darwin') {
-            return 'osx'
-        } else if (opSys === 'win32') {
-            return 'windows'
-        } else if (opSys === 'linux') {
-            return 'linux'
-        } else {
-            return 'unknown_os'
-        }
-    }
-
-    /**
-     * Checks whether or not a library is valid for download on a particular OS, following
-     * the rule format specified in the mojang version data index. If the allow property has
-     * an OS specified, then the library can ONLY be downloaded on that OS. If the disallow
-     * property has instead specified an OS, the library can be downloaded on any OS EXCLUDING
-     * the one specified.
-     *
-     * If the rules are undefined, the natives property will be checked for a matching entry
-     * for the current OS.
-     *
-     * @param {Array.<Object>} rules The Library's download rules.
-     * @param {Object} natives The Library's natives object.
-     * @returns {boolean} True if the Library follows the specified rules, otherwise false.
-     */
-    static validateRules(rules, natives) {
-        if (rules == null) {
-            return natives == null || natives[Library.mojangFriendlyOS()] != null
-        }
-
-        for (let rule of rules) {
-            const action = rule.action
-            const osProp = rule.os
-            if (action != null && osProp != null) {
-                const osName = osProp.name
-                const osMoj = Library.mojangFriendlyOS()
-                if (action === 'allow') {
-                    return osName === osMoj
-                } else if (action === 'disallow') {
-                    return osName !== osMoj
-                }
-            }
-        }
-        return true
-    }
-}
 
 /**
  * Class representing a download tracker. This is used to store meta data
@@ -362,33 +50,6 @@ class DLTracker {
 
 }
 
-class Util {
-
-    /**
-     * Returns true if the actual version is greater than
-     * or equal to the desired version.
-     *
-     * @param {string} desired The desired version.
-     * @param {string} actual The actual version.
-     */
-    static mcVersionAtLeast(desired, actual) {
-        const des = desired.split('.')
-        const act = actual.split('.')
-
-        for (let i = 0; i < des.length; i++) {
-            const aInt = act.length > i ? parseInt(act[i]) : 0
-            const dInt = parseInt(des[i])
-            if (aInt > dInt) {
-                return true
-            } else if (aInt < dInt) {
-                return false
-            }
-        }
-        return true
-    }
-
-}
-
 /**
  * Central object class used for control flow. This object stores data about
  * categories of downloads. Each category is assigned an identifier with a
@@ -404,11 +65,9 @@ class AssetGuard extends EventEmitter {
      * On creation the object's properties are never-null default
      * values. Each identifier is resolved to an empty DLTracker.
      *
-     * @param {string} commonPath The common path for shared game files.
-     * @param {string} launcherVersion The path to a java executable which will be used
-     * to finalize installation.
+     * @param {string} launcherVersion The version of the app.
      */
-    constructor(commonPath, launcherVersion) {
+    constructor(launcherVersion) {
         super()
         this.totaldlsize = 0
         this.progress = 0
@@ -416,105 +75,18 @@ class AssetGuard extends EventEmitter {
         this.libraries = new DLTracker([], 0)
         this.files = new DLTracker([], 0)
         this.forge = new DLTracker([], 0)
-        this.java = new DLTracker([], 0)
-        this.extractQueue = []
-        /** @type {Array<Modifier>} */
+
+        /** @type {Array<VersionManager.Modifier>} */
         this.modifiers = []
-        this.commonPath = commonPath
         this.launcherVersion = launcherVersion
-    }
 
-    // Static Utility Functions
-    // #region
 
-    // Static Hash Validation Functions
-    // #region
-
-    /**
-     * Calculates the hash for a file using the specified algorithm.
-     *
-     * @param {string} filepath The buffer containing file data.
-     * @param {string} algo The hash algorithm.
-     * @returns {Promise} The calculated hash in hex.
-     */
-    static _calculateHash(filepath, algo) {
-        return new Promise((resolve, reject) => {
-            if (algo === 'sha512' || algo === 'md5') {
-                let hash = crypto.createHash(algo)
-                let stream = fs.createReadStream(filepath)
-                stream.on('error', reject)
-                stream.on('data', chunk => hash.update(chunk))
-                stream.on('end', () => resolve(hash.digest('hex')))
-            } else if (algo === 'xxh128') {
-                const hash = new createXXH3_128()
-                const stream = fs.createReadStream(filepath)
-                stream.on('error', reject)
-                stream.on('data', chunk => hash.update(chunk))
-                stream.on('end', () => {
-                    resolve(hash.digest('hex'))
-                })
-            }
-        })
-    }
-
-    /**
-     * Used to parse a checksums file. This is specifically designed for
-     * the checksums.sha1 files found inside the forge scala dependencies.
-     *
-     * @param {string} content The string content of the checksums file.
-     * @returns {Object} An object with keys being the file names, and values being the hashes.
-     */
-    static _parseChecksumsFile(content) {
-        let finalContent = {}
-        let lines = content.split('\n')
-        for (let i = 0; i < lines.length; i++) {
-            let bits = lines[i].split(' ')
-            if (bits[1] == null) {
-                continue
-            }
-            finalContent[bits[1]] = bits[0]
+        if (!ConfigManager.isLoaded()) {
+            ConfigManager.load()
         }
-        return finalContent
+
+        this.commonPath = ConfigManager.getCommonDirectory()
     }
-
-    /**
-     * Validate that a file exists and matches a given hash value.
-     *
-     * @param {string} filePath The path of the file to validate.
-     * @param {string} algo The hash algorithm to check against.
-     * @param {string} hash The existing hash to check against.
-     * @param {number} sizeBytes The expected size of the file in byte.
-     * @returns {boolean} True if the file exists and calculated hash matches the given hash, otherwise false.
-     */
-    static async _validateLocal(filePath, algo, hash, sizeBytes) {
-        try {
-            if (!await fs.pathExists(filePath)) {
-                return false
-            }
-            if (sizeBytes != null) {
-                const stats = await fs.stat(filePath)
-                const currentSize = stats.size
-                if (currentSize !== sizeBytes)
-                    return false
-            }
-            if (hash != null) {
-                const currentHash = await AssetGuard._calculateHash(filePath, algo)
-                if (currentHash !== hash)
-                    return false
-            }
-            return true
-        } catch (e) {
-            console.error(`Failed to validate file ${filePath}`, e)
-            return false
-        }
-    }
-
-    // #endregion
-
-    // #endregion
-
-    // Validation Functions
-    // #region
 
     static _compareArtifactInfo(a, b) {
         const keys = ['size', 'checksum', 'path']
@@ -537,7 +109,7 @@ class AssetGuard extends EventEmitter {
 
         const versionsPath = path.join(this.commonPath, 'versions')
 
-        let versionDirs = await fs.readdir(versionsPath, { withFileTypes: true })
+        let versionDirs = await fs.readdir(versionsPath, {withFileTypes: true})
 
         const toRemove = {}
         for (let versionDir of versionDirs) {
@@ -562,85 +134,15 @@ class AssetGuard extends EventEmitter {
     }
 
     async syncSettings(type) {
-
-
-    }
-
-    async gatherSystemInfo(versionData) {
-        const sysinfo = {
-            'accountid': ConfigManager.getSelectedAccount().uuid,
-            'clientversion': versionData.id,
-            'cpumodel': os.cpus()[0].model,
-            'ostype': os.platform() + arch(),
-            'osversion': os.release(),
-            'ramsize': Math.round(os.totalmem() / 1024 / 1024 / 1024) + 'GB',
-            'gpu': (await si.graphics()).controllers[0].model
-        }
-        //console.log(sysinfo)
-        return sysinfo
-    }
-
-    async sendDumps(versionData) {
-        const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
-        const tree = dirTree(dumpsDirectory, { extensions: /\.dmp/ }).children
-        let dumpsData = []
-        let dumpForm = new FormData({})
-
-        // Check for new dumps & and push them
-        const meta = {
-            'username': ConfigManager.getSelectedAccount().username,
-            'section': 'technical',
-            'subsection': 'launching',
-            'description': 'crush dumps'
-        }
-        dumpForm.append('meta', JSON.stringify(meta), { contentType: 'application/json; charset=utf-8' })
-        for (let i = 0; i < tree.length && i < 2; i++) {
-            dumpsData.push({ 'dumpPath': tree[i].path })
-            dumpForm.append(`dumpfile${i}`, fs.createReadStream(tree[i].path), tree[i].name)
-        }
-        if (dumpsData.length !== 0) {
-            const sysinfo = await this.gatherSystemInfo(versionData)
-            dumpForm.append('sysinfo', JSON.stringify(sysinfo), { filename: 'sysinfo.json' })
-
-            // Send dump
-            const res = await defer(cb => dumpForm.submit('https://www.northernblade.ru/api/submit/support/request', cb))
-
-            // Cleanup
-            if (res.statusCode === '204') {
-                const unlinkResults = []
-                for (let i = 0; i < dumpsData.length; i++) {
-                    unlinkResults.push(fs.unlink(dumpsData[i].dumpPath))
-                }
-                await Promise.allSettled(unlinkResults)
-            }
-        }
-    }
-
-    async createDumpRule() {
-        const Registry = require('winreg')
-        let regKey = new Registry({
-            hive: Registry.HKCU,
-            key: '\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\nblade.exe',
-
-        })
-        let keyExists = await defer(cb => regKey.keyExists(cb))
-        if (!keyExists) {
-            const dumpsDirectory = path.join(ConfigManager.getCommonDirectory(), 'dumps')
-            await fs.promises.mkdir(dumpsDirectory, { recursive: true })
-
-            await defer(cb => regKey.set('DumpFolder', Registry.REG_EXPAND_SZ, dumpsDirectory, cb))
-            await defer(cb => regKey.set('DumpCount', Registry.REG_DWORD, 3, cb))
-            await defer(cb => regKey.set('DumpType', Registry.REG_DWORD, 1, cb))
-            await defer(cb => regKey.create(cb))
-        }
+        // TODO: will be used to sync user setting between devices
     }
 
     async validateRequirements() {
         const requirementsDirectory = path.join(ConfigManager.getCommonDirectory(), 'requirements')
-        await fs.promises.mkdir(requirementsDirectory, { recursive: true })
+        await fs.promises.mkdir(requirementsDirectory, {recursive: true})
 
         const screenshotsDirectory = path.join(ConfigManager.getCommonDirectory(), 'screenshots')
-        await fs.promises.mkdir(screenshotsDirectory, { recursive: true })
+        await fs.promises.mkdir(screenshotsDirectory, {recursive: true})
 
         const VC08exePath = path.join(requirementsDirectory, 'vcredist_x86.exe')
         const VC19exePath = path.join(requirementsDirectory, 'VC_redist.x86.exe')
@@ -799,34 +301,19 @@ class AssetGuard extends EventEmitter {
 
         const result = {}
 
-        const versionsPath = path.join(this.commonPath, 'versions')
-        const versionDirs = await defer(cb => fs.readdir(versionsPath, { withFileTypes: true }, cb))
-        for (let versionDir of versionDirs) {
-            if (!versionDir.isDirectory())
+        const previousVersions = VersionManager.versions()
+        for (let versionInfo of previousVersions) {
+            if (versionInfo.id === targetVersionData.id)
                 continue
 
-
-            const versionNumber = versionDir.name
-            if (versionNumber === targetVersionData.id)
-                continue
-
-            const versionFile = path.join(versionsPath, versionNumber, versionNumber + '.json')
-            try {
-                await defer(cb => fs.access(versionFile, fs.constants.R_OK, cb))
-            } catch (err) {
-                continue
-            }
-
-            const versionData = await defer(cb => fs.readFile(versionFile, cb))
-            const versionInfo = JSON.parse(versionData)
-            const previousMoudles = versionInfo.downloads
+            const previousModules = versionInfo.downloads
 
             for (let id of ids) {
                 const targetModule = modules[id]
                 if (targetModule.type !== 'File')
                     continue
 
-                const previousMoudle = previousMoudles[id]
+                const previousMoudle = previousModules[id]
                 if (!previousMoudle)
                     continue
                 if (previousMoudle.type !== 'File')
@@ -835,7 +322,7 @@ class AssetGuard extends EventEmitter {
 
                 if (AssetGuard._compareArtifactInfo(targetModule.artifact, previousMoudle.artifact)) {
                     let versions = result[id] || []
-                    versions.push(versionNumber)
+                    versions.push(versionInfo.id)
                     result[id] = versions
                 }
             }
@@ -844,91 +331,13 @@ class AssetGuard extends EventEmitter {
         return result
     }
 
-    /**
-     * Loads the version data for a given version.
-     *
-     * @param {DistroManager.Version} version The game version for which to load the index data.
-     * @param {boolean} force Optional. If true, the version index will be downloaded even if it exists locally. Defaults to false.
-     * @returns {Promise.<Object>} Promise which resolves to the version data object.
-     */
-    loadVersionData(version, force = false) {
-        const self = this
-        return new Promise(async (resolve, reject) => {
-            const versionPath = path.join(self.commonPath, 'versions', version.id)
-            const versionFile = path.join(versionPath, version.id + '.json')
-
-            const customHeaders = {
-                'User-Agent': 'BladeLauncher/' + this.launcherVersion
-            }
-
-            let fetch = force
-            if (!fetch) {
-                await fs.ensureDir(versionPath)
-                fetch = !await fs.pathExists(versionFile)
-            }
-            if (!fetch) {
-                const stats = await fs.stat(versionFile)
-                customHeaders['If-Modified-Since'] = stats.mtime.toUTCString()
-            }
-
-            //This download will never be tracked as it's essential and trivial.
-            console.log('Preparing download of ' + version.id + ' assets.')
-
-            const authAcc = ConfigManager.getSelectedAccount()
-
-            const opts = {
-                url: version.url,
-                timeout: 5000,
-                auth: {
-                    'bearer': authAcc.accessToken
-                }
-            }
-            if (Object.keys(customHeaders).length > 0) {
-                opts.headers = customHeaders
-            }
-
-            request(opts, (error, resp, body) => {
-                console.info(`Downloading ${version.url}`)
-                if (error) {
-                    reject(error)
-                    return
-                }
-
-                if (resp.statusCode === 304) {
-                    fs.readFile(versionFile).then(JSON.parse).then(resolve, reject)
-                    return
-                }
-
-                if (resp.statusCode !== 200) {
-                    reject(resp.statusMessage || body || 'Failed to retive version data')
-                    return
-                }
-
-                let data
-                try {
-                    data = JSON.parse(body)
-                } catch (e) {
-                    reject(e)
-                    return
-                }
-
-                fs.writeFile(versionFile, body, 'utf-8', (err) => {
-                    if (err) {
-                        reject(err)
-                    } else {
-                        resolve(data)
-                    }
-                })
-            })
-        })
-    }
 
     async validateLauncherVersion(versionData) {
         let requiredVersion = versionData.minimumLauncherVersion
         if (!isNaN(requiredVersion)) {
             requiredVersion = '' + requiredVersion
         }
-        if(!Util.mcVersionAtLeast(requiredVersion, this.launcherVersion)) {
+        if (!Util.mcVersionAtLeast(requiredVersion, this.launcherVersion)) {
             throw `Required launcher version: ${requiredVersion}`
         }
     }
@@ -956,19 +365,19 @@ class AssetGuard extends EventEmitter {
         // Check validity of each library. If the hashs don't match, download the library.
         await async.eachLimit(ids, 5, async (id) => {
             const lib = versionData.downloads[id]
-            if (!Library.validateRules(lib.rules, lib.natives)) {
+            if (!File.validateRules(lib.rules, lib.natives)) {
                 return
             }
 
             if (lib.type === 'File') {
                 const artifact = (lib.natives == null)
                     ? lib.artifact
-                    : lib.classifiers[lib.natives[Library.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
+                    : lib.classifiers[lib.natives[File.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
 
                 const checksum = artifact.checksum.split(':', 2)
                 const algo = checksum[0].toLowerCase()
                 const hash = checksum[1]
-                const libItm = new Library(
+                const libItm = new File(
                     id,
                     {'algo': algo, 'hash': hash},
                     artifact.size,
@@ -982,7 +391,7 @@ class AssetGuard extends EventEmitter {
                         for (let previousVersion of previousVersions) {
                             const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), previousVersion)
                             const previousPath = path.join(previousLibPath, artifact.path)
-                            const previousLib = new Library(
+                            const previousLib = new File(
                                 id,
                                 {'algo': algo, 'hash': hash},
                                 artifact.size,
@@ -1008,42 +417,8 @@ class AssetGuard extends EventEmitter {
         self.libraries = new DLTracker(libDlQueue, dlSize)
     }
 
-
     async validateModifiers(versionData) {
-        const modifierDlQueue = []
-        this.modifiers = modifierDlQueue
-
-        if (!versionData.modifiers) {
-            return
-        }
-
-        const libPath = path.join(ConfigManager.getInstanceDirectory(), versionData.id)
-        for (let modifier of versionData.modifiers) {
-            const rules = []
-            for (let rule of modifier.rules) {
-                switch (rule.type) {
-                    case 'xml':
-                        rules.push(new XmlModifierRule(rule.tree))
-                        break
-                    case 'dir':
-                        rules.push(new DirectoryModifierRule(rule.ensure))
-                        break
-                    case 'ejs':
-                        rules.push(new EjsModifierRule(path.join(libPath, rule.src)))
-                        break
-                    case 'compat':
-                        if (process.platform === 'win32') {
-                            // TODO: temporary ignore this modifier because it prevents passing of envs
-                            // rules.push(new WinCompatibilityModeModifierRule(rule.mode))
-                        }
-                        break
-                }
-            }
-            modifierDlQueue.push(new Modifier(
-                path.join(libPath, modifier.path),
-                rules
-            ))
-        }
+        this.modifiers = [...versionData.modifiers]
     }
 
     async validateConfig() {
@@ -1055,7 +430,7 @@ class AssetGuard extends EventEmitter {
                 }
             }
         })]
-        this.modifiers.push(new Modifier(
+        this.modifiers.push(new VersionManager.Modifier(
             configPath,
             rules
         ))
@@ -1201,10 +576,10 @@ class AssetGuard extends EventEmitter {
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
     processDlQueues(server, identifiers = [
-        { id: 'assets', limit: 20 },
-        { id: 'libraries', limit: 5 },
-        { id: 'files', limit: 5 },
-        { id: 'forge', limit: 5 }
+        {id: 'assets', limit: 20},
+        {id: 'libraries', limit: 5},
+        {id: 'files', limit: 5},
+        {id: 'forge', limit: 5}
     ]) {
         const self = this
         return new Promise((resolve, reject) => {
@@ -1241,46 +616,44 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async validateEverything(serverid, dev = false) {
+    async validateEverything(serverId, dev = false) {
         try {
-            if (!ConfigManager.isLoaded()) {
-                ConfigManager.load()
-            }
-
             DistroManager.setDevMode(dev)
             const dI = await DistroManager.pullLocal()
 
-            const server = dI.getServer(serverid)
+            const server = dI.getServer(serverId)
 
             // Validate Everything
 
-            const versionData = await this.loadVersionData(server.getVersions()[0])
+            if (!VersionManager.isInited()) {
+                await VersionManager.init()
+            }
 
-            await this.validateLauncherVersion(versionData)
+            const versionMeta = await VersionManager.fetch(server.getVersions()[0])
 
-            const reusableModules = await this.loadPreviousVersionFilesInfo(versionData)
+            await this.validateLauncherVersion(versionMeta)
 
-            //await this.syncSettings('download')
+            const account = ConfigManager.getSelectedAccount()
+
+            const parallelTasks = []
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
-                try {
-                    await this.createDumpRule()
-                } catch (err) {
-                    console.warn(err)
-                }
-                try {
-                    await this.sendDumps(versionData)
-                } catch (err) {
-                    console.warn(err)
-                }
-                await this.validateRequirements()
+                parallelTasks.push(
+                    DumpsManager.createRule().catch(console.warn),
+                    DumpsManager.sendDumps(account, versionMeta).catch(console.warn),
+                    this.validateRequirements()
+                )
             }
             this.emit('validate', 'version')
-            await this.validateVersion(versionData, reusableModules)
+            const reusableModules = await this.loadPreviousVersionFilesInfo(versionMeta)
+            await this.validateVersion(versionMeta, reusableModules)
             this.emit('validate', 'libraries')
-            await this.validateModifiers(versionData)
+            await this.validateModifiers(versionMeta)
+            //await this.syncSettings('download')
             await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server)
+
+            await Promise.all(parallelTasks)
             //this.emit('complete', 'download')
             try {
                 await this.cleanupPreviousVersionData(dI)
@@ -1288,11 +661,9 @@ class AssetGuard extends EventEmitter {
                 console.warn(err)
             }
 
-            const forgeData = {}
-
             return {
-                versionData,
-                forgeData
+                versionData: versionMeta,
+                forgeData: {}
             }
 
         } catch (err) {
@@ -1313,6 +684,4 @@ class AssetGuard extends EventEmitter {
 module.exports = {
     Util,
     AssetGuard,
-    Asset,
-    Library
 }
