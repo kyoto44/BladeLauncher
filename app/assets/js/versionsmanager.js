@@ -183,7 +183,7 @@ class Version {
      * @param {string} minimumLauncherVersion
      * @param {Manifest} manifest
      * @param {Downloads} downloads
-     * @param {Array<Modifier>} modifiers
+     * @param {Array.<Modifier>} modifiers
      * @param {Date} fetchTime
      */
     constructor(id, type, minimumLauncherVersion, manifest, downloads, modifiers, fetchTime) {
@@ -197,6 +197,8 @@ class Version {
         this.fetchTime = fetchTime
     }
 }
+
+exports.Version = Version
 
 
 async function loadVersionFile(path) {
@@ -215,7 +217,8 @@ exports.isInited = function () {
 exports.init = async function () {
     const result = {}
 
-    const versionsPath = path.join(ConfigManager.getCommonDirectory(), 'versions')
+    const versionsPath = path.join(ConfigManager.getInstanceDirectory(), 'versions')
+    await fs.promises.mkdir(versionsPath, {recursive: true})
     const versionDirs = await fs.promises.readdir(versionsPath, {withFileTypes: true})
 
 

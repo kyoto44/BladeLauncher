@@ -5,16 +5,17 @@ const EventEmitter = require('events')
 const fs = require('fs-extra')
 const path = require('path')
 const request = require('request')
-const url = require('url')
 const arch = require('arch')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
 const DumpsManager = require('./dumpsmanager')
+const FetchManager = require('./fetchmanager')
 const VersionManager = require('./versionsmanager')
 
 const {Util} = require('./helpers')
-const {Asset, File, XmlModifierRule} = require('./assets')
+const {Asset, XmlModifierRule} = require('./assets')
+
 
 function defer(call) {
     return new Promise((resolve, reject) => {
@@ -86,15 +87,6 @@ class AssetGuard extends EventEmitter {
         }
 
         this.commonPath = ConfigManager.getCommonDirectory()
-    }
-
-    static _compareArtifactInfo(a, b) {
-        const keys = ['size', 'checksum', 'path']
-        for (let key of keys) {
-            if (a[key] !== b[key])
-                return false
-        }
-        return true
     }
 
     async cleanupPreviousVersionData(distroIndex) {
@@ -229,9 +221,7 @@ class AssetGuard extends EventEmitter {
                                 }
                             })
                     })
-                    .on('error', (error) => {
-                        reject(error)
-                    })
+                    .on('error', reject)
             })
         }
 
@@ -295,39 +285,6 @@ class AssetGuard extends EventEmitter {
         }
     }
 
-    async loadPreviousVersionFilesInfo(targetVersionData) {
-        const modules = targetVersionData.downloads
-        const ids = Object.keys(modules)
-
-        const result = {}
-
-        const previousVersions = VersionManager.versions()
-        for (let versionInfo of previousVersions) {
-            if (versionInfo.id === targetVersionData.id)
-                continue
-
-            const previousModules = versionInfo.downloads
-
-            for (let id of ids) {
-                const targetModule = modules[id]
-                const previousMoudle = previousModules[id]
-                if (!previousMoudle)
-                    continue
-                if (typeof previousMoudle === typeof targetModule)
-                    continue
-
-                if (AssetGuard._compareArtifactInfo(targetModule.artifact, previousMoudle.artifact)) {
-                    let versions = result[id] || []
-                    versions.push(versionInfo.id)
-                    result[id] = versions
-                }
-            }
-        }
-
-        return result
-    }
-
-
     async validateLauncherVersion(versionData) {
         let requiredVersion = versionData.minimumLauncherVersion
         if (!isNaN(requiredVersion)) {
@@ -345,10 +302,9 @@ class AssetGuard extends EventEmitter {
      * queue for the 'libraries' identifier.
      *
      * @param {Object} versionData The version data for the assets.
-     * @param {Object} reusableModules Information about same modules in the previous versions which were downloaded and can be reused
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
      */
-    async validateVersion(versionData, reusableModules) {
+    async validateVersion(versionData) {
         const self = this
 
         const libDlQueue = []
@@ -363,31 +319,9 @@ class AssetGuard extends EventEmitter {
                 return
             }
 
-            const libItm = lib
-
-            if (!await libItm.validateLocal()) {
-                const previousVersions = reusableModules[id]
-                if (previousVersions) {
-                    for (let previousVersion of previousVersions) {
-                        const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), previousVersion)
-                        const previousPath = path.join(previousLibPath, lib.path)
-                        const previousLib = new File(
-                            id,
-                            lib.checksum,
-                            lib.size,
-                            [],
-                            previousPath
-                        )
-                        if (await previousLib.validateLocal()) {
-                            const localUrl = url.pathToFileURL(previousPath).href
-                            libItm.urls.unshift(localUrl)
-                            break
-                        }
-                    }
-                }
-
-                dlSize += (libItm.size * 1)
-                libDlQueue.push(libItm)
+            if (!await lib.validateLocal()) {
+                dlSize += (lib.size * 1)
+                libDlQueue.push(lib)
             }
 
             currentid++
@@ -419,11 +353,12 @@ class AssetGuard extends EventEmitter {
     /**
      * Initiate an async download process for an AssetGuard DLTracker.
      *
+     * @param fetcher
      * @param {string} identifier The identifier of the AssetGuard DLTracker.
      * @param {number} limit Optional. The number of async processes to run in parallel.
      * @returns {boolean} True if the process began, otherwise false.
      */
-    startAsyncProcess(identifier, limit = 5) {
+    startAsyncProcess(fetcher, identifier, limit = 5) {
 
         const self = this
         const dlTracker = this[identifier]
@@ -433,105 +368,35 @@ class AssetGuard extends EventEmitter {
             return false
         }
 
-        const authAcc = ConfigManager.getSelectedAccount()
-
         async.eachLimit(dlQueue, limit, (asset, cb) => {
-
-            async function afterLoad() {
-                if (dlTracker.callback != null) {
-                    dlTracker.callback.apply(dlTracker, [asset, self])
-                }
-
-                const v = await asset.validateLocal()
-                if (v) {
-                    cb()
-                    return
-                }
-
-                const msg = `Validation of downloaded asset ${asset.id} failed, may be corrupted.`
-                console.error(msg)
-                cb(msg)
-            }
-
-            fs.ensureDirSync(path.dirname(asset.to))
-
-            const alternatives = asset.urls
-            for (let alternative of alternatives) {
-                const urlObj = new URL(alternative)
-                if (urlObj.protocol === 'file:') {
-                    fs.copyFile(url.fileURLToPath(alternative), asset.to, async (err) => {
-                        if (err) {
-                            cb(err)
-                            return
-                        }
-
-                        self.progress += asset.size
-                        self.emit('progress', 'download', self.progress, self.totaldlsize)
-
-                        await afterLoad()
-                    })
-                    return
-                }
-            }
-
-
-            const opt = {
-                url: asset.urls[0],
-                headers: {
-                    'User-Agent': 'BladeLauncher/' + this.launcherVersion,
-                    'Accept': '*/*'
-                },
-                auth: {
-                    'bearer': authAcc.accessToken
-                }
-            }
-
-            let req = request(opt)
-            req.pause()
-
-            req.on('response', (resp) => {
-                if (resp.statusCode !== 200) {
-                    req.abort()
-                    console.error(`Failed to download ${asset.id}(${typeof opt['url'] === 'object' ? opt['url'].url : opt['url']}). Response code ${resp.statusCode}`)
-                    cb(`${asset.id}: ${resp.statusMessage}`)
-                    return
-                }
-
-                const contentLength = parseInt(resp.headers['content-length'])
-
-                if (contentLength !== asset.size) {
-                    console.log(`WARN: Got ${contentLength} bytes for ${asset.id}: Expected ${asset.size}`)
-
-                    // Adjust download
-                    this.totaldlsize -= asset.size
-                    this.totaldlsize += contentLength
-                }
-
-                let writeStream = fs.createWriteStream(asset.to)
-                writeStream.on('close', async () => {
-                    await afterLoad()
+            let assetProgress = 0
+            fetcher.pull(asset).then(req => {
+                req.on('error', cb)
+                req.on('download', (bytes) => {
+                    self.progress += bytes
+                    assetProgress += bytes
+                    self.emit('progress', 'download', self.progress, self.totaldlsize)
                 })
-                req.pipe(writeStream)
-                req.resume()
-
-            })
-
-            req.on('error', cb)
-
-            req.on('data', (chunk) => {
-                self.progress += chunk.length
-                self.emit('progress', 'download', self.progress, self.totaldlsize)
-            })
-
+                req.on('reset', () => {
+                    self.progress -= assetProgress
+                    assetProgress = 0
+                })
+                req.on('done', () => {
+                    if (dlTracker.callback != null) {
+                        dlTracker.callback.apply(dlTracker, [asset, self])
+                    }
+                    cb()
+                })
+            }, cb)
         }, (err) => {
             if (err) {
-                const msg = 'An item in ' + identifier + ' failed to process: ' + err
+                const msg = `An item in ${identifier} failed to process: ${err}`
                 console.log(msg)
                 self.emit('error', 'download', msg)
                 return
             }
 
-            console.log('All ' + identifier + ' have been processed successfully')
+            console.log(`All ${identifier} have been processed successfully`)
 
             self[identifier] = new DLTracker([], 0)
 
@@ -553,11 +418,12 @@ class AssetGuard extends EventEmitter {
      * global object instance.
      *
      * @param {Server} server
+     * @param fetcher
      * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
      */
-    processDlQueues(server, identifiers = [
+    processDlQueues(server, fetcher, identifiers = [
         {id: 'assets', limit: 20},
-        {id: 'libraries', limit: 5},
+        {id: 'libraries', limit: 20},
         {id: 'files', limit: 5},
         {id: 'forge', limit: 5}
     ]) {
@@ -579,9 +445,10 @@ class AssetGuard extends EventEmitter {
             })
 
             for (let iden of identifiers) {
-                let r = this.startAsyncProcess(iden.id, iden.limit)
-                if (r)
+                let r = this.startAsyncProcess(fetcher, iden.id, iden.limit)
+                if (r) {
                     shouldFire = false
+                }
             }
 
             if (shouldFire) {
@@ -622,14 +489,14 @@ class AssetGuard extends EventEmitter {
                 )
             }
             this.emit('validate', 'version')
-            const reusableModules = await this.loadPreviousVersionFilesInfo(versionMeta)
-            await this.validateVersion(versionMeta, reusableModules)
+            await this.validateVersion(versionMeta)
             this.emit('validate', 'libraries')
             await this.validateModifiers(versionMeta)
             //await this.syncSettings('download')
+            const fetcher = FetchManager.init(ConfigManager.getSelectedAccount(), versionMeta)
             await this.validateConfig()
             this.emit('validate', 'files')
-            await this.processDlQueues(server)
+            await this.processDlQueues(server, fetcher)
 
             await Promise.all(parallelTasks)
             //this.emit('complete', 'download')
