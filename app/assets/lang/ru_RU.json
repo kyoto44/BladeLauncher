@@ -4,6 +4,8 @@
         "newsButtonText": "НОВОСТИ",
         "launch_button": "ИГРАТЬ",
         "settingsTooltip": "Настройки",
+        "websiteTooltip": "Веб-сайт",
+        "discordTooltip": "Cервер в Discord",
         "loginCancelText": "Отмена",
         "updateAvailableTooltip": "Обновление",
         "landingPlayerLabel": "СЕРВЕР",
