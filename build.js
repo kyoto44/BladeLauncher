@@ -43,7 +43,10 @@ builder.build({
             ],
             legalTrademarks: 'N-blade',
             signAndEditExecutable: true,
-            signDlls: true
+            signDlls: true,
+            extraResources: [
+                'tools/win'
+            ],
         },
         nsis: {
             oneClick: true,
@@ -63,14 +66,14 @@ builder.build({
             vendor: 'N-Blade LLC',
             synopsis: 'Northern Blade Launcher',
             description: 'Game launcher which allows users to join servers and handle updates automatically.',
-            category: 'Game'
+            category: 'Game',
+            extraResources: [
+                'tools/linux'
+            ],
         },
         compression: 'maximum',
         files: [
             '!{dist,.gitignore,.vscode,docs,dev-app-update.yml,.travis.yml,.nvmrc,.eslintrc.json,build.js}'
-        ],
-        extraResources: [
-            'tools'
         ],
         asar: true
     }
