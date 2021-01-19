@@ -214,10 +214,16 @@ exports.isInited = function () {
     return _STORAGE !== null
 }
 
+
+function getVersionsPath() {
+    return path.join(ConfigManager.getCommonDirectory(), 'versions')
+}
+
+
 exports.init = async function () {
     const result = {}
 
-    const versionsPath = path.join(ConfigManager.getInstanceDirectory(), 'versions')
+    const versionsPath = getVersionsPath()
     await fs.promises.mkdir(versionsPath, {recursive: true})
     const versionDirs = await fs.promises.readdir(versionsPath, {withFileTypes: true})
 
@@ -239,7 +245,7 @@ exports.init = async function () {
         result[version.id] = version
     })
 
-    _STORAGE = new Storage(versionsPath, result)
+    _STORAGE = new Storage(ConfigManager.getInstanceDirectory(), result)
 }
 
 
@@ -255,8 +261,7 @@ exports.fetch = async function (version, force = false) {
     if (existedVersion && !force) {
         return existedVersion
     }
-
-    const versionPath = path.join(_STORAGE.storagePath, version.id)
+    const versionPath = path.join(getVersionsPath(), version.id)
     const versionFile = path.join(versionPath, version.id + '.json')
 
     const customHeaders = {
