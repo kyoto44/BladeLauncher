@@ -2,11 +2,15 @@ const EventEmitter = require('events')
 const request = require('request')
 const fs = require('fs-extra')
 const path = require('path')
+const parseTorrent = require('parse-torrent')
+const WebTorrent = require('webtorrent-hybrid')
+const FSChunkStore = require('fs-chunk-store')
 
 const {File} = require('./assets')
 const VersionsManager = require('./versionsmanager')
 
 const logger = require('./loggerutil')('%c[FetchManager]', 'color: #a02d2a; font-weight: bold')
+
 
 class Fetcher {
 
@@ -115,6 +119,92 @@ class HttpFecher extends Fetcher {
 }
 
 
+class TorrentFetcher extends Fetcher {
+    /**
+     * @param {Reporter} reporter
+     * @param {string} chosenUrl
+     * @param {WebTorrent} webTorrentClient
+     */
+    constructor(reporter, chosenUrl, webTorrentClient) {
+        super(reporter)
+        this.url = chosenUrl
+        this.webTorrentClient = webTorrentClient
+    }
+
+    async fetch(targetPath) {
+        const dirname = path.dirname(targetPath)
+        const parsedTorrent = parseTorrent(this.url)
+
+        const timer = new TimeoutEmitter(10 * 1000)
+        const torrent = this.webTorrentClient.add(parsedTorrent, {
+            path: dirname,
+            fileModtimes: false,
+            store: function (chunkLength, storeOpts) {
+                let updatedStoreOpts = {...storeOpts}
+                updatedStoreOpts.files.forEach(file => {
+                    file.path = targetPath
+                })
+                return FSChunkStore(
+                    chunkLength,
+                    updatedStoreOpts
+                )
+            }
+        })
+        console.log('torrent is added:', torrent.infoHash)
+
+        torrent.on('infoHash', () => console.log('torrent received hash:', torrent.name))
+        torrent.on('metadata', () => {
+            console.log('torrent received metadata:', torrent.name)
+            timer.delay()
+        })
+
+        let progress = -0.01
+        torrent.on('download', bytes => {
+            if (torrent.progress - progress > 0.01) {
+                progress = torrent.progress
+                console.log(`downloaded: ${bytes}; total: ${torrent.downloaded}; speed: ${torrent.downloadSpeed}; progress: ${torrent.progress}`)
+            }
+            this.reporter.download(bytes)
+            timer.delay()
+        })
+        torrent.on('upload', bytes => {
+            console.log(`uploaded: ${bytes}; total: ${torrent.uploaded}; speed: ${torrent.uploadSpeed}; progress: ${torrent.progress}`)
+        })
+        torrent.on('wire', (wire, addr) => console.log('connected to peer with address ' + addr))
+
+        torrent.on('warning', console.warn)
+        torrent.on('ready', () => {
+            console.log(`torrent ${torrent.name} is ready`)
+        })
+        torrent.on('noPeers', announceType => {
+            console.log(`torrent ${torrent.name} has no peers in ${announceType}`)
+        })
+
+        await new Promise((resolve, reject) => {
+            torrent.on('error', reject)
+            torrent.on('done', () => {
+                console.log(`torrent ${torrent.name} download finished`)
+                resolve()
+            })
+            timer.on('timeout', reject)
+        }).finally(async () => {
+            timer.cancel()
+            await new Promise((resolve, reject) => {
+                this.webTorrentClient.remove(torrent, (err) => {
+                    if (err) {
+                        console.warn(`torrent ${torrent.name} failed to cancel`)
+                        reject(err)
+                    } else {
+                        resolve()
+                    }
+                })
+            })
+        })
+
+    }
+}
+
+
 class Reporter {
     /**
      * @param {EventEmitter} eventEmitter
@@ -141,6 +231,35 @@ class Reporter {
 }
 
 
+class TimeoutEmitter extends EventEmitter {
+    constructor(ms, timeoutError) {
+        super()
+        this._ms = ms
+        this._timeoutError = timeoutError
+        this._timer = setTimeout(this._onTimeout.bind(this), ms)
+    }
+
+    _onTimeout() {
+        this.emit('timeout', this._timeoutError)
+    }
+
+    delay(ms = null) {
+        if (this._timer) {
+            clearTimeout(this._timer)
+            this._timer = setTimeout(this._onTimeout.bind(this), ms || this._ms)
+        }
+    }
+
+    cancel() {
+        if (this._timer) {
+            clearTimeout(this._timer)
+            this._timer = 0
+        }
+    }
+
+}
+
+
 class Facade {
     /**
      * @param account
@@ -149,6 +268,7 @@ class Facade {
     constructor(account, reusableModules) {
         this.account = account
         this.reusableModules = reusableModules
+        this.webTorrentClient = new WebTorrent()
     }
 
     /**
@@ -172,12 +292,21 @@ class Facade {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
                 fetchers.push(new HttpFecher(reporter, url, this.account))
+            } else if (urlObj.protocol === 'magnet:') {
+                fetchers.push(new TorrentFetcher(reporter, url, this.webTorrentClient))
             } else {
                 logger.warn('Unsupported url type for asses', asset.id)
             }
         }
 
         new Promise(async (resolve, reject) => {
+            try {
+                await fs.ensureDir(path.dirname(asset.targetPath))
+            } catch (e) {
+                reporter.error(`Failed to create asset ${asset.id} directory`)
+                return
+            }
+
             for (let i = 0; i < fetchers.length; i++) {
                 if (i > 0) {
                     reporter.reset()
@@ -185,10 +314,9 @@ class Facade {
 
                 let fetcher = fetchers[i]
                 try {
-                    await fs.ensureDir(path.dirname(asset.targetPath))
                     await fetcher.fetch(asset.targetPath)
                 } catch (e) {
-                    console.warn(`Failed to fetch asset ${asset.id} with fetcher ${typeof fetcher}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`, e)
+                    console.warn(`Failed to fetch asset ${asset.id} with fetcher ${fetcher.constructor.name}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`, e)
                     continue
                 }
 
@@ -199,7 +327,7 @@ class Facade {
                     return
                 }
 
-                console.warn(`Fetcher ${typeof fetcher} produced invalid resource ${asset.id}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`)
+                console.warn(`Fetcher ${fetcher.constructor.name} produced invalid resource ${asset.id}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`)
             }
 
             reporter.error(`Failed to fetch asset ${asset.id}`)
