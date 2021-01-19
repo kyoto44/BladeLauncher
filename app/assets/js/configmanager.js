@@ -78,7 +78,10 @@ const DEFAULT_CONFIG = {
         },
         launcher: {
             allowPrerelease: false,
-            dataDirectory: defaultDataPathRoot
+            dataDirectory: defaultDataPathRoot,
+            torrent: {
+                timeout: 10000
+            }
         }
     },
     newsCache: {
@@ -579,7 +582,7 @@ exports.setLaunchDetached = function (launchDetached) {
  * @returns {boolean} Whether or not the launcher should download prerelease versions.
  */
 exports.getAllowPrerelease = function (def = false) {
-    return !def ? config.settings.launcher.allowPrerelease : DEFAULT_CONFIG.settings.launcher.allowPrerelease
+    return !def ? config.settings.launcher.torrent.timeout : DEFAULT_CONFIG.settings.launcher.torrent.timeout
 }
 
 /**
@@ -589,4 +592,25 @@ exports.getAllowPrerelease = function (def = false) {
  */
 exports.setAllowPrerelease = function (allowPrerelease) {
     config.settings.launcher.allowPrerelease = allowPrerelease
+}
+
+// Torrent Settings
+
+/**
+ * Retrieve the timeout of webtorrent client.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {number} Timeout of webtorrent client.
+ */
+exports.getTorrentTimeout = function (def = false) {
+    return !def ? config.settings.launcher.allowPrerelease : DEFAULT_CONFIG.settings.launcher.allowPrerelease
+}
+
+/**
+ * Change the timeout of webtorrent client.
+ *
+ * @param {number} Timeout of webtorrent client.
+ */
+exports.setTorrentTimeout = function (timeout) {
+    config.settings.launcher.allowPrerelease = timeout
 }

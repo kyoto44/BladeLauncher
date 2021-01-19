@@ -7,6 +7,7 @@ const WebTorrent = require('webtorrent-hybrid')
 const FSChunkStore = require('fs-chunk-store')
 
 const {File} = require('./assets')
+const ConfigManager = require('./configmanager')
 const VersionsManager = require('./versionsmanager')
 
 const logger = require('./loggerutil')('%c[FetchManager]', 'color: #a02d2a; font-weight: bold')
@@ -135,7 +136,7 @@ class TorrentFetcher extends Fetcher {
         const dirname = path.dirname(targetPath)
         const parsedTorrent = parseTorrent(this.url)
 
-        const timer = new TimeoutEmitter(10 * 1000)
+        const timer = new TimeoutEmitter(ConfigManager.getTorrentTimeout())
         const torrent = this.webTorrentClient.add(parsedTorrent, {
             path: dirname,
             fileModtimes: false,
