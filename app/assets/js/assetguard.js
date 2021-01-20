@@ -129,30 +129,6 @@ class AssetGuard extends EventEmitter {
         // TODO: will be used to sync user setting between devices
     }
 
-    async getPatcherPath() {
-        let patcherFile
-        switch (process.platform) {
-            case 'win32':
-                if (arch() === 'x64') {
-                    patcherFile = 'tools/win/hpatchz64.exe'
-                } else if (arch() === 'x86') {
-                    patcherFile = 'tools/win/hpatchz32.exe'
-                }
-                break
-            case 'linux':
-                if (arch() === 'x64') {
-                    patcherFile = 'tools/linux/hpatchz64'
-                } else if (arch() === 'x86') {
-                    patcherFile = 'tools/linux/hpatchz32'
-                }
-                break
-            default:
-                console.error('Unsupported platform!')
-                return undefined
-        }
-        return path.join(__dirname, '../../../../', `${patcherFile}`)
-    }
-
     async validateRequirements() {
         const requirementsDirectory = path.join(ConfigManager.getCommonDirectory(), 'requirements')
         await fs.promises.mkdir(requirementsDirectory, {recursive: true})

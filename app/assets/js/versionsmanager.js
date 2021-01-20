@@ -26,8 +26,8 @@ class Storage {
     }
 
     /**
-     * @param {string}version_id
-     * @returns {Version}
+     * @param {string} version_id
+     * @returns {?Version}
      */
     get(version_id) {
         return this.data[version_id]
@@ -321,9 +321,16 @@ exports.fetch = async function (version, force = false) {
 }
 
 /**
- *
  * @returns {Array<Version>}
  */
 exports.versions = function () {
     return Object.values(_STORAGE.data)
+}
+
+/**
+ * @param {string} versionId
+ * @returns {?Version}
+ */
+exports.get = function (versionId) {
+    return _STORAGE.get(versionId)
 }

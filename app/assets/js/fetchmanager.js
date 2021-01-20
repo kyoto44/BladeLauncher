@@ -1,6 +1,8 @@
 const EventEmitter = require('events')
 const request = require('request')
 const fs = require('fs-extra')
+const arch = require('arch')
+const child_process = require('child_process')
 const path = require('path')
 const parseTorrent = require('parse-torrent')
 const WebTorrent = require('webtorrentspeedlimit')
@@ -10,14 +12,14 @@ const FSChunkStore = require('fs-chunk-store')
 const {File} = require('./assets')
 const ConfigManager = require('./configmanager')
 const VersionsManager = require('./versionsmanager')
+const LoggerUtil = require('./loggerutil')
 
-const logger = require('./loggerutil')('%c[FetchManager]', 'color: #a02d2a; font-weight: bold')
+const logger = LoggerUtil('%c[FetchManager]', 'color: #a02d2a; font-weight: bold')
 
 
 class Fetcher {
 
     /**
-     *
      * @param {Reporter} reporter
      */
     constructor(reporter) {
@@ -70,7 +72,7 @@ class PreviousVersionFetcher extends Fetcher {
 }
 
 
-class HttpFecher extends Fetcher {
+class HttpFetcher extends Fetcher {
     /**
      * @param {Reporter}reporter
      * @param {string} chosenUrl
@@ -207,6 +209,112 @@ class TorrentFetcher extends Fetcher {
 }
 
 
+class PatchFetcher extends Fetcher {
+    /**
+     * @param {Reporter}reporter
+     * @param {string} chosenUrl
+     * @param account
+     * @param {string} assetId
+     */
+    constructor(reporter, chosenUrl, account, assetId) {
+        super(reporter)
+        this.url = chosenUrl
+        this.account = account
+        this.assetId = assetId
+    }
+
+    static async getPatcherPath() {
+        let patcherFile
+        switch (process.platform) {
+            case 'win32':
+                if (arch() === 'x64') {
+                    patcherFile = 'tools/win/hpatchz64.exe'
+                } else if (arch() === 'x86') {
+                    patcherFile = 'tools/win/hpatchz32.exe'
+                }
+                break
+            case 'linux':
+                if (arch() === 'x64') {
+                    patcherFile = 'tools/linux/hpatchz64'
+                } else if (arch() === 'x86') {
+                    patcherFile = 'tools/linux/hpatchz32'
+                }
+                break
+            default:
+                console.error('Unsupported platform!')
+                return null
+        }
+        return path.join(__dirname, '../../../../', `${patcherFile}`)
+    }
+
+    async fetch(targetPath) {
+        const url = new URL(this.url)
+        const baseVersionId = url.searchParams.get('bs')
+        const subURI = url.searchParams.get('su')
+        const diffType = url.searchParams.get('dt')
+        const expectedLength = url.searchParams.get('xl')
+        const checksum = url.searchParams.get('cs')
+
+        if (!baseVersionId || !subURI || !diffType) {
+            throw new Error('Invalid patch uri')
+        }
+
+        if (diffType !== 'hpatchz') {
+            throw new Error('Unsupported diff type: ' + diffType)
+        }
+
+        const subUrl = new URL(subURI)
+        if (subUrl.protocol !== 'http:' && subUrl.protocol !== 'https:') {
+            throw new Error('Unsupported sub uri protocol: ' + subUrl.protocol)
+        }
+
+        const baseVersion = VersionsManager.get(baseVersionId)
+        if (!baseVersion) {
+            throw new Error('Base version not exists: ' + baseVersionId)
+        }
+
+        const baseAsset = baseVersion.downloads[this.assetId]
+        if (!baseAsset) {
+            throw new Error('Base version does not contain needed asset: ' + this.assetId)
+        }
+
+        const httpFetcher = new HttpFetcher(this.reporter, subURI, this.account)
+
+        const patchTargetPath = targetPath + '.patch'
+        await httpFetcher.fetch(patchTargetPath)
+
+        const patcherPath = PatchFetcher.getPatcherPath()
+        const child = child_process.spawn(patcherPath, [
+            '-f', baseAsset.targetPath, targetPath
+        ])
+        child.stdout.setEncoding('utf8')
+        child.stderr.setEncoding('utf8')
+
+        const loggerMCstdout = LoggerUtil('%c[Patcher]', 'color: #36b030; font-weight: bold')
+        const loggerMCstderr = LoggerUtil('%c[Patcher]', 'color: #b03030; font-weight: bold')
+
+        child.stdout.on('data', (data) => {
+            loggerMCstdout.log(data)
+        })
+        child.stderr.on('data', (data) => {
+            loggerMCstderr.log(data)
+        })
+        await new Promise((resolve, reject) => {
+            child.on('exit', (code) => {
+                if (code) {
+                    reject(`Process exited with code ${code}`)
+                } else {
+                    resolve()
+                }
+            })
+            child.on('error', (err) => {
+                reject(err)
+            })
+        })
+    }
+}
+
+
 class Reporter {
     /**
      * @param {EventEmitter} eventEmitter
@@ -296,9 +404,11 @@ class Facade {
         for (const url of asset.urls) {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-                fetchers.push(new HttpFecher(reporter, url, this.account))
+                fetchers.push(new HttpFetcher(reporter, url, this.account))
             } else if (urlObj.protocol === 'magnet:') {
                 fetchers.push(new TorrentFetcher(reporter, url, this.webTorrentClient))
+            } else if (urlObj.protocol === 'patch:') {
+                fetchers.push(new PatchFetcher(reporter, url, this.account, asset.id))
             } else {
                 logger.warn('Unsupported url type for asses', asset.id)
             }
