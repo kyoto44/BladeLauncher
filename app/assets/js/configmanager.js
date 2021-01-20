@@ -80,7 +80,9 @@ const DEFAULT_CONFIG = {
             allowPrerelease: false,
             dataDirectory: defaultDataPathRoot,
             torrent: {
-                timeout: 10000
+                timeout: 10000,
+                downloadLimit: Number.MAX_VALUE,
+                uploadLimit: Number.MAX_VALUE,
             }
         }
     },
@@ -582,7 +584,7 @@ exports.setLaunchDetached = function (launchDetached) {
  * @returns {boolean} Whether or not the launcher should download prerelease versions.
  */
 exports.getAllowPrerelease = function (def = false) {
-    return !def ? config.settings.launcher.torrent.timeout : DEFAULT_CONFIG.settings.launcher.torrent.timeout
+    return !def ? config.settings.launcher.allowPrerelease : DEFAULT_CONFIG.settings.launcher.allowPrerelease
 }
 
 /**
@@ -603,14 +605,52 @@ exports.setAllowPrerelease = function (allowPrerelease) {
  * @returns {number} Timeout of webtorrent client.
  */
 exports.getTorrentTimeout = function (def = false) {
-    return !def ? config.settings.launcher.allowPrerelease : DEFAULT_CONFIG.settings.launcher.allowPrerelease
+    return !def ? config.settings.launcher.torrent.timeout : DEFAULT_CONFIG.settings.launcher.torrent.timeout
 }
 
 /**
  * Change the timeout of webtorrent client.
  *
- * @param {number} Timeout of webtorrent client.
+ * @param {number} timeout Timeout of webtorrent client.
  */
 exports.setTorrentTimeout = function (timeout) {
-    config.settings.launcher.allowPrerelease = timeout
+    config.settings.launcher.torrent.timeout = timeout
+}
+
+/**
+ * Retrieve the download speed limit of webtorrent client.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {number} Download speed limit of webtorrent client.
+ */
+exports.getTorrentDownloadSpeedLimit = function (def = false) {
+    return !def ? config.settings.launcher.torrent.downloadLimit : DEFAULT_CONFIG.settings.launcher.torrent.downloadLimit
+}
+
+/**
+ * Change the download speed limit of webtorrent client.
+ *
+ * @param {number} limit Download speed limit of webtorrent client.
+ */
+exports.setTorrentDownloadSpeedLimit = function (limit) {
+    config.settings.launcher.torrent.downloadLimit = limit
+}
+
+/**
+ * Retrieve the upload speed limit of webtorrent client.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {number} Upload speed limit of webtorrent client.
+ */
+exports.getTorrentUploadSpeedLimit = function (def = false) {
+    return !def ? config.settings.launcher.torrent.uploadLimit : DEFAULT_CONFIG.settings.launcher.torrent.uploadLimit
+}
+
+/**
+ * Change the download speed limit of webtorrent client.
+ *
+ * @param {number} limit Upload speed limit of webtorrent client.
+ */
+exports.setTorrentUploadSpeedLimit = function (limit) {
+    config.settings.launcher.torrent.uploadLimit = limit
 }

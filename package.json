@@ -42,7 +42,7 @@
     "semver": "^7.3.2",
     "systeminformation": "^4.34.5",
     "tar-fs": "^2.1.1",
-    "webtorrent-hybrid": "^4.0.3",
+    "webtorrentspeedlimit": "webtorrent/webtorrent#add_speed_limit",
     "winreg": "^1.2.4",
     "xml2js": "^0.4.23"
   },

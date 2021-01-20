@@ -3,8 +3,9 @@ const request = require('request')
 const fs = require('fs-extra')
 const path = require('path')
 const parseTorrent = require('parse-torrent')
-const WebTorrent = require('webtorrent-hybrid')
+const WebTorrent = require('webtorrentspeedlimit')
 const FSChunkStore = require('fs-chunk-store')
+
 
 const {File} = require('./assets')
 const ConfigManager = require('./configmanager')
@@ -269,7 +270,10 @@ class Facade {
     constructor(account, reusableModules) {
         this.account = account
         this.reusableModules = reusableModules
-        this.webTorrentClient = new WebTorrent()
+        this.webTorrentClient = new WebTorrent({
+            downloadLimit: ConfigManager.getTorrentDownloadSpeedLimit(),
+            uploadLimit: ConfigManager.getTorrentUploadSpeedLimit()
+        })
     }
 
     /**
