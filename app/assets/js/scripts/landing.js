@@ -4,7 +4,7 @@
 // Requirements
 const cp = require('child_process')
 const crypto = require('crypto')
-const { URL } = require('url')
+const {URL} = require('url')
 
 // Internal Requirements
 const DiscordWrapper = require('./assets/js/discordwrapper')
@@ -235,11 +235,10 @@ function dlAsync(login = true) {
     // Start AssetExec to run validations and downloads in a forked process.
     aEx = cp.fork(path.join(__dirname, 'assets', 'js', 'assetexec.js'), [
         'AssetGuard',
-        ConfigManager.getCommonDirectory(),
         remote.app.getVersion()
     ], {
         env: forkEnv,
-        // execArgv:['--inspect-brk'],
+        //execArgv:['--inspect-brk'],
         stdio: 'pipe'
     })
     // Stdout
@@ -386,7 +385,7 @@ function dlAsync(login = true) {
                     settingsNavItemListener(document.getElementById('settingsNavUpdate'), false)
                 })
                 aEx.disconnect()
-                
+
                 return
             }
 

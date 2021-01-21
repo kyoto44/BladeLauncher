@@ -42,13 +42,13 @@
     "semver": "^7.3.2",
     "systeminformation": "^4.34.5",
     "tar-fs": "^2.1.1",
-    "webtorrent": "^0.112.0",
+    "webtorrentspeedlimit": "webtorrent/webtorrent#add_speed_limit",
     "winreg": "^1.2.4",
     "xml2js": "^0.4.23"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "electron": "^11.1.1",
+    "electron": "^11.2.0",
     "electron-builder": "^22.10.4",
     "electron-rebuild": "^2.3.4",
     "electron-reloader": "^1.1.0",

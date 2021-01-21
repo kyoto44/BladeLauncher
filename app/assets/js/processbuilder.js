@@ -6,7 +6,8 @@ const os                    = require('os')
 const path                  = require('path')
 const { URL }               = require('url')
 
-const { Util, Library }  = require('./assetguard')
+const { Asset }  = require('./assets')
+const { Util }  = require('./helpers')
 const ConfigManager            = require('./configmanager')
 const DistroManager            = require('./distromanager')
 const LoggerUtil               = require('./loggerutil')
@@ -355,7 +356,7 @@ class ProcessBuilder {
                 let checksum = 0
                 for(let rule of args[i].rules){
                     if(rule.os != null){
-                        if(rule.os.name === Library.mojangFriendlyOS()
+                        if(rule.os.name === Asset.mojangFriendlyOS()
                             && (rule.os.version == null || new RegExp(rule.os.version).test(os.release))){
                             if(rule.action === 'allow'){
                                 checksum++
@@ -604,7 +605,7 @@ class ProcessBuilder {
         fs.ensureDirSync(tempNativePath)
         for(let i=0; i<libArr.length; i++){
             const lib = libArr[i]
-            if(Library.validateRules(lib.rules, lib.natives)){
+            if(Asset.validateRules(lib.rules, lib.natives)){
                 if(lib.natives == null){
                     const dlInfo = lib.downloads
                     const artifact = dlInfo.artifact
@@ -613,7 +614,7 @@ class ProcessBuilder {
                 } else {
                     // Extract the native library.
                     const exclusionArr = lib.extract != null ? lib.extract.exclude : ['META-INF/']
-                    const artifact = lib.downloads.classifiers[lib.natives[Library.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
+                    const artifact = lib.downloads.classifiers[lib.natives[Asset.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
     
                     // Location of native zip.
                     const to = path.join(this.libPath, artifact.path)
