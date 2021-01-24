@@ -5,7 +5,7 @@ const arch = require('arch')
 const child_process = require('child_process')
 const path = require('path')
 const parseTorrent = require('parse-torrent')
-const WebTorrent = require('webtorrentspeedlimit')
+const WebTorrent = require('webtorrent')
 const FSChunkStore = require('fs-chunk-store')
 
 
