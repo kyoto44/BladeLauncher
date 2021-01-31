@@ -205,6 +205,11 @@ class AssetGuard extends EventEmitter {
             return new Promise((resolve, reject) => {
                 console.log(`Downloading ${reqName}...`)
                 request(url)
+                    .on('response', res => {
+                        if (res.statusCode >= 400) {
+                            reject(`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
+                        }
+                    })
                     .pipe(fs.createWriteStream(path))
                     .on('finish', () => {
                         console.log(`${reqName} download completed`)
@@ -216,7 +221,6 @@ class AssetGuard extends EventEmitter {
                                 if (calculatedHash !== hash) {
                                     reject(`Wrong Hash! ${calculatedHash} !== ${hash}`)
                                 } else {
-                                    //console.log(path, calculatedHash)
                                     resolve()
                                 }
                             })
