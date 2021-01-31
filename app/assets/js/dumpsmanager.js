@@ -6,6 +6,7 @@ const arch = require('arch')
 const si = require('systeminformation')
 const FormData = require('form-data')
 const Registry = require('winreg')
+const AdmZip = require('adm-zip')
 
 const ConfigManager = require('./configmanager')
 
@@ -54,6 +55,7 @@ exports.sendDumps = async function (account, versionData) {
     const tree = dirTree(dumpsDirectory, {extensions: /\.dmp/}).children
     let dumpsData = []
     let dumpForm = new FormData({})
+    let zip = new AdmZip()
 
     // Check for new dumps & and push them
     const meta = {
@@ -63,19 +65,20 @@ exports.sendDumps = async function (account, versionData) {
         'description': 'crush dumps'
     }
     dumpForm.append('meta', JSON.stringify(meta), {contentType: 'application/json; charset=utf-8'})
-    for (let i = 0; i < tree.length && i < 2; i++) {
+    for (let i = 0; i < tree.length; i++) {
         dumpsData.push({'dumpPath': tree[i].path})
-        dumpForm.append(`dumpfile${i}`, fs.createReadStream(tree[i].path), tree[i].name)
+        zip.addLocalFile(tree[i].path)
     }
+
     if (dumpsData.length !== 0) {
         const sysinfo = await gatherSystemInfo(account, versionData)
-        dumpForm.append('sysinfo', JSON.stringify(sysinfo), {filename: 'sysinfo.json'})
-
+        zip.addFile('sysinfo.json', JSON.stringify(sysinfo))
+        dumpForm.append('dumpfile', zip.toBuffer(), {filename: `dumps-${ConfigManager.getSelectedAccount().username}.zip`})
         // Send dump
-        const res = util.promisify(dumpForm.submit).bind(dumpForm)(SUPPORT_URI)
+        const res = await util.promisify(dumpForm.submit).bind(dumpForm)(SUPPORT_URI)
 
         // Cleanup
-        if (res.statusCode === '204') {
+        if (res.statusCode === 204) {
             const unlinkResults = []
             for (let i = 0; i < dumpsData.length; i++) {
                 unlinkResults.push(fs.unlink(dumpsData[i].dumpPath))
