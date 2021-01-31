@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const path = require('path')
 const Registry = require('winreg')
-const xml2js = require('xml2js')
+const parserxml = require('fast-xml-parser')
 const util = require('util')
 
 const ConfigManager = require('./configmanager')
@@ -196,7 +196,12 @@ class XmlModifierRule extends ModifierRule {
         let json = {}
         if (exists === true) {
             const data = await fs.promises.readFile(filePath, 'ascii')
-            json = await xml2js.parseStringPromise(data, {explicitArray: false, trim: true})
+            if (parserxml.validate(data) === true) {
+                json = await parserxml.parse(data)
+            } else {
+                console.log(`Bad XML config file! Path ${filePath} Removing...`)
+                await fs.promises.unlink(filePath)
+            }
         }
 
         function isObject(obj) {
@@ -255,8 +260,8 @@ class XmlModifierRule extends ModifierRule {
         const dirname = path.dirname(filePath)
         await fs.promises.mkdir(dirname, {recursive: true})
 
-        const builder = new xml2js.Builder()
-        const xml = builder.buildObject(result)
+        const j2x = new parserxml.j2xParser()
+        const xml = j2x.parse(result)
         await fs.promises.writeFile(filePath, xml, 'ascii')
     }
 }
