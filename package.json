@@ -1,6 +1,6 @@
 {
   "name": "bladelauncher",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "productName": "Blade Launcher",
   "description": "Northern Blade Launcher",
   "author": "N-Blade LCC",
@@ -33,6 +33,7 @@
     "discord-rpc": "^3.1.4",
     "ejs": "^3.1.5",
     "ejs-electron": "^2.1.1",
+    "electron-log": "^4.3.1",
     "electron-updater": "^4.3.5",
     "fast-xml-parser": "^3.17.6",
     "form-data": "^2.5.1",

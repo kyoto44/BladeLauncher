@@ -73,7 +73,7 @@ exports.sendDumps = async function (account, versionData) {
     if (dumpsData.length !== 0) {
         const sysinfo = await gatherSystemInfo(account, versionData)
         zip.addFile('sysinfo.json', JSON.stringify(sysinfo))
-        dumpForm.append('dumpfile', zip.toBuffer(), {filename: `dumps-${ConfigManager.getSelectedAccount().username}.zip`})
+        dumpForm.append('dumpfile', zip.toBuffer(), {filename: `dumps-${account.username}.zip`})
         // Send dump
         const res = await util.promisify(dumpForm.submit).bind(dumpForm)(SUPPORT_URI)
 

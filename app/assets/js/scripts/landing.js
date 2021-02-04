@@ -5,6 +5,7 @@
 const cp = require('child_process')
 const crypto = require('crypto')
 const {URL} = require('url')
+const electron = require('electron')
 
 // Internal Requirements
 const DiscordWrapper = require('./assets/js/discordwrapper')
@@ -21,6 +22,7 @@ const launch_details_text = document.getElementById('launch_details_text')
 const server_selection_button = document.getElementById('server_selection_button')
 const user_text = document.getElementById('user_text')
 
+const log = require('electron-log')
 const loggerLanding = LoggerUtil('%c[Landing]', 'color: #000668; font-weight: bold')
 
 /* Launch Progress Wrapper Functions */
@@ -231,7 +233,7 @@ function dlAsync(login = true) {
 
     const forkEnv = JSON.parse(JSON.stringify(process.env))
     forkEnv.CONFIG_DIRECT_PATH = ConfigManager.getLauncherDirectory()
-
+    log.transports.file.level = true
     // Start AssetExec to run validations and downloads in a forked process.
     aEx = cp.fork(path.join(__dirname, 'assets', 'js', 'assetexec.js'), [
         'AssetGuard',
@@ -244,19 +246,24 @@ function dlAsync(login = true) {
     // Stdout
     aEx.stdio[1].setEncoding('utf8')
     aEx.stdio[1].on('data', (data) => {
-        loggerAEx.log(data)
+        log.info(data)
     })
     // Stderr
     aEx.stdio[2].setEncoding('utf8')
     aEx.stdio[2].on('data', (data) => {
-        loggerAEx.log(data)
+        log.info(data)
     })
+    const userDataPath = (electron.app || electron.remote.app).getPath(
+        'userData'
+    )
     aEx.on('error', (err) => {
+        loggerLaunchSuite.sendLauncherErrorReport(ConfigManager.getSelectedAccount(), userDataPath)
         loggerLaunchSuite.error('Error during launch', err)
         showLaunchFailure('Error During Launch', err.message || 'See console (CTRL + Shift + i) for more details.')
     })
     aEx.on('close', (code, signal) => {
         if (code !== 0) {
+            loggerLaunchSuite.sendLauncherErrorReport(ConfigManager.getSelectedAccount(), userDataPath)
             loggerLaunchSuite.error(`AssetExec exited with code ${code}, assuming error.`)
             showLaunchFailure('Error During Launch', 'See console (CTRL + Shift + i) for more details.')
         }

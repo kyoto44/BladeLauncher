@@ -6,7 +6,6 @@ const request = require('request')
 const ConfigManager = require('./configmanager')
 const {
     File,
-
     WinCompatibilityModeModifierRule,
     DirectoryModifierRule,
     XmlModifierRule,

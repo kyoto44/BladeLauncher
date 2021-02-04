@@ -6,6 +6,7 @@ const fs = require('fs-extra')
 const path = require('path')
 const request = require('request')
 const arch = require('arch')
+const log = require('electron-log')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -143,7 +144,7 @@ class AssetGuard extends EventEmitter {
 
         async function checkDirectX() {
             if (!fs.existsSync('C:\\Windows\\System32\\D3DX9_43.dll')) {
-                console.log('DirectX Missing!')
+                log.warn('DirectX Missing!')
                 return true
             }
             return false
@@ -157,19 +158,19 @@ class AssetGuard extends EventEmitter {
                     hive: Registry.HKLM,
                     key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
                 })
-                console.log('64bit system detected')
+                log.info('64bit system detected')
             } else if (arch() === 'x86') {
                 regKey = new Registry({
                     hive: Registry.HKLM,
                     key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
                 })
-                console.log('32bit system detected')
+                log.info('32bit system detected')
             } else {
                 throw 'Unknown architecture'
             }
             let keyExists = await defer(cb => regKey.keyExists(cb))
             if (!keyExists) {
-                console.log('VC++ 2008 x86 Missing!')
+                log.warn('VC++ 2008 x86 Missing!')
                 return true
             }
             return false
@@ -183,19 +184,19 @@ class AssetGuard extends EventEmitter {
                     hive: Registry.HKLM,
                     key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
                 })
-                console.log('64bit system detected')
+                log.info('64bit system detected')
             } else if (arch() === 'x86') {
                 regKey = new Registry({
                     hive: Registry.HKLM,
                     key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
                 })
-                console.log('32bit system detected')
+                log.info('32bit system detected')
             } else {
                 throw 'Unknown architecture'
             }
             let keyExists = await defer(cb => regKey.keyExists(cb))
             if (!keyExists) {
-                console.log('VC++ 2019 x86 Missing!')
+                log.warn('VC++ 2019 x86 Missing!')
                 return true
             }
             return false
@@ -203,7 +204,7 @@ class AssetGuard extends EventEmitter {
 
         function downloadReq(reqName, url, path, hash) {
             return new Promise((resolve, reject) => {
-                console.log(`Downloading ${reqName}...`)
+                log.info(`Downloading ${reqName}...`)
                 request(url)
                     .on('response', res => {
                         if (res.statusCode >= 400) {
@@ -212,7 +213,7 @@ class AssetGuard extends EventEmitter {
                     })
                     .pipe(fs.createWriteStream(path))
                     .on('finish', () => {
-                        console.log(`${reqName} download completed`)
+                        log.info(`${reqName} download completed`)
                         let calculatedHash = crypto.createHash('md5')
                         fs.createReadStream(path)
                             .on('data', data => calculatedHash.update(data))
@@ -233,22 +234,22 @@ class AssetGuard extends EventEmitter {
             return new Promise((resolve, reject) => {
                 child_process.exec(`${path} ${flags}`, (error, stdout, stderr) => {
                     if (stdout) {
-                        console.log(`stdout: ${stdout}`)
+                        log.info(`stdout: ${stdout}`)
                     }
                     if (stderr) {
-                        console.log(`stderr: ${stderr}`)
+                        log.info(`stderr: ${stderr}`)
                     }
                     if (error) {
-                        console.log(`error: ${error.message}`)
+                        log.error(`error: ${error.message}`)
                         if (error.code === 3010) {
                             //3010 means "The requested operation is successful. Changes will not be effective until the system is rebooted."
-                            console.log(`${reqName} Installation completed.`)
+                            log.info(`${reqName} Installation completed.`)
                             resolve()
                         } else {
                             reject(error)
                         }
                     } else {
-                        console.log(`${reqName} Installation completed.`)
+                        log.info(`${reqName} Installation completed.`)
                         resolve()
                     }
                 })
@@ -395,12 +396,12 @@ class AssetGuard extends EventEmitter {
         }, (err) => {
             if (err) {
                 const msg = `An item in ${identifier} failed to process: ${err}`
-                console.log(msg)
+                log.error(msg)
                 self.emit('error', 'download', msg)
                 return
             }
 
-            console.log(`All ${identifier} have been processed successfully`)
+            log.info(`All ${identifier} have been processed successfully`)
 
             self[identifier] = new DLTracker([], 0)
 
@@ -516,7 +517,8 @@ class AssetGuard extends EventEmitter {
             }
 
         } catch (err) {
-            console.error(err)
+            log.error(err)
+            await this.sendLauncherErrorReport(ConfigManager.getSelectedAccount())
             return {
                 versionData: null,
                 forgeData: null,
