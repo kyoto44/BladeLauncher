@@ -42,7 +42,7 @@ class LoggerUtil {
             'username': account.username,
             'section': 'technical',
             'subsection': 'launching',
-            'description': 'error during launch'
+            'description': '[error_during_launch]'
         }
 
         dumpForm.append('meta', JSON.stringify(meta), {contentType: 'application/json; charset=utf-8'})
