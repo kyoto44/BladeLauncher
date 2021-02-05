@@ -21,7 +21,7 @@ builder.build({
         appId: 'nblade.bladelauncher',
         productName: 'Blade Launcher',
         artifactName: '${productName}-setup-${version}.${ext}',
-        copyright: 'Copyright © 2019-2020 N-Blade LLC',
+        copyright: 'Copyright © 2019-2021 N-Blade LLC',
         directories: {
             buildResources: 'build',
             output: 'dist'

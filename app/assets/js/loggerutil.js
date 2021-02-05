@@ -53,15 +53,30 @@ class LoggerUtil {
             'osversion': os.release(),
         }
         zip.addFile('sysinfo.json', JSON.stringify(sysinfo))
-        if (fs.existsSync(path.join(userDataPath, 'logs/main.log'))) {
-            zip.addLocalFile(path.join(userDataPath, 'logs/main.log'))
-        }
-        if (fs.existsSync(path.join(userDataPath, 'logs/renderer.log'))) {
-            zip.addLocalFile(path.join(userDataPath, 'logs/renderer.log'))
-        }
-        if (fs.existsSync(path.join(userDataPath, 'logs/worker.log'))) {
-            zip.addLocalFile(path.join(userDataPath, 'logs/worker.log'))
-        }
+        await fs.promises.access(path.join(userDataPath, 'logs/main.log'))
+            .then(() => {
+                zip.addLocalFile(path.join(userDataPath, 'logs/main.log'))
+            })
+            .catch(() => {
+                console.warn('file main.log does not exist')
+            })
+
+        await fs.promises.access(path.join(userDataPath, 'logs/renderer.log'))
+            .then(() => {
+                zip.addLocalFile(path.join(userDataPath, 'logs/renderer.log'))
+            })
+            .catch(() => {
+                console.warn('file renderer.log does not exist')
+            })
+
+        await fs.promises.access(path.join(userDataPath, 'logs/worker.log'))
+            .then(() => {
+                zip.addLocalFile(path.join(userDataPath, 'logs/worker.log'))
+            })
+            .catch(() => {
+                console.warn('file worker.log does not exist')
+            })
+
         dumpForm.append('logsfile', zip.toBuffer(), {filename: `logs-${account.username}.zip`})
         console.log(dumpForm)
         const res = await util.promisify(dumpForm.submit).bind(dumpForm)(SUPPORT_URI)
