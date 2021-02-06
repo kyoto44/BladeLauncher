@@ -256,15 +256,16 @@ function dlAsync(login = true) {
     const userDataPath = (electron.app || electron.remote.app).getPath(
         'userData'
     )
+    const ReportManager = require('./assets/js/reportmanager')
     aEx.on('error', (err) => {
         loggerLaunchSuite.error('Error during launch', err)
-        loggerLaunchSuite.sendLauncherErrorReport(ConfigManager.getSelectedAccount(), userDataPath)
+        ReportManager.sendReport('launcher', userDataPath)
         showLaunchFailure('Error During Launch', err.message || 'See console (CTRL + Shift + i) for more details.')
     })
     aEx.on('close', (code, signal) => {
         if (code !== 0) {
             loggerLaunchSuite.error(`AssetExec exited with code ${code}, assuming error.`)
-            loggerLaunchSuite.sendLauncherErrorReport(ConfigManager.getSelectedAccount(), userDataPath)
+            ReportManager.sendReport('launcher', userDataPath)
             showLaunchFailure('Error During Launch', 'See console (CTRL + Shift + i) for more details.')
         }
     })
