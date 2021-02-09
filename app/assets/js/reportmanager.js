@@ -10,7 +10,6 @@ const dirTree = require('directory-tree')
 
 const DistroManager = require('./distromanager')
 const ConfigManager = require('./configmanager')
-const VersionManager = require('./versionsmanager')
 
 async function gatherSystemInfo(account, versionData) {
     return {
@@ -92,9 +91,8 @@ exports.sendReport = async function (type, userDataPath = '') {
             await addIfAccess(zip, filesList[i])
         }
 
-        const server = (await DistroManager.pullLocal()).getServer(ConfigManager.getSelectedServer())
-        const versionMeta = await VersionManager.fetch(server.getVersions()[0])
-        const sysinfo = await gatherSystemInfo(account, versionMeta)
+        const server = (await DistroManager.pullLocal()).getServer(ConfigManager.getSelectedServer()).getVersions()[0]
+        const sysinfo = await gatherSystemInfo(account, server)
         zip.addFile('sysinfo.json', JSON.stringify(sysinfo))
 
 

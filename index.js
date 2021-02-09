@@ -90,7 +90,7 @@ ipcMain.on('distributionIndexDone', (event, res) => {
 app.disableHardwareAcceleration()
 
 // https://github.com/electron/electron/issues/18397
-app.allowRendererProcessReuse = false
+app.allowRendererProcessReuse = true
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
