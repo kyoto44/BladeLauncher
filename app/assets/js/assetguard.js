@@ -13,7 +13,7 @@ const DistroManager = require('./distromanager')
 const DumpsManager = require('./dumpsmanager')
 const FetchManager = require('./fetchmanager')
 const VersionManager = require('./versionsmanager')
-const ReportManager = require('./reportmanager')
+const {DumpsReporter} = require('./reportmanager')
 
 const {Util} = require('./helpers')
 const {Asset, XmlModifierRule} = require('./assets')
@@ -490,7 +490,7 @@ class AssetGuard extends EventEmitter {
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
                 parallelTasks.push(
                     DumpsManager.createRule().catch(console.warn),
-                    ReportManager.sendReport('dumps').catch(console.warn),
+                    DumpsReporter.report().catch(console.warn),
                     this.validateRequirements()
                 )
             }
@@ -519,7 +519,6 @@ class AssetGuard extends EventEmitter {
 
         } catch (err) {
             log.error(err)
-            await this.sendLauncherErrorReport(ConfigManager.getSelectedAccount())
             return {
                 versionData: null,
                 forgeData: null,

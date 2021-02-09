@@ -9,9 +9,8 @@ const electron = require('electron')
 
 // Internal Requirements
 const DiscordWrapper = require('./assets/js/discordwrapper')
-const Mojang = require('./assets/js/mojang')
 const ProcessBuilder = require('./assets/js/basicprocessbuilder')
-const ServerStatus = require('./assets/js/serverstatus')
+const {LogsReporter} = require('./assets/js/reportmanager')
 
 // Launch Elements
 const launch_content = document.getElementById('launch_content')
@@ -228,7 +227,6 @@ function dlAsync(login = true) {
     toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
-    const loggerAEx = LoggerUtil('%c[AEx]', 'color: #353232; font-weight: bold')
     const loggerLaunchSuite = LoggerUtil('%c[LaunchSuite]', 'color: #000668; font-weight: bold')
 
     const forkEnv = JSON.parse(JSON.stringify(process.env))
@@ -253,21 +251,19 @@ function dlAsync(login = true) {
     aEx.stdio[2].on('data', (data) => {
         log.info(data)
     })
-    const userDataPath = (electron.app || electron.remote.app).getPath(
-        'userData'
-    )
-    const ReportManager = require('./assets/js/reportmanager')
+
     aEx.on('error', (err) => {
         loggerLaunchSuite.error('Error during launch', err)
-        ReportManager.sendReport('launcher', userDataPath)
+        LogsReporter.report().catch(console.warn)
         showLaunchFailure('Error During Launch', err.message || 'See console (CTRL + Shift + i) for more details.')
     })
     aEx.on('close', (code, signal) => {
-        if (code !== 0) {
-            loggerLaunchSuite.error(`AssetExec exited with code ${code}, assuming error.`)
-            ReportManager.sendReport('launcher', userDataPath)
-            showLaunchFailure('Error During Launch', 'See console (CTRL + Shift + i) for more details.')
+        if (code === 0) {
+            return
         }
+        loggerLaunchSuite.error(`AssetExec exited with code ${code}, assuming error.`)
+        LogsReporter.report().catch(console.warn)
+        showLaunchFailure('Error During Launch', 'See console (CTRL + Shift + i) for more details.')
     })
 
     // Establish communications between the AssetExec and current process.

@@ -11,115 +11,103 @@ const dirTree = require('directory-tree')
 const DistroManager = require('./distromanager')
 const ConfigManager = require('./configmanager')
 
-async function gatherSystemInfo(account, currentVersion) {
+
+const SUPPORT_URI = 'https://www.northernblade.ru/api/submit/support/request'
+
+
+async function gatherSystemInfo(account, versionId) {
     return {
         'accountid': account.uuid,
-        'clientversion': currentVersion,
+        'version': versionId,
         'cpumodel': os.cpus()[0].model,
-        'ostype': os.platform() + arch(),
+        'ostype': `${os.platform()};${os.arch()};${arch()}`,
         'osversion': os.release(),
         'ramsize': Math.round(os.totalmem() / 1024 / 1024 / 1024) + 'GB',
         'gpu': (await si.graphics()).controllers[0].model
     }
 }
 
-async function addIfAccess(zip, filePath) {
-    await fs.promises.access(filePath)
+
+function addIfAccess(zip, filePath) {
+    return fs.promises.access(filePath)
         .then(() => {
             zip.addLocalFile(filePath)
         })
         .catch(() => {
-            console.warn(`${filePath} does not exist`)
+            console.warn(`Failed to add ${filePath} into report archive`)
         })
 }
 
-async function prepareFileList(type, userDataPath) {
-    let filesList = []
-    const dumpsDirectory = ConfigManager.getCrashDumpDirectory()
-    switch (type) {
-        case 'dumps': {
-            const tree = dirTree(dumpsDirectory, {extensions: /\.dmp/}).children
-            for (let i = 0; i < tree.length; i++) {
-                filesList.push(tree[i].path)
-            }
-            return filesList
-        }
-        case 'launcher': {
-            const tree = dirTree(path.join(userDataPath, 'logs'), {extensions: /\.log/}).children
-            for (let i = 0; i < tree.length; i++) {
-                filesList.push(tree[i].path)
-            }
-            return filesList
-        }
-        default:
-            throw 'Not implemented'
+
+async function sendReport(filesList, archivePrefix, metaSubsection, metaDescription) {
+    const account = ConfigManager.getSelectedAccount()
+    const versionId = DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer()).getVersion()
+
+    if (filesList.length === 0) {
+        console.log('Report was not sent - empty files list')
+        return
+    }
+
+    const dumpForm = new FormData({})
+
+    dumpForm.append('meta', JSON.stringify({
+        'username': account.username,
+        'section': 'internal',
+        'subsection': metaSubsection,
+        'description': metaDescription,
+    }), {contentType: 'application/json; charset=utf-8'})
+
+    let zip = new AdmZip()
+    for (let i = 0; i < filesList.length; i++) {
+        await addIfAccess(zip, filesList[i])
+    }
+
+    const sysinfo = await gatherSystemInfo(account, versionId)
+    zip.addFile('sysinfo.json', JSON.stringify(sysinfo))
+
+    dumpForm.append(archivePrefix, zip.toBuffer(), {filename: `${archivePrefix}-${account.username}.zip`})
+
+    const res = await util.promisify(dumpForm.submit).bind(dumpForm)(SUPPORT_URI)
+    if (res.statusCode !== 204) {
+        console.warn(`Failed to send report: ${res.statusMessage}`)
+    }
+    const unlinkResults = []
+    for (let i = 0; i < filesList.length; i++) {
+        unlinkResults.push(fs.unlink(filesList[i]))
+    }
+    await Promise.allSettled(unlinkResults)
+    console.log('Report was sent successfully!')
+}
+
+
+function flatten(tree) {
+    const children = tree.children
+    const files = []
+    for (let i = 0; i < children.length; i++) {
+        files.push(children[i].path)
+    }
+    return files
+}
+
+class DumpsReporter {
+    static async report() {
+        const dumpsDirectory = ConfigManager.getCrashDumpDirectory()
+        const filesList = flatten(dirTree(dumpsDirectory, {extensions: /\.dmp/}))
+        return await sendReport(filesList, 'dumps', 'crash', '[crush_dumps]')
     }
 }
 
-exports.sendReport = async function (type, userDataPath = '') {
 
-    const SUPPORT_URI = 'https://www.northernblade.ru/api/submit/support/request'
-    const account = ConfigManager.getSelectedAccount()
-    let dumpForm = new FormData({})
-    let zip = new AdmZip()
-    let meta = {
-        'username': account.username,
-        'section': 'technical',
-        'subsection': 'launching',
+class LogsReporter {
+    static async report() {
+        const launcherDirectory = ConfigManager.getLauncherDirectory()
+        const filesList = flatten(dirTree(path.join(launcherDirectory, 'logs'), {extensions: /\.log/}))
+        return await sendReport(filesList, 'logs', 'launching', '[error_during_launch]')
     }
-    let filesList
-
-    switch (type) {
-        case 'dumps': {
-            meta.description = '[crush_dumps]'
-            filesList = await prepareFileList(type, userDataPath)
-        }
-            break
-        case 'launcher': {
-            meta.description = '[error_during_launch]'
-            filesList = await prepareFileList(type, userDataPath)
-        }
-            break
-        default:
-            throw 'Not implemented'
-    }
-
-    if (filesList.length !== 0) {
-        dumpForm.append('meta', JSON.stringify(meta), {contentType: 'application/json; charset=utf-8'})
-
-        for (let i = 0; i < filesList.length; i++) {
-            await addIfAccess(zip, filesList[i])
-        }
-
-        const currentVersion = await DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer()).getVersion()
-        const sysinfo = await gatherSystemInfo(account, currentVersion)
-        zip.addFile('sysinfo.json', JSON.stringify(sysinfo))
+}
 
 
-        switch (type) {
-            case 'dumps': {
-                dumpForm.append('dumpfile', zip.toBuffer(), {filename: `dumps-${account.username}.zip`})
-            }
-                break
-            case 'launcher': {
-                dumpForm.append('logsfile', zip.toBuffer(), {filename: `logs-${account.username}.zip`})
-            }
-                break
-            default:
-                throw 'Not implemented'
-        }
-
-        console.log(dumpForm)
-        const res = await util.promisify(dumpForm.submit).bind(dumpForm)(SUPPORT_URI)
-        if (res.statusCode === 204) {
-            const unlinkResults = []
-            for (let i = 0; i < filesList.length; i++) {
-                unlinkResults.push(fs.unlink(filesList[i]))
-            }
-            await Promise.allSettled(unlinkResults)
-            console.log('Form was sent successfully!')
-        } else {
-            console.log('Something went wrong during sending process...')
-        }
-    }
+module.exports = {
+    DumpsReporter,
+    LogsReporter,
 }
