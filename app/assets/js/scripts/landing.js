@@ -406,6 +406,7 @@ function dlAsync(login = true) {
             // If these properties are not defined it's likely an error.
             if (m.result.forgeData == null || m.result.versionData == null) {
                 loggerLaunchSuite.error('Error during validation:', m.result.error)
+                LogsReporter.report().catch(console.warn)
                 showLaunchFailure('Error During Launch', 'Please check the console (CTRL + Shift + i) for more details.')
 
                 aEx.disconnect()
@@ -451,6 +452,7 @@ function dlAsync(login = true) {
 
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)
+                    LogsReporter.report().catch(console.warn)
                     showLaunchFailure('Error During Launch', 'Please contact support.')
                 }
             }
