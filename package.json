@@ -1,6 +1,6 @@
 {
   "name": "bladelauncher",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "productName": "Blade Launcher",
   "description": "Northern Blade Launcher",
   "author": "N-Blade LCC",
@@ -44,7 +44,7 @@
     "semver": "^7.3.4",
     "systeminformation": "^5.1.2",
     "tar-fs": "^2.1.1",
-    "webtorrent": "github:webtorrent/webtorrent#add_speed_limit",
+    "webtorrent": "github:kyoto44/webtorrent#master",
     "winreg": "^1.2.4"
   },
   "devDependencies": {
