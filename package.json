@@ -42,7 +42,7 @@
     "jquery": "^3.5.1",
     "request": "^2.88.2",
     "semver": "^7.3.4",
-    "systeminformation": "^5.1.2",
+    "systeminformation": "^5.2.3",
     "tar-fs": "^2.1.1",
     "webtorrent": "github:kyoto44/webtorrent#master",
     "winreg": "^1.2.4"
