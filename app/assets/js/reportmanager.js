@@ -105,6 +105,13 @@ class LogsReporter {
         const filesList = flatten(dirTree(path.join(launcherDirectory, 'logs'), {extensions: /\.log/}))
         return await sendReport(filesList, 'logs', 'launching', '[error_during_launch]')
     }
+    static async truncateLogs() {
+        const launcherDirectory = ConfigManager.getLauncherDirectory()
+        const filesList = flatten(dirTree(path.join(launcherDirectory, 'logs'), {extensions: /\.log/}))
+        for (let i = 0; i < filesList.length; i++) {
+            await fs.promises.truncate(filesList[i], 0)
+        }
+    }
 }
 
 

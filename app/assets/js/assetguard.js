@@ -13,7 +13,7 @@ const DistroManager = require('./distromanager')
 const DumpsManager = require('./dumpsmanager')
 const FetchManager = require('./fetchmanager')
 const VersionManager = require('./versionsmanager')
-const {DumpsReporter} = require('./reportmanager')
+const {DumpsReporter, LogsReporter} = require('./reportmanager')
 
 const {Util} = require('./helpers')
 const {Asset, XmlModifierRule} = require('./assets')
@@ -511,7 +511,7 @@ class AssetGuard extends EventEmitter {
             } catch (err) {
                 console.warn(err)
             }
-
+            await LogsReporter.truncateLogs()
             return {
                 versionData: versionMeta,
                 forgeData: {}
