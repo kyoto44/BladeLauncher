@@ -82,12 +82,15 @@ async function sendReport(filesList, archivePrefix, metaSubsection, metaDescript
 
 
 function flatten(tree) {
-    const children = tree.children
-    const files = []
-    for (let i = 0; i < children.length; i++) {
-        files.push(children[i].path)
+    if (tree.length !== 0) {
+        const children = tree.children
+        const files = []
+        for (let i = 0; i < children.length; i++) {
+            files.push(children[i].path)
+        }
+        return files
     }
-    return files
+    return []
 }
 
 class DumpsReporter {

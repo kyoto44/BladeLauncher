@@ -249,11 +249,12 @@ class PatchFetcher extends Fetcher {
 
     async fetch(targetPath) {
         const url = new URL(this.url)
-        const baseVersionId = url.searchParams.get('bs')
-        const subURI = url.searchParams.get('su')
-        const diffType = url.searchParams.get('dt')
-        const expectedLength = url.searchParams.get('xl')
-        const checksum = url.searchParams.get('cs')
+        const params = new URLSearchParams(url.search);
+        const baseVersionId = params.get('bs')
+        const subURI = params.get('su')
+        const diffType = params.get('dt')
+        const expectedLength = params.get('xl')
+        const checksum = params.get('cs')
 
         if (!baseVersionId || !subURI || !diffType) {
             throw new Error('Invalid patch uri')
