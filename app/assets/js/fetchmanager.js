@@ -7,7 +7,7 @@ const path = require('path')
 const parseTorrent = require('parse-torrent')
 const WebTorrent = require('webtorrent')
 const FSChunkStore = require('fs-chunk-store')
-
+const ThrottleGroup = require('stream-throttle').ThrottleGroup
 
 const {File} = require('./assets')
 const ConfigManager = require('./configmanager')
@@ -104,6 +104,8 @@ class HttpFetcher extends Fetcher {
         })
 
         await new Promise((resolve, reject) => {
+            const tg = new ThrottleGroup({rate: 1024 * ConfigManager.getAssetDownloadSpeedLimit()})
+
             req.on('error', reject)
             req.on('response', (resp) => {
                 if (resp.statusCode !== 200) {
@@ -115,7 +117,7 @@ class HttpFetcher extends Fetcher {
 
                 let writeStream = fs.createWriteStream(targetPath)
                 writeStream.on('close', resolve)
-                req.pipe(writeStream)
+                req.pipe(tg.throttle()).pipe(writeStream)
                 req.resume()
             })
         })
@@ -249,7 +251,7 @@ class PatchFetcher extends Fetcher {
 
     async fetch(targetPath) {
         const url = new URL(this.url)
-        const params = new URLSearchParams(url.search);
+        const params = new URLSearchParams(url.search)
         const baseVersionId = params.get('bs')
         const subURI = params.get('su')
         const diffType = params.get('dt')

@@ -334,9 +334,21 @@
                             id="settingsChoosingFolderId">Choose Folder</label>
                     </div>
                 </div>
-                <div class="settingsFileSelDesc" id="settingsInstallInfoId">All game files and local Java installations
+                <div class="settingsFileSelDesc" id="settingsInstallInfoId">
+                    All game files and local Java installations
                     will be stored in the data directory.<br>Screenshots and world saves are stored in the instance
-                    folder for the corresponding server configuration.</div>
+                    folder for the corresponding server configuration.
+                </div>
+                <span class="settingsDownloadSpeedHeader" id="settingsMaxDownloadSpeedId">Maximum download speed</span>
+                <div class="settingsDownloadSpeedContainer">
+                    <div id="settingsMaxDownloadSpeedRange" class="rangeSlider" cValue="MaxDownloadSpeed" min="100"
+                        max="10000" value="1000" step="100">
+                        <div class="rangeSliderBar"></div>
+                        <div class="rangeSliderTrack"></div>
+                    </div>
+                    <span id="settingsDownloadSpeedLabel" class="settingsMaxDownloadSpeedLabel">10000 KB/s</span>
+                </div>
+                <div id="settingsDownloadSpeedDesc">Here's listed maximum download speed in KB/s</div>
             </div>
         </div>
         <div id="settingsTabAbout" class="settingsTab" style="display: none;">

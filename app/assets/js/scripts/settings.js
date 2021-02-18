@@ -938,6 +938,9 @@ const settingsMinRAMLabel = document.getElementById('settingsMinRAMLabel')
 const settingsMemoryTotal = document.getElementById('settingsMemoryTotal')
 const settingsMemoryAvail = document.getElementById('settingsMemoryAvail')
 
+const settingsMaxDownloadSpeedRange = document.getElementById('settingsMaxDownloadSpeedRange')
+const settingsDownloadSpeedLabel = document.getElementById('settingsDownloadSpeedLabel')
+
 // Store maximum memory values.
 const SETTINGS_MAX_MEMORY = ConfigManager.getAbsoluteMaxRAM()
 const SETTINGS_MIN_MEMORY = ConfigManager.getAbsoluteMinRAM()
@@ -947,6 +950,17 @@ settingsMaxRAMRange.setAttribute('max', SETTINGS_MAX_MEMORY)
 settingsMaxRAMRange.setAttribute('min', SETTINGS_MIN_MEMORY)
 settingsMinRAMRange.setAttribute('max', SETTINGS_MAX_MEMORY)
 settingsMinRAMRange.setAttribute('min', SETTINGS_MIN_MEMORY)
+settingsMaxDownloadSpeedRange.setAttribute('max', 10100)
+settingsMaxDownloadSpeedRange.setAttribute('min', 100)
+settingsMaxDownloadSpeedRange.setAttribute('value', ConfigManager.getAssetDownloadSpeedLimit())
+// Bind on change event for max dl speed container.
+settingsMaxDownloadSpeedRange.onchange = (e) => {
+    // Current range values
+    const sMaxV = Number(settingsMaxDownloadSpeedRange.getAttribute('value'))
+    // Update label
+    settingsDownloadSpeedLabel.innerHTML = sMaxV.toFixed(0) + ' KB/s'
+    ConfigManager.setAssetDownloadSpeedLimit(sMaxV)
+}
 
 // Bind on change event for min memory container.
 settingsMinRAMRange.onchange = (e) => {
@@ -1308,6 +1322,7 @@ function prepareSettings(first = false) {
     }
     initSettingsValues()
     prepareAccountsTab()
+    bindRangeSlider()
     // prepareJavaTab()
     // prepareAboutTab()
 }

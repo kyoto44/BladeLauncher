@@ -4891,3 +4891,33 @@ input:checked + .toggleSwitchSlider:before {
 #agreementDismiss:active {
     color: rgba(165, 165, 165, 0.75);
 }
+
+/* Header for download speed sliders. */
+.settingsDownloadSpeedHeader {
+    font-size: 14px;
+}
+
+/* Wrapper container for a download speed slider and label. */
+.settingsDownloadSpeedContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Label which displays a download speed slider's value. */
+.settingsDownloadSpeedLabel {
+    font-size: 10px;
+    margin-right: 2%;
+}
+
+/* Range sliders for max download speed settings. */
+#settingsMaxDownloadSpeedRange {
+    width: 80%;
+}
+
+/* Description for download speed management. */
+#settingsDownloadSpeedDesc {
+    font-size: 10px;
+    margin: 10px 0px;
+    color: lightgrey;
+}

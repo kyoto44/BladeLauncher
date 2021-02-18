@@ -83,7 +83,8 @@ const DEFAULT_CONFIG = {
                 timeout: 10000,
                 downloadLimit: Number.MAX_VALUE,
                 uploadLimit: Number.MAX_VALUE,
-            }
+            },
+            assetDownloadLimit: 10000
         }
     },
     newsCache: {
@@ -653,4 +654,23 @@ exports.getTorrentUploadSpeedLimit = function (def = false) {
  */
 exports.setTorrentUploadSpeedLimit = function (limit) {
     config.settings.launcher.torrent.uploadLimit = limit
+}
+
+/**
+ * Retrieve the download speed limit of launcher.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {number} Download speed limit of launcher.
+ */
+exports.getAssetDownloadSpeedLimit = function (def = false) {
+    return !def ? config.settings.launcher.assetDownloadLimit : DEFAULT_CONFIG.settings.launcher.assetDownloadLimit
+}
+
+/**
+ * Change the download speed limit of launcher.
+ *
+ * @param {number} limit Download speed limit of launcher.
+ */
+exports.setAssetDownloadSpeedLimit = function (limit) {
+    config.settings.launcher.assetDownloadLimit = limit
 }
