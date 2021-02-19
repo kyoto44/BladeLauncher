@@ -958,7 +958,12 @@ settingsMaxDownloadSpeedRange.onchange = (e) => {
     // Current range values
     const sMaxV = Number(settingsMaxDownloadSpeedRange.getAttribute('value'))
     // Update label
-    settingsDownloadSpeedLabel.innerHTML = sMaxV.toFixed(0) + ' KB/s'
+    if (sMaxV === 10000) {
+        settingsDownloadSpeedLabel.innerHTML = "∞   "
+    } else {
+        settingsDownloadSpeedLabel.innerHTML = sMaxV.toFixed(0) + ' KB/s'
+    }
+    
     ConfigManager.setAssetDownloadSpeedLimit(sMaxV)
 }
 
