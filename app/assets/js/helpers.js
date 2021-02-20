@@ -71,13 +71,15 @@ class Util {
             if (sizeBytes != null) {
                 const stats = await fs.stat(filePath)
                 const currentSize = stats.size
-                if (currentSize !== sizeBytes)
+                if (currentSize !== sizeBytes) {
                     return false
+                }
             }
             if (hash != null) {
                 const currentHash = await Util.calculateHash(filePath, algo)
-                if (currentHash !== hash)
+                if (currentHash !== hash) {
                     return false
+                }
             }
             return true
         } catch (e) {
@@ -86,6 +88,16 @@ class Util {
         }
     }
 
+    /**
+     * @param {string} checksumUri
+     * @returns {{algo: string, hash: string}}
+     */
+    static parseChecksum(checksumUri) {
+        const checksum = checksumUri.split(':', 2)
+        const algo = checksum[0].toLowerCase()
+        const hash = checksum[1]
+        return {'algo': algo, 'hash': hash}
+    }
 }
 
 module.exports = {

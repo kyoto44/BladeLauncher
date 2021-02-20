@@ -9,8 +9,9 @@ const WebTorrent = require('webtorrent')
 const FSChunkStore = require('fs-chunk-store')
 const ThrottleGroup = require('stream-throttle').ThrottleGroup
 
-const isDev = require('./app/assets/js/isdev')
+const isDev = require('./isdev')
 const {File} = require('./assets')
+const {Util} = require('./helpers')
 const ConfigManager = require('./configmanager')
 const VersionsManager = require('./versionsmanager')
 const LoggerUtil = require('./loggerutil')
@@ -227,39 +228,38 @@ class PatchFetcher extends Fetcher {
     }
 
     static async getPatcherPath() {
-        let patcherFile
+        let patcherPath = Array(3).fill('..')
+        if (!isDev) {
+            patcherPath.push('resources')
+        }
+        patcherPath.push('tools')
+        const myArch = arch()
         switch (process.platform) {
             case 'win32':
-                if (arch() === 'x64') {
-                    if (isDev) {
-                        return path.join(__dirname, '../tools/win/hpatchz64.exe')
-                    }
-                    patcherFile = 'resources/tools/win/hpatchz64.exe'
-                } else if (arch() === 'x86') {
-                    if (isDev) {
-                        return path.join(__dirname, '../tools/win/hpatchz32.exe')
-                    }
-                    patcherFile = 'resources/tools/win/hpatchz32.exe'
+                patcherPath.push('win')
+                if (myArch === 'x64') {
+                    patcherPath.push('hpatchz64.exe')
+                } else if (myArch === 'x86') {
+                    patcherPath.push('hpatchz32.exe')
                 }
                 break
             case 'linux':
-                if (arch() === 'x64') {
-                    if (isDev) {
-                        return path.join(__dirname, '../tools/linux/hpatchz64')
-                    }
-                    patcherFile = 'resources/tools/linux/hpatchz64'
-                } else if (arch() === 'x86') {
-                    if (isDev) {
-                        return path.join(__dirname, '../tools/linux/hpatchz32')
-                    }
-                    patcherFile = 'resources/tools/linux/hpatchz32'
+                patcherPath.push('linux')
+                if (myArch === 'x64') {
+                    patcherPath.push('hpatchz64')
+                } else if (myArch === 'x86') {
+                    patcherPath.push('hpatchz32')
                 }
                 break
-            default:
-                console.error('Unsupported platform!')
-                return null
         }
-        return path.join(__dirname, '../../../', `${patcherFile}`)
+        const patcherFile = path.join(__dirname, ...patcherPath)
+        try {
+            await fs.promises.access(patcherFile, fs.constants.R_OK)
+        } catch (err) {
+            logger.error('Unsupported platform!', err)
+            throw err
+        }
+        return patcherFile
     }
 
     async fetch(targetPath) {
@@ -268,40 +268,52 @@ class PatchFetcher extends Fetcher {
         const baseVersionId = params.get('bs')
         const subURI = params.get('su')
         const diffType = params.get('dt')
-        const expectedLength = params.get('xl')
-        const checksum = params.get('cs')
+        const expectedLength = Number(params.get('xl'))
+        const checksumUri = params.get('cs')
 
-        if (!baseVersionId || !subURI || !diffType) {
+        if (!baseVersionId || !subURI || !diffType || !expectedLength || !checksumUri) {
             throw new Error('Invalid patch uri')
         }
 
         if (diffType !== 'hpatchz') {
-            throw new Error('Unsupported diff type: ' + diffType)
+            throw new Error(`Unsupported diff type: ${diffType}`)
         }
 
         const subUrl = new URL(subURI)
         if (subUrl.protocol !== 'http:' && subUrl.protocol !== 'https:') {
-            throw new Error('Unsupported sub uri protocol: ' + subUrl.protocol)
+            throw new Error(`Unsupported sub uri protocol: ${subUrl.protocol}`)
         }
 
         const baseVersion = VersionsManager.get(baseVersionId)
         if (!baseVersion) {
-            throw new Error('Base version not exists: ' + baseVersionId)
+            throw new Error(`Base version not exists: ${baseVersionId}`)
         }
 
         const baseAsset = baseVersion.downloads[this.assetId]
         if (!baseAsset) {
-            throw new Error('Base version does not contain needed asset: ' + this.assetId)
+            throw new Error(`Base version does not contain needed asset: ${this.assetId}`)
         }
+        if (!await baseAsset.validateLocal()) {
+            throw new Error(`Base version asset is corrupted and can not be used: ${this.assetId}`)
+        }
+
+        const checksum = Util.parseChecksum(checksumUri)
 
         const httpFetcher = new HttpFetcher(this.reporter, subURI, this.account)
 
         const patchTargetPath = targetPath + '.patch'
-        await httpFetcher.fetch(patchTargetPath)
+        const isAlreadyValid = await Util.validateLocal(patchTargetPath, checksum.algo, checksum.hash, expectedLength)
+        if (!isAlreadyValid) {
+            await httpFetcher.fetch(patchTargetPath)
+            const isValid = await Util.validateLocal(patchTargetPath, checksum.algo, checksum.hash, expectedLength)
+            if (!isValid) {
+                throw new Error('Fetched patch is not valid')
+            }
+        }
 
-        const patcherPath = PatchFetcher.getPatcherPath()
+        const patcherPath = await PatchFetcher.getPatcherPath()
         const child = child_process.spawn(patcherPath, [
-            '-f', baseAsset.targetPath, targetPath
+            baseAsset.targetPath, patchTargetPath, targetPath,
         ])
         child.stdout.setEncoding('utf8')
         child.stderr.setEncoding('utf8')
@@ -309,12 +321,8 @@ class PatchFetcher extends Fetcher {
         const loggerMCstdout = LoggerUtil('%c[Patcher]', 'color: #36b030; font-weight: bold')
         const loggerMCstderr = LoggerUtil('%c[Patcher]', 'color: #b03030; font-weight: bold')
 
-        child.stdout.on('data', (data) => {
-            loggerMCstdout.log(data)
-        })
-        child.stderr.on('data', (data) => {
-            loggerMCstderr.log(data)
-        })
+        child.stdout.on('data', (data) => loggerMCstdout.log(data))
+        child.stderr.on('data', (data) => loggerMCstderr.error(data))
         await new Promise((resolve, reject) => {
             child.on('exit', (code) => {
                 if (code) {
@@ -323,9 +331,7 @@ class PatchFetcher extends Fetcher {
                     resolve()
                 }
             })
-            child.on('error', (err) => {
-                reject(err)
-            })
+            child.on('error', reject)
         })
     }
 }
@@ -402,7 +408,7 @@ class Facade {
 
     /**
      * @param {File} asset
-     * @returns {Promise<EventEmitter>}
+     * @returns {EventEmitter}
      */
     async pull(asset) {
 
@@ -451,7 +457,7 @@ class Facade {
                     continue
                 }
 
-                const v = asset.validateLocal()
+                const v = await asset.validateLocal()
                 if (v) {
                     reporter.done()
                     resolve()

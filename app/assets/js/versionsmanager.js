@@ -11,6 +11,7 @@ const {
     XmlModifierRule,
     EjsModifierRule,
 } = require('./assets')
+const {Util} = require('./helpers')
 
 const logger = require('./loggerutil')('%c[VersionManager]', 'color: #a02d2a; font-weight: bold')
 
@@ -62,12 +63,10 @@ class Downloads {
                     ? asset.artifact
                     : asset.classifiers[asset.natives[File.mojangFriendlyOS()].replace('${arch}', process.arch.replace('x', ''))]
 
-                const checksum = artifact.checksum.split(':', 2)
-                const algo = checksum[0].toLowerCase()
-                const hash = checksum[1]
+                const checksum = Util.parseChecksum(artifact.checksum)
                 const file = new File(
                     assetId,
-                    {'algo': algo, 'hash': hash},
+                    checksum,
                     artifact.size,
                     artifact.urls,
                     artifact.path,
