@@ -158,11 +158,11 @@ class TorrentFetcher extends Fetcher {
                 )
             }
         })
-        console.log('torrent is added:', torrent.infoHash)
+        logger.log('torrent is added:', torrent.infoHash)
 
-        torrent.on('infoHash', () => console.log('torrent received hash:', torrent.name))
+        torrent.on('infoHash', () => logger.log('torrent received hash:', torrent.name))
         torrent.on('metadata', () => {
-            console.log('torrent received metadata:', torrent.name)
+            logger.log('torrent received metadata:', torrent.name)
             timer.delay()
         })
 
@@ -170,28 +170,28 @@ class TorrentFetcher extends Fetcher {
         torrent.on('download', bytes => {
             if (torrent.progress - progress > 0.01) {
                 progress = torrent.progress
-                console.log(`downloaded: ${bytes}; total: ${torrent.downloaded}; speed: ${torrent.downloadSpeed}; progress: ${torrent.progress}`)
+                logger.log(`downloaded: ${bytes}; total: ${torrent.downloaded}; speed: ${torrent.downloadSpeed}; progress: ${torrent.progress}`)
             }
             this.reporter.download(bytes)
             timer.delay()
         })
         torrent.on('upload', bytes => {
-            console.log(`uploaded: ${bytes}; total: ${torrent.uploaded}; speed: ${torrent.uploadSpeed}; progress: ${torrent.progress}`)
+            logger.log(`uploaded: ${bytes}; total: ${torrent.uploaded}; speed: ${torrent.uploadSpeed}; progress: ${torrent.progress}`)
         })
-        torrent.on('wire', (wire, addr) => console.log('connected to peer with address ' + addr))
+        torrent.on('wire', (wire, addr) => logger.log('connected to peer with address ' + addr))
 
-        torrent.on('warning', console.warn)
+        torrent.on('warning', logger.warn)
         torrent.on('ready', () => {
-            console.log(`torrent ${torrent.name} is ready`)
+            logger.log(`torrent ${torrent.name} is ready`)
         })
         torrent.on('noPeers', announceType => {
-            console.log(`torrent ${torrent.name} has no peers in ${announceType}`)
+            logger.log(`torrent ${torrent.name} has no peers in ${announceType}`)
         })
 
         await new Promise((resolve, reject) => {
             torrent.on('error', reject)
             torrent.on('done', () => {
-                console.log(`torrent ${torrent.name} download finished`)
+                logger.log(`torrent ${torrent.name} download finished`)
                 resolve()
             })
             timer.on('timeout', reject)
@@ -200,7 +200,7 @@ class TorrentFetcher extends Fetcher {
             await new Promise((resolve, reject) => {
                 this.webTorrentClient.remove(torrent, (err) => {
                     if (err) {
-                        console.warn(`torrent ${torrent.name} failed to cancel`)
+                        logger.warn(`torrent ${torrent.name} failed to cancel`)
                         reject(err)
                     } else {
                         resolve()
@@ -218,13 +218,14 @@ class PatchFetcher extends Fetcher {
      * @param {Reporter}reporter
      * @param {string} chosenUrl
      * @param account
-     * @param {string} assetId
+     * @param {File} asset
      */
-    constructor(reporter, chosenUrl, account, assetId) {
+    constructor(reporter, chosenUrl, account, asset) {
         super(reporter)
         this.url = chosenUrl
         this.account = account
-        this.assetId = assetId
+        this.assetId = asset.id
+        this.assetSize = asset.size
     }
 
     static async getPatcherPath() {
@@ -298,8 +299,18 @@ class PatchFetcher extends Fetcher {
         }
 
         const checksum = Util.parseChecksum(checksumUri)
+        let virtualBytesLeft = this.assetSize
+        const self = this
 
-        const httpFetcher = new HttpFetcher(this.reporter, subURI, this.account)
+        class AdjustReporter {
+            download(bytes) {
+                const adjustLength = Math.floor(self.assetSize * bytes / expectedLength)
+                self.reporter.download(adjustLength)
+                virtualBytesLeft -= adjustLength
+            }
+        }
+
+        const httpFetcher = new HttpFetcher(new AdjustReporter(), subURI, this.account)
 
         const patchTargetPath = targetPath + '.patch'
         const isAlreadyValid = await Util.validateLocal(patchTargetPath, checksum.algo, checksum.hash, expectedLength)
@@ -333,6 +344,9 @@ class PatchFetcher extends Fetcher {
             })
             child.on('error', reject)
         })
+        if (virtualBytesLeft > 0) {
+            this.reporter.download(virtualBytesLeft)
+        }
     }
 }
 
@@ -412,7 +426,7 @@ class Facade {
      */
     async pull(asset) {
 
-        /** @type Array.<Fetcher> */
+        /** @type Array.<{fetcher:Fetcher,priority:number}> */
         const fetchers = []
 
         const eventEmitter = new EventEmitter()
@@ -420,34 +434,30 @@ class Facade {
 
         const previousVersions = this.reusableModules[asset.id]
         if (previousVersions) {
-            fetchers.push(new PreviousVersionFetcher(reporter, asset, previousVersions))
+            fetchers.push({fetcher: new PreviousVersionFetcher(reporter, asset, previousVersions), priority: 0})
         }
 
-        const patcherPriority = 1
-        const httpPriority = 2
-        const webtorrentPriority = 3 //not implemented for now
+
         for (const url of asset.urls) {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: httpPriority})
+                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 2})
             } else if (urlObj.protocol === 'magnet:') {
-                fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.webTorrentClient), priority: webtorrentPriority})
+                fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.webTorrentClient), priority: 3})
             } else if (urlObj.protocol === 'patch:') {
-                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset.id), priority: patcherPriority})
+                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 1})
             } else {
                 logger.warn('Unsupported url type for asset', asset.id)
             }
         }
 
-        fetchers.sort(function (method1, method2) {
-            return method1.priority - method2.priority
-        });
+        fetchers.sort((method1, method2) => method1.priority - method2.priority)
 
         new Promise(async (resolve, reject) => {
             try {
                 await fs.ensureDir(path.dirname(asset.targetPath))
             } catch (e) {
-                reporter.error(`Failed to create asset ${asset.id} directory`)
+                reject(`Failed to create asset ${asset.id} directory`)
                 return
             }
 
@@ -460,23 +470,21 @@ class Facade {
                 try {
                     await fetcher.fetch(asset.targetPath)
                 } catch (e) {
-                    console.warn(`Failed to fetch asset ${asset.id} with fetcher ${fetcher.constructor.name}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`, e)
+                    logger.warn(`Failed to fetch asset ${asset.id} with fetcher ${fetcher.constructor.name}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`, e)
                     continue
                 }
 
                 const v = await asset.validateLocal()
                 if (v) {
-                    reporter.done()
                     resolve()
                     return
                 }
 
-                console.warn(`Fetcher ${fetcher.constructor.name} produced invalid resource ${asset.id}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`)
+                logger.warn(`Fetcher ${fetcher.constructor.name} produced invalid resource ${asset.id}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`)
             }
 
-            reporter.error(`Failed to fetch asset ${asset.id}`)
-        })
-
+            reject(`Failed to fetch asset ${asset.id}`)
+        }).then(_ => reporter.done(), reporter.error)
 
         return eventEmitter
     }
