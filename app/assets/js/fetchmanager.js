@@ -9,6 +9,7 @@ const WebTorrent = require('webtorrent')
 const FSChunkStore = require('fs-chunk-store')
 const ThrottleGroup = require('stream-throttle').ThrottleGroup
 
+const isDev = require('./app/assets/js/isdev')
 const {File} = require('./assets')
 const ConfigManager = require('./configmanager')
 const VersionsManager = require('./versionsmanager')
@@ -230,23 +231,35 @@ class PatchFetcher extends Fetcher {
         switch (process.platform) {
             case 'win32':
                 if (arch() === 'x64') {
-                    patcherFile = 'tools/win/hpatchz64.exe'
+                    if (isDev) {
+                        return path.join(__dirname, '../tools/win/hpatchz64.exe')
+                    }
+                    patcherFile = 'resources/tools/win/hpatchz64.exe'
                 } else if (arch() === 'x86') {
-                    patcherFile = 'tools/win/hpatchz32.exe'
+                    if (isDev) {
+                        return path.join(__dirname, '../tools/win/hpatchz32.exe')
+                    }
+                    patcherFile = 'resources/tools/win/hpatchz32.exe'
                 }
                 break
             case 'linux':
                 if (arch() === 'x64') {
-                    patcherFile = 'tools/linux/hpatchz64'
+                    if (isDev) {
+                        return path.join(__dirname, '../tools/linux/hpatchz64')
+                    }
+                    patcherFile = 'resources/tools/linux/hpatchz64'
                 } else if (arch() === 'x86') {
-                    patcherFile = 'tools/linux/hpatchz32'
+                    if (isDev) {
+                        return path.join(__dirname, '../tools/linux/hpatchz32')
+                    }
+                    patcherFile = 'resources/tools/linux/hpatchz32'
                 }
                 break
             default:
                 console.error('Unsupported platform!')
                 return null
         }
-        return path.join(__dirname, '../../../../', `${patcherFile}`)
+        return path.join(__dirname, '../../../', `${patcherFile}`)
     }
 
     async fetch(targetPath) {
@@ -438,7 +451,7 @@ class Facade {
                     continue
                 }
 
-                const v = await asset.validateLocal()
+                const v = asset.validateLocal()
                 if (v) {
                     reporter.done()
                     resolve()
