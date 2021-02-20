@@ -423,18 +423,25 @@ class Facade {
             fetchers.push(new PreviousVersionFetcher(reporter, asset, previousVersions))
         }
 
+        const patcherPriority = 1
+        const httpPriority = 2
+        const webtorrentPriority = 3 //not implemented for now
         for (const url of asset.urls) {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-                fetchers.push(new HttpFetcher(reporter, url, this.account))
+                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: httpPriority})
             } else if (urlObj.protocol === 'magnet:') {
-                fetchers.push(new TorrentFetcher(reporter, url, this.webTorrentClient))
+                fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.webTorrentClient), priority: webtorrentPriority})
             } else if (urlObj.protocol === 'patch:') {
-                fetchers.push(new PatchFetcher(reporter, url, this.account, asset.id))
+                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset.id), priority: patcherPriority})
             } else {
-                logger.warn('Unsupported url type for asses', asset.id)
+                logger.warn('Unsupported url type for asset', asset.id)
             }
         }
+
+        fetchers.sort(function (method1, method2) {
+            return method1.priority - method2.priority
+        });
 
         new Promise(async (resolve, reject) => {
             try {
@@ -449,7 +456,7 @@ class Facade {
                     reporter.reset()
                 }
 
-                let fetcher = fetchers[i]
+                let fetcher = fetchers[i].fetcher
                 try {
                     await fetcher.fetch(asset.targetPath)
                 } catch (e) {
