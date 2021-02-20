@@ -34,8 +34,11 @@ builder.build({
             icon: 'app/assets/images/SealCircle.ico',
             target: [
                 {
-                    target: 'nsis',
-                    arch: 'ia32'
+                    target: 'nsis-web',
+                    arch: [
+                        'x64',
+                        'ia32'
+                    ]
                 }
             ],
             legalTrademarks: 'N-blade',
