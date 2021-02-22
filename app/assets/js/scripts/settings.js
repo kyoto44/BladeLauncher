@@ -952,18 +952,24 @@ settingsMinRAMRange.setAttribute('max', SETTINGS_MAX_MEMORY)
 settingsMinRAMRange.setAttribute('min', SETTINGS_MIN_MEMORY)
 settingsMaxDownloadSpeedRange.setAttribute('max', 10100)
 settingsMaxDownloadSpeedRange.setAttribute('min', 100)
-settingsMaxDownloadSpeedRange.setAttribute('value', ConfigManager.getAssetDownloadSpeedLimit())
+if (ConfigManager.getAssetDownloadSpeedLimit() === Number.MAX_VALUE) {
+    settingsMaxDownloadSpeedRange.setAttribute('value', 10000)
+} else {
+    settingsMaxDownloadSpeedRange.setAttribute('value', ConfigManager.getAssetDownloadSpeedLimit())
+}
+
 // Bind on change event for max dl speed container.
 settingsMaxDownloadSpeedRange.onchange = (e) => {
     // Current range values
-    const sMaxV = Number(settingsMaxDownloadSpeedRange.getAttribute('value'))
+    let sMaxV = Number(settingsMaxDownloadSpeedRange.getAttribute('value'))
     // Update label
     if (sMaxV === 10000) {
-        settingsDownloadSpeedLabel.innerHTML = "∞   "
+        settingsDownloadSpeedLabel.innerHTML = '∞   '
+        sMaxV = Number.MAX_VALUE
     } else {
         settingsDownloadSpeedLabel.innerHTML = sMaxV.toFixed(0) + ' KB/s'
     }
-    
+
     ConfigManager.setAssetDownloadSpeedLimit(sMaxV)
 }
 

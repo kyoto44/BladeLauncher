@@ -81,10 +81,9 @@ const DEFAULT_CONFIG = {
             dataDirectory: defaultDataPathRoot,
             torrent: {
                 timeout: 10000,
-                downloadLimit: Number.MAX_VALUE,
                 uploadLimit: Number.MAX_VALUE,
             },
-            assetDownloadLimit: 10000
+            assetDownloadLimit: Number.MAX_VALUE
         }
     },
     newsCache: {
@@ -616,25 +615,6 @@ exports.getTorrentTimeout = function (def = false) {
  */
 exports.setTorrentTimeout = function (timeout) {
     config.settings.launcher.torrent.timeout = timeout
-}
-
-/**
- * Retrieve the download speed limit of webtorrent client.
- *
- * @param {boolean} def Optional. If true, the default value will be returned.
- * @returns {number} Download speed limit of webtorrent client.
- */
-exports.getTorrentDownloadSpeedLimit = function (def = false) {
-    return !def ? config.settings.launcher.torrent.downloadLimit : DEFAULT_CONFIG.settings.launcher.torrent.downloadLimit
-}
-
-/**
- * Change the download speed limit of webtorrent client.
- *
- * @param {number} limit Download speed limit of webtorrent client.
- */
-exports.setTorrentDownloadSpeedLimit = function (limit) {
-    config.settings.launcher.torrent.downloadLimit = limit
 }
 
 /**

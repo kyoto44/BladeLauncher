@@ -172,7 +172,7 @@ class TorrentFetcher extends Fetcher {
         torrent.on('download', bytes => {
             if (torrent.progress - progress > 0.01) {
                 progress = torrent.progress
-                logger.log(`[${torrent.name}]: downloaded: ${bytes}; total: ${torrent.downloaded}; speed: ${torrent.downloadSpeed}; progress: ${torrent.progress}.`)
+                logger.log(`[${torrent.name}]: downloaded: ${torrent.lastPieceLength}; total: ${(torrent.downloaded / 1024 / 1024).toFixed(2)} MB; speed: ${(torrent.downloadSpeed / 1024 / 1024).toFixed(2)} MB/s; progress: ${(torrent.progress * 100).toFixed(2)}%; ETA: ${(torrent.timeRemaining / 1000).toFixed(2)} seconds`)
             }
             this.reporter.download(bytes)
             timer.delay()
@@ -418,7 +418,7 @@ class Facade {
         this.account = account
         this.reusableModules = reusableModules
         this.webTorrentClient = new WebTorrent({
-            downloadLimit: ConfigManager.getTorrentDownloadSpeedLimit(),
+            downloadLimit: ConfigManager.getAssetDownloadSpeedLimit(),
             uploadLimit: ConfigManager.getTorrentUploadSpeedLimit()
         })
     }
