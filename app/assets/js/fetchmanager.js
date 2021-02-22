@@ -33,7 +33,7 @@ class Fetcher {
      * @returns {Promise<void>}
      */
     async fetch(targetPath) {
-        throw new Error('Method is not implemented')
+        throw new Error('Method is not implemented.')
     }
 }
 
@@ -143,7 +143,9 @@ class TorrentFetcher extends Fetcher {
         const dirname = path.dirname(targetPath)
         const parsedTorrent = parseTorrent(this.url)
 
-        const timer = new TimeoutEmitter(ConfigManager.getTorrentTimeout())
+        const timer = new TimeoutEmitter(
+            ConfigManager.getTorrentTimeout(),
+            `Failed to receive any information in allowed timeout: ${this.url}.`)
         const torrent = this.webTorrentClient.add(parsedTorrent, {
             path: dirname,
             fileModtimes: false,
@@ -160,9 +162,9 @@ class TorrentFetcher extends Fetcher {
         })
         logger.log('torrent is added:', torrent.infoHash)
 
-        torrent.on('infoHash', () => logger.log('torrent received hash:', torrent.name))
+        torrent.on('infoHash', () => logger.log(`[${torrent.name}]: torrent received hash.`))
         torrent.on('metadata', () => {
-            logger.log('torrent received metadata:', torrent.name)
+            logger.log(`[${torrent.name}]: torrent received metadata.`)
             timer.delay()
         })
 
@@ -170,28 +172,28 @@ class TorrentFetcher extends Fetcher {
         torrent.on('download', bytes => {
             if (torrent.progress - progress > 0.01) {
                 progress = torrent.progress
-                logger.log(`downloaded: ${bytes}; total: ${torrent.downloaded}; speed: ${torrent.downloadSpeed}; progress: ${torrent.progress}`)
+                logger.log(`[${torrent.name}]: downloaded: ${bytes}; total: ${torrent.downloaded}; speed: ${torrent.downloadSpeed}; progress: ${torrent.progress}.`)
             }
             this.reporter.download(bytes)
             timer.delay()
         })
-        torrent.on('upload', bytes => {
-            logger.log(`uploaded: ${bytes}; total: ${torrent.uploaded}; speed: ${torrent.uploadSpeed}; progress: ${torrent.progress}`)
-        })
-        torrent.on('wire', (wire, addr) => logger.log('connected to peer with address ' + addr))
+        // torrent.on('upload', bytes => {
+        //     logger.log(`[${torrent.name}]: uploaded: ${bytes}; total: ${torrent.uploaded}; speed: ${torrent.uploadSpeed}; progress: ${torrent.progress}.`)
+        // })
+        torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
 
         torrent.on('warning', logger.warn)
         torrent.on('ready', () => {
-            logger.log(`torrent ${torrent.name} is ready`)
+            logger.log(`[${torrent.name}]: torrent is ready.`)
         })
         torrent.on('noPeers', announceType => {
-            logger.log(`torrent ${torrent.name} has no peers in ${announceType}`)
+            logger.log(`[${torrent.name}]: torrent has no peers in ${announceType}.`)
         })
 
         await new Promise((resolve, reject) => {
             torrent.on('error', reject)
             torrent.on('done', () => {
-                logger.log(`torrent ${torrent.name} download finished`)
+                logger.log(`torrent ${torrent.name} download finished.`)
                 resolve()
             })
             timer.on('timeout', reject)
@@ -200,7 +202,7 @@ class TorrentFetcher extends Fetcher {
             await new Promise((resolve, reject) => {
                 this.webTorrentClient.remove(torrent, (err) => {
                     if (err) {
-                        logger.warn(`torrent ${torrent.name} failed to cancel`)
+                        logger.warn(`torrent ${torrent.name} failed to cancel.`)
                         reject(err)
                     } else {
                         resolve()
@@ -208,7 +210,6 @@ class TorrentFetcher extends Fetcher {
                 })
             })
         })
-
     }
 }
 
@@ -275,29 +276,29 @@ class PatchFetcher extends Fetcher {
         const checksumUri = params.get('cs')
 
         if (!baseVersionId || !subURI || !diffType || !expectedLength || !checksumUri) {
-            throw new Error('Invalid patch uri')
+            throw new Error('Invalid patch uri.')
         }
 
         if (diffType !== 'hpatchz') {
-            throw new Error(`Unsupported diff type: ${diffType}`)
+            throw new Error(`Unsupported diff type: ${diffType}.`)
         }
 
         const subUrl = new URL(subURI)
         if (subUrl.protocol !== 'http:' && subUrl.protocol !== 'https:') {
-            throw new Error(`Unsupported sub uri protocol: ${subUrl.protocol}`)
+            throw new Error(`Unsupported sub uri protocol: ${subUrl.protocol}.`)
         }
 
         const baseVersion = VersionsManager.get(baseVersionId)
         if (!baseVersion) {
-            throw new Error(`Base version not exists: ${baseVersionId}`)
+            throw new Error(`Base version not exists: ${baseVersionId}.`)
         }
 
         const baseAsset = baseVersion.downloads[this.assetId]
         if (!baseAsset) {
-            throw new Error(`Base version does not contain needed asset: ${this.assetId}`)
+            throw new Error(`Base version does not contain needed asset: ${this.assetId}.`)
         }
         if (!await baseAsset.validateLocal()) {
-            throw new Error(`Base version asset is corrupted and can not be used: ${this.assetId}`)
+            throw new Error(`Base version asset is corrupted and can not be used: ${this.assetId}.`)
         }
 
         const checksum = Util.parseChecksum(checksumUri)
@@ -320,7 +321,7 @@ class PatchFetcher extends Fetcher {
             await httpFetcher.fetch(patchTargetPath)
             const isValid = await Util.validateLocal(patchTargetPath, checksum.algo, checksum.hash, expectedLength)
             if (!isValid) {
-                throw new Error('Fetched patch is not valid')
+                throw new Error('Fetched patch is not valid.')
             }
         }
 
@@ -339,7 +340,7 @@ class PatchFetcher extends Fetcher {
         await new Promise((resolve, reject) => {
             child.on('exit', (code) => {
                 if (code) {
-                    reject(`Process exited with code ${code}`)
+                    reject(`Process exited with code ${code}.`)
                 } else {
                     resolve()
                 }
@@ -427,7 +428,6 @@ class Facade {
      * @returns {EventEmitter}
      */
     async pull(asset) {
-
         /** @type Array.<{fetcher:Fetcher,priority:number}> */
         const fetchers = []
 
@@ -439,13 +439,12 @@ class Facade {
             fetchers.push({fetcher: new PreviousVersionFetcher(reporter, asset, previousVersions), priority: 0})
         }
 
-
         for (const url of asset.urls) {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 2})
+                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 3})
             } else if (urlObj.protocol === 'magnet:') {
-                fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.webTorrentClient), priority: 3})
+                fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.webTorrentClient), priority: 2})
             } else if (urlObj.protocol === 'patch:') {
                 fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 1})
             } else {
@@ -453,13 +452,13 @@ class Facade {
             }
         }
 
-        fetchers.sort((method1, method2) => method1.priority - method2.priority)
+        fetchers.sort((f1, f2) => f1.priority - f2.priority)
 
         new Promise(async (resolve, reject) => {
             try {
                 await fs.ensureDir(path.dirname(asset.targetPath))
             } catch (e) {
-                reject(`Failed to create asset ${asset.id} directory`)
+                reject(`Failed to create asset ${asset.id} directory.`)
                 return
             }
 
@@ -472,7 +471,7 @@ class Facade {
                 try {
                     await fetcher.fetch(asset.targetPath)
                 } catch (e) {
-                    logger.warn(`Failed to fetch asset ${asset.id} with fetcher ${fetcher.constructor.name}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`, e)
+                    logger.warn(`Failed to fetch asset ${asset.id} with fetcher ${fetcher.constructor.name}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}.`, e)
                     continue
                 }
 
@@ -482,11 +481,11 @@ class Facade {
                     return
                 }
 
-                logger.warn(`Fetcher ${fetcher.constructor.name} produced invalid resource ${asset.id}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}`)
+                logger.warn(`Fetcher ${fetcher.constructor.name} produced invalid resource ${asset.id}: ${i < fetchers.length - 1 ? 'trying next fetcher' : 'no alternative fetchers left'}.`)
             }
 
-            reject(`Failed to fetch asset ${asset.id}`)
-        }).then(_ => reporter.done(), reporter.error)
+            reject(`Failed to fetch asset ${asset.id}.`)
+        }).then(_ => reporter.done(), err => reporter.error(err))
 
         return eventEmitter
     }
@@ -552,8 +551,6 @@ function analyzePreviousVersionAssets(targetVersionMeta) {
  * @returns {Facade}
  */
 exports.init = function (account, targetVersionMeta) {
-
     const reusableModules = analyzePreviousVersionAssets(targetVersionMeta)
-
     return new Facade(account, reusableModules)
 }
