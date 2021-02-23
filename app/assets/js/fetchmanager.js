@@ -232,8 +232,7 @@ class PatchFetcher extends Fetcher {
     static async getPatcherPath() {
         let patcherPath = Array(3).fill('..')
         if (!isDev) {
-            patcherPath.push('..')
-            patcherPath.push('..')
+            patcherPath = Array(5).fill('..')
             patcherPath.push('resources')
         }
         patcherPath.push('tools')
