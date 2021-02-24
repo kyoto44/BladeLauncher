@@ -20,7 +20,7 @@ builder.build({
     config: {
         appId: 'nblade.bladelauncher',
         productName: 'Blade Launcher',
-        artifactName: '${productName}-setup-${version}.${ext}',
+        artifactName: 'BladeLauncher-setup-${version}.${ext}',
         copyright: 'Copyright © 2019-2021 N-Blade LLC',
         directories: {
             buildResources: 'build',
@@ -61,7 +61,12 @@ builder.build({
             category: 'public.app-category.games'
         },
         linux: {
-            target: 'AppImage',
+            target: [
+                'AppImage',
+                'pacman',
+                'deb',
+                'rpm'
+            ],
             maintainer: 'N-Blade LLC',
             vendor: 'N-Blade LLC',
             synopsis: 'Northern Blade Launcher',
