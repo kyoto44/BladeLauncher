@@ -183,24 +183,35 @@ class AssetGuard extends EventEmitter {
             if (arch() === 'x64') {
                 regKey = new Registry({
                     hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
+                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86'
                 })
                 log.info('64bit system detected')
             } else if (arch() === 'x86') {
                 regKey = new Registry({
                     hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{d7a6435f-ac9a-4af6-8fdc-ca130d13fac9}'
+                    key: '\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86'
                 })
                 log.info('32bit system detected')
             } else {
                 throw 'Unknown architecture'
             }
-            let keyExists = await defer(cb => regKey.keyExists(cb))
-            if (!keyExists) {
-                log.warn('VC++ 2019 x86 Missing!')
+            regKey.values((err, items) => {
+                if (err) {
+                    log.error('VC++ 2019 key doesn\'t exist')
+                    return false
+                }
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].name == 'Installed' && items[i].value != 1) {
+                        log.warn('VC++ 2019 x86 Missing!')
+                        return false
+                    }
+                    if (items[i].name == 'Bld' && parseInt(items[i].value, 16) <= 29325) {
+                        log.warn('Current VC++ 2019 x86 version is lower than 29325!')
+                        return false
+                    }
+                }
                 return true
-            }
-            return false
+            })
         }
 
         function downloadReq(reqName, url, path, hash) {
@@ -302,14 +313,14 @@ class AssetGuard extends EventEmitter {
     }
 
     /**
-     * Public library validation function. This function will handle the validation of libraries.
-     * It will parse the version data, analyzing each library entry. In this analysis, it will
-     * check to see if the local file exists and is valid. If not, it will be added to the download
-     * queue for the 'libraries' identifier.
-     *
-     * @param {Object} versionData The version data for the assets.
-     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
-     */
+ * Public library validation function. This function will handle the validation of libraries.
+ * It will parse the version data, analyzing each library entry. In this analysis, it will
+ * check to see if the local file exists and is valid. If not, it will be added to the download
+ * queue for the 'libraries' identifier.
+ *
+ * @param {Object} versionData The version data for the assets.
+ * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
+ */
     async validateVersion(versionData) {
         const self = this
 
@@ -357,13 +368,13 @@ class AssetGuard extends EventEmitter {
     }
 
     /**
-     * Initiate an async download process for an AssetGuard DLTracker.
-     *
-     * @param fetcher
-     * @param {string} identifier The identifier of the AssetGuard DLTracker.
-     * @param {number} limit Optional. The number of async processes to run in parallel.
-     * @returns {boolean} True if the process began, otherwise false.
-     */
+ * Initiate an async download process for an AssetGuard DLTracker.
+ *
+ * @param fetcher
+ * @param {string} identifier The identifier of the AssetGuard DLTracker.
+ * @param {number} limit Optional. The number of async processes to run in parallel.
+ * @returns {boolean} True if the process began, otherwise false.
+ */
     startAsyncProcess(fetcher, identifier, limit = 5) {
 
         const self = this
@@ -416,17 +427,17 @@ class AssetGuard extends EventEmitter {
     }
 
     /**
-     * This function will initiate the download processed for the specified identifiers. If no argument is
-     * given, all identifiers will be initiated. Note that in order for files to be processed you need to run
-     * the processing function corresponding to that identifier. If you run this function without processing
-     * the files, it is likely nothing will be enqueued in the object and processing will complete
-     * immediately. Once all downloads are complete, this function will fire the 'complete' event on the
-     * global object instance.
-     *
-     * @param {Server} server
-     * @param fetcher
-     * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
-     */
+ * This function will initiate the download processed for the specified identifiers. If no argument is
+ * given, all identifiers will be initiated. Note that in order for files to be processed you need to run
+ * the processing function corresponding to that identifier. If you run this function without processing
+ * the files, it is likely nothing will be enqueued in the object and processing will complete
+ * immediately. Once all downloads are complete, this function will fire the 'complete' event on the
+ * global object instance.
+ *
+ * @param {Server} server
+ * @param fetcher
+ * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
+ */
     processDlQueues(server, fetcher, identifiers = [
         {id: 'assets', limit: 20},
         {id: 'libraries', limit: 20},
