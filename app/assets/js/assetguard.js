@@ -522,7 +522,6 @@ class AssetGuard extends EventEmitter {
             } catch (err) {
                 console.warn(err)
             }
-            await LogsReporter.truncateLogs()
             return {
                 versionData: versionMeta,
                 forgeData: {}

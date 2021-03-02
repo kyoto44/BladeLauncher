@@ -449,7 +449,7 @@ function dlAsync(login = true) {
 
                     pb.build()
                     setLaunchDetails('Клиент запущен, приятной игры!')
-
+                    LogsReporter.truncateLogs()
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)
                     LogsReporter.report().catch(console.warn)
