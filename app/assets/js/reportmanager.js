@@ -18,7 +18,7 @@ const SUPPORT_URI = 'https://www.northernblade.ru/api/submit/support/request'
 async function gatherSystemInfo(account, versionId) {
     return {
         'accountid': account.uuid,
-        'launcher': process.env.npm_package_version,
+        'launcher': remote.app.getVersion(),
         'version': versionId,
         'cpumodel': os.cpus()[0].model,
         'ostype': `${os.platform()};${os.arch()};${arch()}`,
