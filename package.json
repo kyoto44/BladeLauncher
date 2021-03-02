@@ -29,12 +29,12 @@
     "adm-zip": "^0.5.3",
     "arch": "^2.2.0",
     "async": "^3.2.0",
-    "directory-tree": "^2.2.5",
+    "directory-tree": "^2.2.7",
     "discord-rpc": "^3.1.4",
     "ejs": "^3.1.6",
     "ejs-electron": "^2.1.1",
     "electron-log": "^4.3.2",
-    "electron-updater": "^4.3.5",
+    "electron-updater": "^4.3.8",
     "fast-xml-parser": "^3.18.0",
     "form-data": "^4.0.0",
     "fs-extra": "^9.1.0",
@@ -43,18 +43,18 @@
     "request": "^2.88.2",
     "semver": "^7.3.4",
     "stream-throttle": "^0.1.3",
-    "systeminformation": "^5.3.4",
+    "systeminformation": "^5.5.0",
     "tar-fs": "^2.1.1",
     "webtorrent": "github:kyoto44/webtorrent#master",
     "winreg": "^1.2.4"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "electron": "^11.3.0",
+    "electron": "^12.0.0",
     "electron-builder": "^22.10.5",
     "electron-rebuild": "^2.3.5",
     "electron-reloader": "^1.1.0",
-    "eslint": "^7.20.0"
+    "eslint": "^7.21.0"
   },
   "repository": {
     "type": "git",
