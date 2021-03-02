@@ -252,22 +252,22 @@ function dlAsync(login = true) {
         log.info(data)
     })
 
-    aEx.on('error', (err) => {
+    aEx.on('error', async (err) => {
         loggerLaunchSuite.error('Error during launch', err)
-        LogsReporter.report().catch(console.warn)
+        await LogsReporter.report().catch(console.warn)
         showLaunchFailure('Error During Launch', err.message || 'See console (CTRL + Shift + i) for more details.')
     })
-    aEx.on('close', (code, signal) => {
+    aEx.on('close', async (code, signal) => {
         if (code === 0) {
             return
         }
         loggerLaunchSuite.error(`AssetExec exited with code ${code}, assuming error.`)
-        LogsReporter.report().catch(console.warn)
+        await LogsReporter.report().catch(console.warn)
         showLaunchFailure('Error During Launch', 'See console (CTRL + Shift + i) for more details.')
     })
 
     // Establish communications between the AssetExec and current process.
-    aEx.on('message', (m) => {
+    aEx.on('message', async (m) => {
 
         if (m.context === 'validate') {
             switch (m.data) {
@@ -406,7 +406,7 @@ function dlAsync(login = true) {
             // If these properties are not defined it's likely an error.
             if (m.result.forgeData == null || m.result.versionData == null) {
                 loggerLaunchSuite.error('Error during validation:', m.result.error)
-                LogsReporter.report().catch(console.warn)
+                await LogsReporter.report().catch(console.warn)
                 showLaunchFailure('Error During Launch', 'Please check the console (CTRL + Shift + i) for more details.')
 
                 aEx.disconnect()
@@ -449,10 +449,10 @@ function dlAsync(login = true) {
 
                     pb.build()
                     setLaunchDetails('Клиент запущен, приятной игры!')
-                    LogsReporter.truncateLogs()
+                    await LogsReporter.truncateLogs()
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)
-                    LogsReporter.report().catch(console.warn)
+                    await LogsReporter.report().catch(console.warn)
                     showLaunchFailure('Error During Launch', 'Please contact support.')
                 }
             }
