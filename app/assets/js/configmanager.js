@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
-
+const Fingerprint = require("./fingerprint")
 const logger = require('./loggerutil')('%c[ConfigManager]', 'color: #a02d2a; font-weight: bold')
 
 const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
@@ -95,7 +95,8 @@ const DEFAULT_CONFIG = {
     selectedServer: null, // Resolved
     selectedAccount: null,
     authenticationDatabase: {},
-    modConfigurations: []
+    modConfigurations: [],
+    fingerprint: []
 }
 
 let config = null
@@ -653,4 +654,27 @@ exports.getAssetDownloadSpeedLimit = function (def = false) {
  */
 exports.setAssetDownloadSpeedLimit = function (limit) {
     config.settings.launcher.assetDownloadLimit = limit
+}
+
+/**
+ * Retrieve fingerprint value.
+ *
+ * @param {boolean} def Optional. If true, the default value will be returned.
+ * @returns {Array} fingerprint list of fingerprints.
+ */
+exports.getFingerprint = function (def = false) {
+    return !def ? config.fingerprint : DEFAULT_CONFIG.fingerprint
+}
+
+/**
+ * Change fingerprint value.
+ *
+ * @param {Array} fingerprint list of fingerprints.
+ */
+exports.setFingerprint = async function () {
+    const currentFingerprint = await Fingerprint.getFingerprint()
+    if (!config.fingerprint.includes(currentFingerprint)) {
+        config.fingerprint.push(currentFingerprint)
+    }
+    exports.save()
 }

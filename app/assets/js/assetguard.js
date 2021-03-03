@@ -495,7 +495,7 @@ class AssetGuard extends EventEmitter {
 
             await this.validateLauncherVersion(versionMeta)
 
-            //const account = ConfigManager.getSelectedAccount()
+            await ConfigManager.setFingerprint()
 
             const parallelTasks = []
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows

@@ -19,6 +19,7 @@ async function gatherSystemInfo(account, versionId) {
     return {
         'accountid': account.uuid,
         'launcher': remote.app.getVersion(),
+        'fingerprint': ConfigManager.getFingerprint(),
         'version': versionId,
         'cpumodel': os.cpus()[0].model,
         'ostype': `${os.platform()};${os.arch()};${arch()}`,
