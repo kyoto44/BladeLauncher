@@ -61,11 +61,10 @@ builder.build({
             category: 'public.app-category.games'
         },
         linux: {
+            icon: 'build/icon.png',
             target: [
-                'AppImage',
                 'pacman',
-                'deb',
-                'rpm'
+                'deb'
             ],
             maintainer: 'N-Blade LLC',
             vendor: 'N-Blade LLC',
