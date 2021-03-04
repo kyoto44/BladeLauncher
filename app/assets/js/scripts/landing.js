@@ -5,12 +5,12 @@
 const cp = require('child_process')
 const crypto = require('crypto')
 const {URL} = require('url')
-const electron = require('electron')
 
 // Internal Requirements
 const DiscordWrapper = require('./assets/js/discordwrapper')
 const ProcessBuilder = require('./assets/js/basicprocessbuilder')
 const {LogsReporter} = require('./assets/js/reportmanager')
+const {TorrentHolder} = require('./assets/js/torrentmanager')
 
 // Launch Elements
 const launch_content = document.getElementById('launch_content')
@@ -172,6 +172,8 @@ const refreshServerStatus = async function (fade = false) {
 }
 
 refreshMojangStatuses()
+TorrentHolder.startSeeding()
+//TorrentHolder.stopSeeding()
 // Server Status is refreshed in uibinder.js on distributionIndexDone.
 
 // Set refresh rate to once every 5 minutes.

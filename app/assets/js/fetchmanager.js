@@ -13,7 +13,7 @@ const isDev = require('./isdev')
 const {File} = require('./assets')
 const {Util} = require('./helpers')
 const ConfigManager = require('./configmanager')
-const TorrentManager = require('./torrentsmanager')
+const {TorrentHolder} = require('./torrentmanager')
 const VersionsManager = require('./versionsmanager')
 const LoggerUtil = require('./loggerutil')
 
@@ -200,7 +200,7 @@ class TorrentFetcher extends Fetcher {
             timer.on('timeout', reject)
         }).finally(async () => {
             timer.cancel()
-            await TorrentsManager.save(torrent.torrentFile)
+            await TorrentHolder.save(torrent.torrentFile, torrent.name)
             await new Promise((resolve, reject) => {
                 this.webTorrentClient.remove(torrent, (err) => {
                     if (err) {
