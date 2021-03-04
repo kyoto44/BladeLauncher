@@ -12,6 +12,7 @@ const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
 const DumpsManager = require('./dumpsmanager')
 const FetchManager = require('./fetchmanager')
+const TorrentManager = require('./torrentsmanager')
 const VersionManager = require('./versionsmanager')
 const {DumpsReporter} = require('./reportmanager')
 
@@ -497,6 +498,7 @@ class AssetGuard extends EventEmitter {
 
             await ConfigManager.setFingerprint()
 
+            await TorrentManager.startSeeding()
             const parallelTasks = []
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
                 parallelTasks.push(
