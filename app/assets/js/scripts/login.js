@@ -18,7 +18,7 @@ const loginRememberOption = document.getElementById('loginRememberOption')
 const loginButton = document.getElementById('loginButton')
 const loginForm = document.getElementById('loginForm')
 
-const register = document.getElementById('loginRegisterSpan')
+
 // Control variables.
 let lu = false, lp = false
 
@@ -27,7 +27,7 @@ const loggerLogin = LoggerUtil('%c[Login]', 'color: #000668; font-weight: bold')
 
 /**
  * Show a login error.
- * 
+ *
  * @param {HTMLElement} element The element on which to display the error.
  * @param {string} value The error text.
  */
@@ -38,7 +38,7 @@ function showError(element, value) {
 
 /**
  * Shake a login error to add emphasis.
- * 
+ *
  * @param {HTMLElement} element The element to shake.
  */
 function shakeError(element) {
@@ -51,7 +51,7 @@ function shakeError(element) {
 
 /**
  * Validate that an email field is neither empty nor invalid.
- * 
+ *
  * @param {string} value The email value.
  */
 function validateEmail(value) {
@@ -76,7 +76,7 @@ function validateEmail(value) {
 
 /**
  * Validate that the password field is not empty.
- * 
+ *
  * @param {string} value The password value.
  */
 function validatePassword(value) {
@@ -111,17 +111,10 @@ loginPassword.addEventListener('input', (e) => {
     validatePassword(e.target.value)
 })
 
-// Open register page
-
-register.addEventListener('click', (e) => {
-    $('#registerContainer').show()
-    $('#loginContainer').hide()
-    $('#registerUserMail').focus()
-})
 
 /**
  * Enable or disable the login button.
- * 
+ *
  * @param {boolean} v True to enable, false to disable.
  */
 function loginDisabled(v) {
@@ -132,7 +125,7 @@ function loginDisabled(v) {
 
 /**
  * Enable or disable loading elements.
- * 
+ *
  * @param {boolean} v True to enable, false to disable.
  */
 function loginLoading(v) {
@@ -147,7 +140,7 @@ function loginLoading(v) {
 
 /**
  * Enable or disable login form.
- * 
+ *
  * @param {boolean} v True to enable, false to disable.
  */
 function formDisabled(v) {
@@ -166,7 +159,7 @@ function formDisabled(v) {
 /**
  * Parses an error and returns a user-friendly title and description
  * for our error overlay.
- * 
+ *
  * @param {Error | {cause: string, error: string, errorMessage: string}} err A Node.js
  * error or Mojang error response.
  */
@@ -265,7 +258,9 @@ loginCancelButton.onclick = (e) => {
 }
 
 // Disable default form behavior.
-loginForm.onsubmit = () => { return false }
+loginForm.onsubmit = () => {
+    return false
+}
 
 // Bind login button behavior.
 loginButton.addEventListener('click', () => {
@@ -305,16 +300,16 @@ loginButton.addEventListener('click', () => {
                 })
             }, 1000)
         }).catch((err) => {
-            loginLoading(false)
-            const errF = resolveError(err)
-            setOverlayContent(errF.title, errF.desc, Lang.queryJS('login.tryAgain'))
-            setOverlayHandler(() => {
-                formDisabled(false)
-                toggleOverlay(false)
-            })
-            toggleOverlay(true)
-            loggerLogin.warn('Error while logging in.', err)
+        loginLoading(false)
+        const errF = resolveError(err)
+        setOverlayContent(errF.title, errF.desc, Lang.queryJS('login.tryAgain'))
+        setOverlayHandler(() => {
+            formDisabled(false)
+            toggleOverlay(false)
         })
+        toggleOverlay(true)
+        loggerLogin.warn('Error while logging in.', err)
+    })
 
 })
 

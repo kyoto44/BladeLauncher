@@ -134,7 +134,7 @@
                 },
                 "emailNotConfirmed": {
                     "title": "Registration was not completed",
-                    "desc": "Please confirm you email address first.<br/>Visit <a href=\"https://www.northernblade.ru/auth/confirm/?err=1\">link</a> for more information"
+                    "desc": "Please confirm you email address first.<br/>Visit <a href=\"https://www.n-blade.ru/register/resend\">link</a> for more information"
                 },
                 "notPaid": {
                     "title": "Error During Login:<br>Game Not Purchased",

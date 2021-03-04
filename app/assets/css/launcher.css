@@ -771,7 +771,6 @@ body, button {
 /* Add spacing between register anchor and disclaimer. */
 #loginRegisterSpan {
     margin-bottom: 5px;
-    visibility: hidden;
 }
 
 /* Disclaimer text styles. */

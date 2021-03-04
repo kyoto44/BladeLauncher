@@ -100,7 +100,7 @@
         "loginPasswordError": "* Обязательное поле",
         "forgotPassId": "Забыли пароль?",
         "loginButtonContent": "ВОЙТИ",
-        "needAccountId": "Зарегистрироваться?",
+        "needAccountId": "Зарегистрироваться",
         "passNotStored": "Ваш пароль будет отправлен непосредственно на сервер и нигде сохранен не будет.",
         "launcherNotAfillAcc": "Blade Launcher не связан с аккаунтом NorthernBlade."
     },
@@ -132,7 +132,7 @@
                 },
                 "emailNotConfirmed": {
                     "title": "Регистрация вашего аккаунта не была завершена",
-                    "desc": "Для входа в систему необходимо завершить регистрацию подтвердив ваш емейл адрес. Для этого пожалуйста <a href=\"https://www.northernblade.ru/auth/confirm/?err=1\">перейдите по ссылке</a> "
+                    "desc": "Для входа в систему необходимо завершить регистрацию подтвердив ваш емейл адрес. Для этого пожалуйста <a href=\"https://www.n-blade.ru/register/resend\">перейдите по ссылке</a> "
                 },
                 "notPaid": {
                     "title": "Error During Login:<br>Game Not Purchased",
@@ -140,7 +140,7 @@
                 },
                 "unknown": {
                     "title": "Ошибка авторизации",
-                    "desc": "Пожалуйста обратитесь в <a href=\"https://www.northernblade.ru/support\">службу поддержки</a>"
+                    "desc": "Пожалуйста обратитесь в <a href=\"https://www.n-blade.ru/support\">службу поддержки</a>"
                 }
             },
             "loginUsername": "ЛОГИН ИЛИ EMAIL",

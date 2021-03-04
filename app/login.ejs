@@ -29,20 +29,28 @@
             </div>
             <div id="loginOptions">
                 <span class="loginSpanDim">
-                    <a href="https://www.northernblade.ru/auth/sendpass/" id="forgotPassId">forgot password?</a>
+                    <a href="https://www.n-blade.ru/forgotten" id="forgotPassId">forgot password?</a>
                 </span>
                 <label id="checkmarkContainer" style="display: none;">
                     <input id="loginRememberOption" type="checkbox" checked>
                     <span id="loginRememberText" class="loginSpanDim">remember me?</span>
                     <span class="loginCheckmark"></span>
                 </label>
+                <span class="loginSpanDim">
+                    <a href="https://www.n-blade.ru/register" id="needAccountId">Need an Account</a>
+                </span>
             </div>
             <button id="loginButton">
                 <div id="loginButtonContent">
                     LOGIN
                     <svg id="loginSVG" viewBox="0 0 24.87 13.97">
                         <defs>
-                            <style>.arrowLine{fill:none;stroke:#FFF;stroke-width:2px;transition: 0.25s ease;}</style>
+                            <style>.arrowLine {
+                                    fill: none;
+                                    stroke: #FFF;
+                                    stroke-width: 2px;
+                                    transition: 0.25s ease;
+                                }</style>
                         </defs>
                         <polyline class="arrowLine" points="0.71 13.26 12.56 1.41 24.16 13.02"/>
                     </svg>
@@ -52,9 +60,6 @@
                     <!--<div class="spinningCircle" id="loginSpinner"></div>-->
                 </div>
             </button>
-            <div id="loginDisclaimer">
-                <span class="loginSpanDim" id="loginRegisterSpan">Need an Account</span>
-            </div>
         </form>
     </div>
     <script src="./assets/js/scripts/login.js"></script>
