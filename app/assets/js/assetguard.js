@@ -13,7 +13,7 @@ const DistroManager = require('./distromanager')
 const DumpsManager = require('./dumpsmanager')
 const FetchManager = require('./fetchmanager')
 const VersionManager = require('./versionsmanager')
-const {DumpsReporter, LogsReporter} = require('./reportmanager')
+const {DumpsReporter} = require('./reportmanager')
 
 const {Util} = require('./helpers')
 const {Asset, XmlModifierRule} = require('./assets')
@@ -205,7 +205,7 @@ class AssetGuard extends EventEmitter {
                         log.warn('VC++ 2019 x86 Missing!')
                         return false
                     }
-                    if (items[i].name == 'Bld' && parseInt(items[i].value, 16) <= 29325) {
+                    if (items[i].name == 'Bld' && parseInt(items[i].value, 16) < 29325) {
                         log.warn('Current VC++ 2019 x86 version is lower than 29325!')
                         return false
                     }
@@ -500,7 +500,7 @@ class AssetGuard extends EventEmitter {
             const parallelTasks = []
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
                 parallelTasks.push(
-                    DumpsManager.createRule().catch(console.warn),
+                    DumpsManager.createRules().catch(console.warn),
                     DumpsReporter.report().catch(console.warn),
                     this.validateRequirements()
                 )

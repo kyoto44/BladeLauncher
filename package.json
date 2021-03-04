@@ -40,6 +40,7 @@
     "fs-extra": "^9.1.0",
     "github-syntax-dark": "^0.5.0",
     "jquery": "^3.5.1",
+    "node-abi": "^2.20.0",
     "request": "^2.88.2",
     "semver": "^7.3.4",
     "stream-throttle": "^0.1.3",

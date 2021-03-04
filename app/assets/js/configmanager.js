@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
-const Fingerprint = require("./fingerprint")
+const Fingerprint = require('./fingerprint')
 const logger = require('./loggerutil')('%c[ConfigManager]', 'color: #a02d2a; font-weight: bold')
 
 const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)

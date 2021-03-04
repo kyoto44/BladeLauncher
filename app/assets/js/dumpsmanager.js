@@ -4,26 +4,41 @@ const Registry = require('winreg')
 
 const ConfigManager = require('./configmanager')
 
-exports.createRule = async function (binaryName) {
-    let regKey = new Registry({
+exports.createRules = async function (binaryName) {
+    let regKeyWER = new Registry({
+        hive: Registry.HKCU,
+        key: '\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting',
+
+    })
+
+    let regKeyDumps = new Registry({
         hive: Registry.HKCU,
         key: `\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\${binaryName}`,
 
     })
 
-    const akeyExists = util.promisify(regKey.keyExists).bind(regKey)
-    const acreate = util.promisify(regKey.create).bind(regKey)
-    const aset = util.promisify(regKey.set).bind(regKey)
+    const aWERKeyExists = util.promisify(regKeyWER.keyExists).bind(regKeyWER)
+    const aDumpsKeyExists = util.promisify(regKeyDumps.keyExists).bind(regKeyDumps)
+    const aCreateWERKey = util.promisify(regKeyWER.create).bind(regKeyWER)
+    const aCreateDumpsKey = util.promisify(regKeyDumps.create).bind(regKeyDumps)
+    const asetWER = util.promisify(regKeyWER.set).bind(regKeyWER)
+    const asetDumps = util.promisify(regKeyDumps.set).bind(regKeyDumps)
 
-    let keyExists = await akeyExists()
+    let keyExists = await aWERKeyExists()
     if (!keyExists) {
-        await acreate()
+        await aCreateWERKey()
     }
+    keyExists = await aDumpsKeyExists()
+    if (!keyExists) {
+        await aCreateDumpsKey()
+    }
+
     const dumpsDirectory = ConfigManager.getCrashDumpDirectory()
     await fs.promises.mkdir(dumpsDirectory, {recursive: true})
     await Promise.all([
-        aset('DumpFolder', Registry.REG_EXPAND_SZ, dumpsDirectory),
-        aset('DumpCount', Registry.REG_DWORD, '3'),
-        aset('DumpType', Registry.REG_DWORD, '1'),
+        asetWER('Disabled', Registry.REG_DWORD, '1'),
+        asetDumps('DumpFolder', Registry.REG_EXPAND_SZ, dumpsDirectory),
+        asetDumps('DumpCount', Registry.REG_DWORD, '3'),
+        asetDumps('DumpType', Registry.REG_DWORD, '1'),
     ])
 }
