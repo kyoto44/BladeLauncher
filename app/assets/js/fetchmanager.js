@@ -200,7 +200,7 @@ class TorrentFetcher extends Fetcher {
             timer.on('timeout', reject)
         }).finally(async () => {
             timer.cancel()
-            await TorrentHolder.save(torrent.torrentFile, torrent.name)
+            await TorrentHolder.save(torrent.torrentFile, torrent.path, torrent.name)
             await new Promise((resolve, reject) => {
                 this.webTorrentClient.remove(torrent, (err) => {
                     if (err) {

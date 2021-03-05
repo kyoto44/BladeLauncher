@@ -14,6 +14,7 @@ const DumpsManager = require('./dumpsmanager')
 const FetchManager = require('./fetchmanager')
 const VersionManager = require('./versionsmanager')
 const {DumpsReporter} = require('./reportmanager')
+const {TorrentHolder} = require('./torrentmanager')
 
 const {Util} = require('./helpers')
 const {Asset, XmlModifierRule} = require('./assets')
@@ -505,6 +506,7 @@ class AssetGuard extends EventEmitter {
                     this.validateRequirements()
                 )
             }
+            await TorrentHolder.stopSeeding()
             this.emit('validate', 'version')
             await this.validateVersion(versionMeta)
             this.emit('validate', 'libraries')

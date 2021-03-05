@@ -452,6 +452,7 @@ function dlAsync(login = true) {
                     pb.build()
                     setLaunchDetails('Клиент запущен, приятной игры!')
                     await LogsReporter.truncateLogs()
+                    await TorrentHolder.startSeeding()
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)
                     await LogsReporter.report().catch(console.warn)

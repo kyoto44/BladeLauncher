@@ -1,3 +1,4 @@
+const {ipcMain} = require('electron')
 const fs = require('fs-extra')
 const path = require('path')
 const WebTorrent = require('webtorrent')
@@ -10,45 +11,72 @@ const webtorrent = new WebTorrent()
 
 class TorrentHolder {
 
-    static async save(torrentfile, name) {
-        let torrentsBlob = []
-        if (fs.existsSync(torrentsBlobPath)) {
-            torrentsBlob = JSON.parse(await fs.readFile(torrentsBlobPath))
-            if (!torrentsBlob.includes(torrentfile.name)) {
-                torrentsBlob.push({torrent: torrentfile, name: name})
-            } else {
-                torrentsBlob[torrentsBlob.indexOf(torrentfile.name)] = {torrent: torrentfile, name: name}
+    static async save(torrentfile, torrentdir, filename) {
+        const filePath = path.join(torrentdir, filename)
+        let torrentsBlob = await this.readBlob()
+
+        await new Promise((resolve, reject) => {
+            if (!torrentsBlob.includes(filePath)) {
+                torrentsBlob.push({torrent: torrentfile, path: filePath})
             }
-            await fs.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob))
-        } else {
-            torrentsBlob.push({torrent: torrentfile, name: name})
-            await fs.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob))
-        }
+            resolve()
+        })
+
+        await fs.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob))
     }
 
-    static startSeeding() {
-        let torrentsBlob
-        if (fs.existsSync(torrentsBlobPath)) {
-            torrentsBlob = JSON.parse(fs.readFileSync(torrentsBlobPath))
-            torrentsBlob.forEach(torrentFile => {
-                webtorrent.add(Buffer.from(torrentFile.torrent.data), (torrent) => {
-                    torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
-                    torrent.on('warning', logger.warn)
-                })
+    static async startSeeding() {
+        let torrentsBlob = await this.flush()
+        torrentsBlob.forEach(torrentFile => {
+            webtorrent.add(Buffer.from(torrentFile.torrent.data), (torrent) => {
+                torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
+                torrent.on('warning', logger.warn)
             })
-        }
+        })
     }
 
     static async flush() {
-        await fs.unlink(torrentsBlobPath)
+
+        let torrentsBlob = await this.readBlob()
+
+        for (let i = 0; i < torrentsBlob.length; i++) {
+            if (!fs.existsSync(torrentsBlob[i].path)) {
+                torrentsBlob.splice(i, 1)
+                i--
+            }
+        }
+
+        await fs.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob))
+        return torrentsBlob
     }
 
-    static stopSeeding() {
+    static async stopSeeding() {
         webtorrent.torrents.forEach(torrent => {
             webtorrent.remove(torrent, () => {
                 logger.log(`Torrent ${torrent.name} was removed from seeding`)
             })
         })
+    }
+
+    static async readBlob() {
+        await this.checkBlobPresence()
+        let blob
+        try {
+            blob = await Promise.all(JSON.parse(await fs.readFile(torrentsBlobPath)))
+        } catch (e) {
+            logger.log(e, 'bad blob file, rewriting...')
+            await fs.writeFile(torrentsBlobPath, JSON.stringify(new Array()))
+            blob = []
+        }
+        return blob
+    }
+
+    static async checkBlobPresence() {
+        try {
+            await fs.promises.access(torrentsBlobPath, fs.constants.R_OK)
+        } catch (e) {
+            await fs.writeFile(torrentsBlobPath, JSON.stringify(new Array()))
+        }
     }
 }
 
