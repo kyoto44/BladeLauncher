@@ -224,6 +224,14 @@ if (!gotTheLock) {
 
     app.on('ready', createWindow)
     app.on('ready', createMenu)
+    app.on('ready', async () => {
+        const {TorrentHolder} = require('./app/assets/js/torrentmanager')
+        try {
+            await TorrentHolder.startSeeding()
+        } catch (e) {
+            console.error(e)
+        }
+    })
 
     app.on('window-all-closed', () => {
         // On macOS it is common for applications and their menu bar

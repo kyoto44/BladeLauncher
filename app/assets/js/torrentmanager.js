@@ -13,69 +13,71 @@ class TorrentHolder {
 
     static async save(torrentfile, torrentdir, filename) {
         const filePath = path.join(torrentdir, filename)
-        let torrentsBlob = await this.readBlob()
-
-        await new Promise((resolve, reject) => {
-            if (!torrentsBlob.includes(filePath)) {
-                torrentsBlob.push({torrent: torrentfile, path: filePath})
-            }
-            resolve()
-        })
-
-        await fs.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob))
+        const torrentsBlob = await this.readBlob()
+        torrentsBlob[filePath] = {torrent: torrentfile, path: filePath}
+        await fs.promises.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
     }
 
     static async startSeeding() {
-        let torrentsBlob = await this.flush()
-        torrentsBlob.forEach(torrentFile => {
-            webtorrent.add(Buffer.from(torrentFile.torrent.data), (torrent) => {
-                torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
-                torrent.on('warning', logger.warn)
-            })
-        })
+        const torrentsBlob = await this.flush()
+        const promises = []
+        for (const torrentInfo of Object.values(torrentsBlob)) {
+            promises.push(new Promise((resolve, reject) => {
+                try {
+                    webtorrent.add(Buffer.from(torrentInfo.torrent.data), (torrent) => {
+                        torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
+                        torrent.on('warning', logger.warn)
+                        resolve(torrent)
+                    })
+                } catch (e) {
+                    reject(e)
+                }
+            }))
+        }
+        await Promise.all(promises)
     }
 
     static async flush() {
-
-        let torrentsBlob = await this.readBlob()
-
-        for (let i = 0; i < torrentsBlob.length; i++) {
-            if (!fs.existsSync(torrentsBlob[i].path)) {
-                torrentsBlob.splice(i, 1)
-                i--
-            }
+        const torrentsBlob = await this.readBlob()
+        const promises = []
+        const entries = Object.entries(torrentsBlob)
+        for (const [filePath, torrentInfo] of entries) {
+            promises.push(fs.promises.access(torrentInfo.path).catch((_) => {
+                delete torrentsBlob[filePath]
+            }))
         }
-
-        await fs.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob))
+        await Promise.all(promises)
+        if (entries.length !== promises.length) {
+            await fs.promises.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
+        }
         return torrentsBlob
     }
 
     static async stopSeeding() {
+        const promises = []
         webtorrent.torrents.forEach(torrent => {
-            webtorrent.remove(torrent, () => {
-                logger.log(`Torrent ${torrent.name} was removed from seeding`)
-            })
+            promises.push(new Promise((resolve, reject) => {
+                try {
+                    webtorrent.remove(torrent, () => {
+                        logger.log(`Torrent ${torrent.name} was removed from seeding`)
+                        resolve(torrent)
+                    })
+                } catch (e) {
+                    reject(e)
+                }
+            }))
         })
+        await Promise.all(promises)
     }
 
     static async readBlob() {
-        await this.checkBlobPresence()
-        let blob
-        try {
-            blob = await Promise.all(JSON.parse(await fs.readFile(torrentsBlobPath)))
-        } catch (e) {
-            logger.log(e, 'bad blob file, rewriting...')
-            await fs.writeFile(torrentsBlobPath, JSON.stringify(new Array()))
-            blob = []
-        }
-        return blob
-    }
-
-    static async checkBlobPresence() {
         try {
             await fs.promises.access(torrentsBlobPath, fs.constants.R_OK)
+            const data = await fs.readFile(torrentsBlobPath, 'UTF8')
+            return JSON.parse(data)
         } catch (e) {
-            await fs.writeFile(torrentsBlobPath, JSON.stringify(new Array()))
+            logger.warn('bad blob file, skipping...', e)
+            return {}
         }
     }
 }

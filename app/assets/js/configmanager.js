@@ -4,11 +4,25 @@ const path = require('path')
 const Fingerprint = require('./fingerprint')
 const logger = require('./loggerutil')('%c[ConfigManager]', 'color: #a02d2a; font-weight: bold')
 
-const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
+const sysRoot = process.env.APPDATA || (process.platform === 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
 const defaultDataPathRoot = path.join(sysRoot, '.nblade')
 
+
+function _getLauncherDir() {
+    let config = process.env.CONFIG_DIRECT_PATH
+    if (config) {
+        return config
+    }
+    const electron = require('electron')
+    if (electron.remote) {
+        return electron.remote.app.getPath('userData')
+    }
+    return electron.app.getPath('userData')
+}
+
+
 // Forked processes do not have access to electron, so we have this workaround.
-const launcherDir = process.env.CONFIG_DIRECT_PATH || require('electron').remote.app.getPath('userData')
+const launcherDir = _getLauncherDir()
 
 /**
  * Retrieve the absolute path of the launcher directory.
