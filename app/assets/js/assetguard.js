@@ -243,9 +243,9 @@ class AssetGuard extends EventEmitter {
             })
         }
 
-        function installReq(reqName, path, flags) {
+        function installReq(reqName, path, ...flags) {
             return new Promise((resolve, reject) => {
-                child_process.exec(`${path} ${flags}`, (error, stdout, stderr) => {
+                child_process.execFile(path, flags, (error, stdout, stderr) => {
                     if (stdout) {
                         log.info(`stdout: ${stdout}`)
                     }
@@ -290,11 +290,11 @@ class AssetGuard extends EventEmitter {
         }
 
         if (isVCPP19Missing) {
-            await installReq('VC++ 2019 x86', VC19exePath, '/passive /norestart')
+            await installReq('VC++ 2019 x86', VC19exePath, '/passive', '/norestart')
         }
 
         if (isDirectXMissing) {
-            await installReq('DirectX Redist', DXRedistPath, `/Q /T:${DXSETUPexePath}`)
+            await installReq('DirectX Redist', DXRedistPath, '/Q', `/T:${DXSETUPexePath}`)
             await installReq('DirectX Jun 2010', path.join(DXSETUPexePath, '/DXSETUP.exe'), '/silent')
         }
 
