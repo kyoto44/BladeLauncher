@@ -1,34 +1,101 @@
-const {ipcMain} = require('electron')
+const EventEmitter = require('events')
 const fs = require('fs-extra')
 const path = require('path')
+
+const parseTorrent = require('parse-torrent')
 const WebTorrent = require('webtorrent')
+const FSChunkStore = require('fs-chunk-store')
+
 const ConfigManager = require('./configmanager')
 const LoggerUtil = require('./loggerutil')
+const {TimeoutEmitter} = require('./helpers')
+
 const logger = LoggerUtil('%c[TorrentManager]', 'color: #a02d2a; font-weight: bold')
 
-const torrentsBlobPath = path.join(ConfigManager.getLauncherDirectory(), 'torrents.blob')
-const webtorrent = new WebTorrent()
 
 class TorrentHolder {
 
-    static async save(torrentfile, torrentdir, filename) {
-        const filePath = path.join(torrentdir, filename)
-        const torrentsBlob = await this.readBlob()
-        torrentsBlob[filePath] = {torrent: torrentfile, path: filePath}
-        await fs.promises.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
+    static get torrentsBlobPath() {
+        return path.join(ConfigManager.getCommonDirectory(), 'torrents.blob')
     }
 
-    static async startSeeding() {
-        const torrentsBlob = await this.flush()
+    static async add(targetPath, torrentFile) {
+        const torrentsBlob = await this._readBlob()
+        torrentsBlob[targetPath] = {torrent: torrentFile.toString('base64')}
+        await fs.promises.writeFile(this.torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
+    }
+
+    static async getData() {
+        const torrentsBlob = await this._readBlob()
         const promises = []
-        for (const torrentInfo of Object.values(torrentsBlob)) {
+        const entries = Object.keys(torrentsBlob)
+        for (const targetPath of entries) {
+            promises.push(fs.promises.access(targetPath).catch((_) => {
+                delete torrentsBlob[targetPath]
+            }))
+        }
+        await Promise.all(promises)
+        if (entries.length !== promises.length) {
+            await fs.promises.writeFile(this.torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
+        }
+        return torrentsBlob
+    }
+
+    static async _readBlob() {
+        try {
+            await fs.promises.access(this.torrentsBlobPath, fs.constants.R_OK)
+            const data = await fs.readFile(this.torrentsBlobPath, 'UTF8')
+            return JSON.parse(data)
+        } catch (e) {
+            logger.warn('bad blob file, skipping...', e)
+            return {}
+        }
+    }
+}
+
+
+const EMPTY_CB = () => {
+}
+
+class TorrentManager {
+    constructor() {
+        this.webTorrentClient = new WebTorrent({
+            downloadLimit: ConfigManager.getAssetDownloadSpeedLimit(),
+            uploadLimit: ConfigManager.getTorrentUploadSpeedLimit()
+        })
+    }
+
+    add(parsedTorrent, targetPath, cb = EMPTY_CB) {
+        const dirname = path.dirname(targetPath)
+        const torrent = this.webTorrentClient.add(parsedTorrent, {
+            path: dirname,
+            fileModtimes: false,
+            store: function (chunkLength, storeOpts) {
+                let updatedStoreOpts = {...storeOpts}
+                updatedStoreOpts.files.forEach(file => {
+                    file.path = targetPath
+                })
+                return FSChunkStore(
+                    chunkLength,
+                    updatedStoreOpts
+                )
+            }
+        }, cb)
+        logger.log('torrent is added:', torrent.infoHash)
+        return torrent
+    }
+
+    async startAll() {
+        await this.stopAll()
+
+        const torrentsBlob = await TorrentHolder.getData()
+        const promises = []
+        for (const [targetPath, torrentInfo] of Object.entries(torrentsBlob)) {
             promises.push(new Promise((resolve, reject) => {
                 try {
-                    webtorrent.add(Buffer.from(torrentInfo.torrent.data), (torrent) => {
-                        torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
-                        torrent.on('warning', logger.warn)
-                        resolve(torrent)
-                    })
+                    const torrent = this.add(Buffer.from(torrentInfo.torrent, 'base64'), targetPath, resolve)
+                    torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
+                    torrent.on('warning', logger.warn)
                 } catch (e) {
                     reject(e)
                 }
@@ -37,28 +104,12 @@ class TorrentHolder {
         await Promise.all(promises)
     }
 
-    static async flush() {
-        const torrentsBlob = await this.readBlob()
+    async stopAll() {
         const promises = []
-        const entries = Object.entries(torrentsBlob)
-        for (const [filePath, torrentInfo] of entries) {
-            promises.push(fs.promises.access(torrentInfo.path).catch((_) => {
-                delete torrentsBlob[filePath]
-            }))
-        }
-        await Promise.all(promises)
-        if (entries.length !== promises.length) {
-            await fs.promises.writeFile(torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
-        }
-        return torrentsBlob
-    }
-
-    static async stopSeeding() {
-        const promises = []
-        webtorrent.torrents.forEach(torrent => {
+        this.webTorrentClient.torrents.forEach(torrent => {
             promises.push(new Promise((resolve, reject) => {
                 try {
-                    webtorrent.remove(torrent, () => {
+                    torrent.destroy(() => {
                         logger.log(`Torrent ${torrent.name} was removed from seeding`)
                         resolve(torrent)
                     })
@@ -70,19 +121,83 @@ class TorrentHolder {
         await Promise.all(promises)
     }
 
-    static async readBlob() {
-        try {
-            await fs.promises.access(torrentsBlobPath, fs.constants.R_OK)
-            const data = await fs.readFile(torrentsBlobPath, 'UTF8')
-            return JSON.parse(data)
-        } catch (e) {
-            logger.warn('bad blob file, skipping...', e)
-            return {}
-        }
+    fetch(magneticUrl, targetPath) {
+        const reporter = new EventEmitter()
+        Promise.resolve().then(() => {
+            const parsedTorrent = parseTorrent(magneticUrl)
+            const torrent = this.add(parsedTorrent, targetPath)
+
+            const timer = new TimeoutEmitter(
+                ConfigManager.getTorrentTimeout(),
+                `Failed to receive any information in allowed timeout: ${magneticUrl}.`)
+
+            torrent.on('infoHash', () => logger.log(`[${torrent.name}]: torrent received hash.`))
+            torrent.on('metadata', () => {
+                logger.log(`[${torrent.name}]: torrent received metadata.`)
+                timer.delay()
+            })
+
+            let progress = -0.01
+            torrent.on('download', bytes => {
+                if (torrent.progress - progress > 0.01) {
+                    progress = torrent.progress
+                    logger.log(`[${torrent.name}]: downloaded: ${torrent.lastPieceLength}; total: ${(torrent.downloaded / 1024 / 1024).toFixed(2)} MB; speed: ${(torrent.downloadSpeed / 1024 / 1024).toFixed(2)} MB/s; progress: ${(torrent.progress * 100).toFixed(2)}%; ETA: ${(torrent.timeRemaining / 1000).toFixed(2)} seconds`)
+                }
+                reporter.emit('download', bytes)
+                timer.delay()
+            })
+            // torrent.on('upload', bytes => {
+            //     logger.log(`[${torrent.name}]: uploaded: ${bytes}; total: ${torrent.uploaded}; speed: ${torrent.uploadSpeed}; progress: ${torrent.progress}.`)
+            // })
+            torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
+
+            torrent.on('warning', logger.warn)
+            torrent.on('ready', () => {
+                logger.log(`[${torrent.name}]: torrent is ready.`)
+            })
+            torrent.on('noPeers', announceType => {
+                logger.log(`[${torrent.name}]: torrent has no peers in ${announceType}.`)
+            })
+
+            return new Promise((resolve, reject) => {
+                torrent.on('error', reject)
+                torrent.on('done', () => {
+                    logger.log(`torrent ${torrent.name} download finished.`)
+                    resolve()
+                })
+                timer.on('timeout', reject)
+            }).finally(async () => {
+                timer.cancel()
+                await new Promise((resolve, reject) => {
+                    this.webTorrentClient.remove(torrent, (err) => {
+                        if (err) {
+                            logger.warn(`torrent ${torrent.name} failed to cancel.`)
+                            reject(err)
+                        } else {
+                            resolve()
+                        }
+                    })
+                })
+            }).then((result) => {
+                reporter.emit('done', result)
+            }, (error) => {
+                reporter.emit('error', error)
+            }).then(async () => {
+                try {
+                    await TorrentHolder.add(targetPath, torrent.torrentFile)
+                } catch (e) {
+                    logger.warn(`Failed to save torrent for seeding ${torrent.name}`)
+                }
+            })
+        }).catch((error) => {
+            reporter.emit('error', error)
+        })
+        return reporter
     }
 }
 
 
 module.exports = {
-    TorrentHolder
+    TorrentHolder,
+    TorrentManager,
 }

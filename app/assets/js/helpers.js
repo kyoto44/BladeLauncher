@@ -1,6 +1,35 @@
+const EventEmitter = require('events')
 const fs = require('fs-extra')
 const {createXXH3_128} = require('@kaciras-blog/nativelib')
 const crypto = require('crypto')
+
+
+class TimeoutEmitter extends EventEmitter {
+    constructor(ms, timeoutError) {
+        super()
+        this._ms = ms
+        this._timeoutError = timeoutError
+        this._timer = setTimeout(this._onTimeout.bind(this), ms)
+    }
+
+    _onTimeout() {
+        this.emit('timeout', this._timeoutError)
+    }
+
+    delay(ms = null) {
+        if (this._timer) {
+            clearTimeout(this._timer)
+            this._timer = setTimeout(this._onTimeout.bind(this), ms || this._ms)
+        }
+    }
+
+    cancel() {
+        if (this._timer) {
+            clearTimeout(this._timer)
+            this._timer = 0
+        }
+    }
+}
 
 
 class Util {
@@ -101,5 +130,6 @@ class Util {
 }
 
 module.exports = {
+    TimeoutEmitter,
     Util,
 }

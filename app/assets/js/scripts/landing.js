@@ -10,7 +10,6 @@ const {URL} = require('url')
 const DiscordWrapper = require('./assets/js/discordwrapper')
 const ProcessBuilder = require('./assets/js/basicprocessbuilder')
 const {LogsReporter} = require('./assets/js/reportmanager')
-const {TorrentHolder} = require('./assets/js/torrentmanager')
 
 // Launch Elements
 const launch_content = document.getElementById('launch_content')
@@ -172,8 +171,6 @@ const refreshServerStatus = async function (fade = false) {
 }
 
 refreshMojangStatuses()
-TorrentHolder.startSeeding()
-//TorrentHolder.stopSeeding()
 // Server Status is refreshed in uibinder.js on distributionIndexDone.
 
 // Set refresh rate to once every 5 minutes.
@@ -254,12 +251,23 @@ function dlAsync(login = true) {
         log.info(data)
     })
 
+    const listener = (event, ...args) => {
+        aEx.send({
+            task: 'execute',
+            function: 'torrentsNotification',
+            argsArr: args
+        })
+    }
+    ipcRenderer.on('torrentsNotification', listener)
+
     aEx.on('error', async (err) => {
         loggerLaunchSuite.error('Error during launch', err)
         await LogsReporter.report().catch(console.warn)
         showLaunchFailure('Error During Launch', err.message || 'See console (CTRL + Shift + i) for more details.')
+        ipcRenderer.removeListener('torrentsNotification', listener)
     })
     aEx.on('close', async (code, signal) => {
+        ipcRenderer.removeListener('torrentsNotification', listener)
         if (code === 0) {
             return
         }
@@ -270,8 +278,9 @@ function dlAsync(login = true) {
 
     // Establish communications between the AssetExec and current process.
     aEx.on('message', async (m) => {
-
-        if (m.context === 'validate') {
+        if (m.context === 'torrents') {
+            ipcRenderer.send.apply(ipcRenderer, ['torrents', ...m.args])
+        } else if (m.context === 'validate') {
             switch (m.data) {
                 case 'distribution':
                     setLaunchPercentage(20, 100)
@@ -452,7 +461,7 @@ function dlAsync(login = true) {
                     pb.build()
                     setLaunchDetails('Клиент запущен, приятной игры!')
                     await LogsReporter.truncateLogs()
-                    await TorrentHolder.startSeeding()
+                    // await TorrentHolder.startSeeding()
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)
                     await LogsReporter.report().catch(console.warn)

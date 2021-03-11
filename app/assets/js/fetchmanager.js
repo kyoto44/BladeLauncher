@@ -4,16 +4,12 @@ const fs = require('fs-extra')
 const arch = require('arch')
 const child_process = require('child_process')
 const path = require('path')
-const parseTorrent = require('parse-torrent')
-const WebTorrent = require('webtorrent')
-const FSChunkStore = require('fs-chunk-store')
 const ThrottleGroup = require('stream-throttle').ThrottleGroup
 
 const isDev = require('./isdev')
 const {File} = require('./assets')
 const {Util} = require('./helpers')
 const ConfigManager = require('./configmanager')
-const {TorrentHolder} = require('./torrentmanager')
 const VersionsManager = require('./versionsmanager')
 const LoggerUtil = require('./loggerutil')
 
@@ -132,86 +128,52 @@ class TorrentFetcher extends Fetcher {
     /**
      * @param {Reporter} reporter
      * @param {string} chosenUrl
-     * @param {WebTorrent} webTorrentClient
      */
-    constructor(reporter, chosenUrl, webTorrentClient) {
+    constructor(reporter, chosenUrl, torrentsProxy) {
         super(reporter)
         this.url = chosenUrl
-        this.webTorrentClient = webTorrentClient
+        this.torrentsProxy = torrentsProxy
+
+        let listener
+        this.fetchResult = new Promise((resolve, reject) => {
+            listener = (...args) => {
+                const cmd = args.shift()
+                switch (cmd) {
+                    case 'fetchError': {
+                        const url = args[0]
+                        if (url === chosenUrl) {
+                            reject(args[1])
+                        }
+                        break
+                    }
+                    case 'done': {
+                        const url = args[0]
+                        if (url === chosenUrl) {
+                            resolve()
+                        }
+                        break
+                    }
+                    case 'download': {
+                        const url = args[0]
+                        if (url === chosenUrl) {
+                            const bytes = args[1]
+                            this.reporter.download(bytes)
+                        }
+                        break
+                    }
+                    default:
+                        logger.error(`Unexpected cmd ${cmd} from 'torrentsNotification' channel`)
+                }
+            }
+            torrentsProxy.on('torrentsNotification', listener)
+        }).finally(() => {
+            torrentsProxy.removeListener('torrentsNotification', listener)
+        })
     }
 
     async fetch(targetPath) {
-        const dirname = path.dirname(targetPath)
-        const parsedTorrent = parseTorrent(this.url)
-
-        const timer = new TimeoutEmitter(
-            ConfigManager.getTorrentTimeout(),
-            `Failed to receive any information in allowed timeout: ${this.url}.`)
-        const torrent = this.webTorrentClient.add(parsedTorrent, {
-            path: dirname,
-            fileModtimes: false,
-            store: function (chunkLength, storeOpts) {
-                let updatedStoreOpts = {...storeOpts}
-                updatedStoreOpts.files.forEach(file => {
-                    file.path = targetPath
-                })
-                return FSChunkStore(
-                    chunkLength,
-                    updatedStoreOpts
-                )
-            }
-        })
-        logger.log('torrent is added:', torrent.infoHash)
-
-        torrent.on('infoHash', () => logger.log(`[${torrent.name}]: torrent received hash.`))
-        torrent.on('metadata', () => {
-            logger.log(`[${torrent.name}]: torrent received metadata.`)
-            timer.delay()
-        })
-
-        let progress = -0.01
-        torrent.on('download', bytes => {
-            if (torrent.progress - progress > 0.01) {
-                progress = torrent.progress
-                logger.log(`[${torrent.name}]: downloaded: ${torrent.lastPieceLength}; total: ${(torrent.downloaded / 1024 / 1024).toFixed(2)} MB; speed: ${(torrent.downloadSpeed / 1024 / 1024).toFixed(2)} MB/s; progress: ${(torrent.progress * 100).toFixed(2)}%; ETA: ${(torrent.timeRemaining / 1000).toFixed(2)} seconds`)
-            }
-            this.reporter.download(bytes)
-            timer.delay()
-        })
-        // torrent.on('upload', bytes => {
-        //     logger.log(`[${torrent.name}]: uploaded: ${bytes}; total: ${torrent.uploaded}; speed: ${torrent.uploadSpeed}; progress: ${torrent.progress}.`)
-        // })
-        torrent.on('wire', (wire, addr) => logger.log(`[${torrent.name}]: connected to peer with address ${addr}.`))
-
-        torrent.on('warning', logger.warn)
-        torrent.on('ready', () => {
-            logger.log(`[${torrent.name}]: torrent is ready.`)
-        })
-        torrent.on('noPeers', announceType => {
-            logger.log(`[${torrent.name}]: torrent has no peers in ${announceType}.`)
-        })
-
-        await new Promise((resolve, reject) => {
-            torrent.on('error', reject)
-            torrent.on('done', () => {
-                logger.log(`torrent ${torrent.name} download finished.`)
-                resolve()
-            })
-            timer.on('timeout', reject)
-        }).finally(async () => {
-            timer.cancel()
-            await TorrentHolder.save(torrent.torrentFile, torrent.path, torrent.name)
-            await new Promise((resolve, reject) => {
-                this.webTorrentClient.remove(torrent, (err) => {
-                    if (err) {
-                        logger.warn(`torrent ${torrent.name} failed to cancel.`)
-                        reject(err)
-                    } else {
-                        resolve()
-                    }
-                })
-            })
-        })
+        this.torrentsProxy.emit('torrents', 'fetch', this.url, targetPath)
+        await this.fetchResult
     }
 }
 
@@ -381,47 +343,15 @@ class Reporter {
 }
 
 
-class TimeoutEmitter extends EventEmitter {
-    constructor(ms, timeoutError) {
-        super()
-        this._ms = ms
-        this._timeoutError = timeoutError
-        this._timer = setTimeout(this._onTimeout.bind(this), ms)
-    }
-
-    _onTimeout() {
-        this.emit('timeout', this._timeoutError)
-    }
-
-    delay(ms = null) {
-        if (this._timer) {
-            clearTimeout(this._timer)
-            this._timer = setTimeout(this._onTimeout.bind(this), ms || this._ms)
-        }
-    }
-
-    cancel() {
-        if (this._timer) {
-            clearTimeout(this._timer)
-            this._timer = 0
-        }
-    }
-
-}
-
-
 class Facade {
     /**
      * @param account
      * @param {Object.<string, Array.<File>>} reusableModules
      */
-    constructor(account, reusableModules) {
+    constructor(account, reusableModules, torrentsProxy) {
         this.account = account
         this.reusableModules = reusableModules
-        this.webTorrentClient = new WebTorrent({
-            downloadLimit: ConfigManager.getAssetDownloadSpeedLimit(),
-            uploadLimit: ConfigManager.getTorrentUploadSpeedLimit()
-        })
+        this.torrentsProxy = torrentsProxy
     }
 
     /**
@@ -445,7 +375,7 @@ class Facade {
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
                 fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 3})
             } else if (urlObj.protocol === 'magnet:') {
-                fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.webTorrentClient), priority: 2})
+                fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.torrentsProxy), priority: 2})
             } else if (urlObj.protocol === 'patch:') {
                 fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 1})
             } else {
@@ -551,7 +481,7 @@ function analyzePreviousVersionAssets(targetVersionMeta) {
  * @param {Version} targetVersionMeta
  * @returns {Facade}
  */
-exports.init = function (account, targetVersionMeta) {
+exports.init = async function (account, targetVersionMeta, torrentsProxy) {
     const reusableModules = analyzePreviousVersionAssets(targetVersionMeta)
-    return new Facade(account, reusableModules)
+    return new Facade(account, reusableModules, torrentsProxy)
 }

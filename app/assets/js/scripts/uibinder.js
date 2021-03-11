@@ -116,6 +116,8 @@ function showMainUI() {
                     $(VIEWS.login).fadeIn(1000)
                 }
             }
+
+            ipcRenderer.send('torrents', 'init')
     
             setTimeout(() => {
                 $('#loadingContainer').fadeOut(500, () => {

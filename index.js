@@ -4,6 +4,8 @@ const autoUpdater = require('electron-updater').autoUpdater
 const ejse = require('ejs-electron')
 const fs = require('fs')
 const isDev = require('./app/assets/js/isdev')
+const ConfigManager = require('./app/assets/js/configmanager')
+const {TorrentManager} = require('./app/assets/js/torrentmanager')
 const path = require('path')
 const semver = require('semver')
 const url = require('url')
@@ -84,6 +86,68 @@ ipcMain.on('autoUpdateAction', (event, arg, data) => {
 ipcMain.on('distributionIndexDone', (event, res) => {
     event.sender.send('distributionIndexDone', res)
 })
+
+
+class TorrentsEventsListener {
+    constructor() {
+        /** @type ?TorrentManager */
+        this._manager = null
+    }
+
+    async handler(event, ...args) {
+        try {
+            const cmd = args.shift()
+            switch (cmd) {
+                case 'init': {
+                    // Load ConfigManager
+                    ConfigManager.load()
+                    this._manager = new TorrentManager()
+                    this._manager.startAll().then(() => {
+                        event.sender.send('torrentsNotification', 'inited')
+                    }, (err) => {
+                        event.sender.send('torrentsNotification', 'error', err)
+                    })
+                    break
+                }
+                case 'fetch': {
+                    const [magneticUrl, targetPath] = args
+                    try {
+                        const reporter = this._manager.fetch(magneticUrl, targetPath)
+                        reporter.on('download', (bytes) => {
+                            event.sender.send('torrentsNotification', 'download', magneticUrl, bytes)
+                        })
+                        reporter.on('done', () => {
+                            event.sender.send('torrentsNotification', 'done', magneticUrl)
+                        })
+                        reporter.on('error', (err) => {
+                            event.sender.send('torrentsNotification', 'fetchError', magneticUrl, err)
+                        })
+                    } catch (e) {
+                        event.sender.send('torrentsNotification', 'fetchError', magneticUrl, e)
+                    }
+                    break
+                }
+                case 'stop': {
+                    this._manager.stopAll().then(() => {
+                        event.sender.send('torrentsNotification', 'stopped')
+                    }, (e) => {
+                        event.sender.send('torrentsNotification', 'error', e)
+                    })
+                    break
+                }
+                default:
+                    console.log('Unknown command for torrent manager', cmd)
+            }
+        } catch (e) {
+            event.sender.send('torrentsNotification', 'error', e)
+        }
+    }
+}
+
+
+const _torrentsEventsListener = new TorrentsEventsListener()
+ipcMain.on('torrents', _torrentsEventsListener.handler.bind(_torrentsEventsListener))
+
 
 // Disable hardware acceleration.
 // https://electronjs.org/docs/tutorial/offscreen-rendering
@@ -224,14 +288,6 @@ if (!gotTheLock) {
 
     app.on('ready', createWindow)
     app.on('ready', createMenu)
-    app.on('ready', async () => {
-        const {TorrentHolder} = require('./app/assets/js/torrentmanager')
-        try {
-            await TorrentHolder.startSeeding()
-        } catch (e) {
-            console.error(e)
-        }
-    })
 
     app.on('window-all-closed', () => {
         // On macOS it is common for applications and their menu bar
