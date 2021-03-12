@@ -180,14 +180,17 @@ class TorrentManager {
                 })
             }).then((result) => {
                 reporter.emit('done', result)
-            }, (error) => {
-                reporter.emit('error', error)
             }).then(async () => {
                 try {
                     await TorrentHolder.add(targetPath, torrent.torrentFile)
+                    // need to add after removing torrent to reset file stream to readonly because readwrite
+                    // stream blocks file from accessing by game client
+                    this.add(torrent.torrentFile, targetPath)
                 } catch (e) {
                     logger.warn(`Failed to save torrent for seeding ${torrent.name}`)
                 }
+            }, (error) => {
+                reporter.emit('error', error)
             })
         }).catch((error) => {
             reporter.emit('error', error)
