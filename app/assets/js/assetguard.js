@@ -208,29 +208,48 @@ class AssetGuard extends EventEmitter {
 
         function downloadReq(reqName, url, path, hash) {
             return new Promise((resolve, reject) => {
-                log.info(`Downloading ${reqName}...`)
-                request(url)
-                    .on('response', res => {
-                        if (res.statusCode >= 400) {
-                            reject(`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
-                        }
-                    })
-                    .pipe(fs.createWriteStream(path))
-                    .on('finish', () => {
-                        log.info(`${reqName} download completed`)
-                        let calculatedHash = crypto.createHash('md5')
-                        fs.createReadStream(path)
-                            .on('data', data => calculatedHash.update(data))
-                            .on('end', () => {
-                                calculatedHash = calculatedHash.digest('hex')
-                                if (calculatedHash !== hash) {
-                                    reject(`Wrong Hash! ${calculatedHash} !== ${hash}`)
-                                } else {
-                                    resolve()
-                                }
-                            })
-                    })
-                    .on('error', reject)
+                let corrupted = false
+                if (fs.existsSync(path)) {
+                    let calculatedHash = crypto.createHash('md5')
+                    fs.createReadStream(path)
+                        .on('data', data => calculatedHash.update(data))
+                        .on('end', () => {
+                            calculatedHash = calculatedHash.digest('hex')
+                            if (calculatedHash === hash) {
+                                log.info(`${reqName} executable exist and not corrupted`)
+                                resolve()
+                            } else {
+                                corrupted = true
+                            }
+                        })
+                } else {
+                    corrupted = true
+                }
+                if (corrupted) {
+                    log.info(`Downloading ${reqName}...`)
+                    request(url)
+                        .on('response', res => {
+                            if (res.statusCode >= 400) {
+                                reject(`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
+                            }
+                        })
+                        .pipe(fs.createWriteStream(path))
+                        .on('finish', () => {
+                            log.info(`${reqName} download completed`)
+                            let calculatedHash = crypto.createHash('md5')
+                            fs.createReadStream(path)
+                                .on('data', data => calculatedHash.update(data))
+                                .on('end', () => {
+                                    calculatedHash = calculatedHash.digest('hex')
+                                    if (calculatedHash !== hash) {
+                                        reject(`Wrong Hash! ${calculatedHash} !== ${hash}`)
+                                    } else {
+                                        resolve()
+                                    }
+                                })
+                        })
+                        .on('error', reject)
+                }
             })
         }
 
