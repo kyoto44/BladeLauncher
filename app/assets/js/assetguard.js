@@ -157,25 +157,18 @@ class AssetGuard extends EventEmitter {
         }
 
         async function checkVCPP08() {
-            const Registry = require('winreg')
+            const reg = require('native-reg')
             let regKey
             if (arch() === 'x64') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
-                })
-                log.info('64bit system detected')
+                log.info('x64 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.ALL_ACCESS)
             } else if (arch() === 'x86') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
-                })
-                log.info('32bit system detected')
+                log.info('x32 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.ALL_ACCESS)
             } else {
                 throw 'Unknown architecture'
             }
-            let keyExists = await defer(cb => regKey.keyExists(cb))
-            if (!keyExists) {
+            if (regKey === null) {
                 log.warn('VC++ 2008 x86 Missing!')
                 return true
             }
@@ -183,40 +176,34 @@ class AssetGuard extends EventEmitter {
         }
 
         async function checkVCPP19() {
-            const Registry = require('winreg')
+            const reg = require('native-reg')
             let regKey
             if (arch() === 'x64') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86'
-                })
-                log.info('64bit system detected')
+                log.info('x64 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.ALL_ACCESS)
             } else if (arch() === 'x86') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86'
-                })
-                log.info('32bit system detected')
+                log.info('x32 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.ALL_ACCESS)
             } else {
                 throw 'Unknown architecture'
             }
-            regKey.values((err, items) => {
-                if (err) {
-                    log.error('VC++ 2019 key doesn\'t exist')
-                    return false
-                }
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].name == 'Installed' && items[i].value != 1) {
-                        log.warn('VC++ 2019 x86 Missing!')
-                        return false
-                    }
-                    if (items[i].name == 'Bld' && parseInt(items[i].value, 16) < 29325) {
-                        log.warn('Current VC++ 2019 x86 version is lower than 29325!')
-                        return false
-                    }
-                }
+
+            if (regKey === null) {
+                log.warn('VC++ 2019 key doesn\'t exist')
                 return true
-            })
+            }
+
+            if (reg.getValue(regKey, '', 'Installed') !== 1) {
+                log.warn('VC++ 2019 x86 Missing!')
+                return true
+            }
+
+            if (reg.getValue(regKey, '', 'Bld') < 29325) {
+                log.warn('Current VC++ 2019 x86 version is lower than 29325!')
+                return true
+            }
+
+            return false
         }
 
         function downloadReq(reqName, url, path, hash) {
@@ -505,7 +492,7 @@ class AssetGuard extends EventEmitter {
             const parallelTasks = []
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
                 parallelTasks.push(
-                    DumpsManager.createRules().catch(console.warn),
+                    DumpsManager.createRules('nblade.exe').catch(console.warn),
                     DumpsReporter.report().catch(console.warn),
                     this.validateRequirements()
                 )

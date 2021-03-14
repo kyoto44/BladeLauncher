@@ -35,11 +35,12 @@
     "ejs-electron": "^2.1.1",
     "electron-log": "^4.3.2",
     "electron-updater": "^4.3.8",
-    "fast-xml-parser": "^3.18.0",
+    "fast-xml-parser": "^3.19.0",
     "form-data": "^4.0.0",
     "fs-extra": "^9.1.0",
     "github-syntax-dark": "^0.5.0",
     "jquery": "^3.6.0",
+    "native-reg": "^0.3.4",
     "node-abi": "^2.21.0",
     "request": "^2.88.2",
     "semver": "^7.3.4",
@@ -51,11 +52,11 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "electron": "^12.0.0",
+    "electron": "^12.0.1",
     "electron-builder": "^22.10.5",
     "electron-rebuild": "^2.3.5",
     "electron-reloader": "^1.1.0",
-    "eslint": "^7.21.0"
+    "eslint": "^7.22.0"
   },
   "repository": {
     "type": "git",
