@@ -48,6 +48,7 @@ class TorrentHolder {
             return JSON.parse(data)
         } catch (e) {
             logger.warn('bad blob file, skipping...', e)
+            await fs.promises.writeFile(this.torrentsBlobPath, JSON.stringify({}), 'UTF8')
             return {}
         }
     }
