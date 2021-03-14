@@ -101,6 +101,7 @@ class TorrentsEventsListener {
                 case 'init': {
                     // Load ConfigManager
                     ConfigManager.load()
+                    await ConfigManager.setFingerprint()
                     this._manager = new TorrentManager()
                     this._manager.startAll().then(() => {
                         event.sender.send('torrentsNotification', 'inited')
