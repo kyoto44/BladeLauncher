@@ -137,33 +137,6 @@ class ModifierRule {
     }
 }
 
-
-class WinCompatibilityModeModifierRule extends ModifierRule {
-
-    constructor(mode) {
-        super()
-        this._mode = mode
-    }
-
-    async ensure(path, server) {
-        let regKey = new Registry({
-            hive: Registry.HKCU,
-            key: '\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-        })
-        const akeyExists = util.promisify(regKey.keyExists).bind(regKey)
-        const acreate = util.promisify(regKey.create).bind(regKey)
-        const aset = util.promisify(regKey.set).bind(regKey)
-
-        let keyExists = await akeyExists()
-        if (!keyExists) {
-            await acreate()
-        }
-        let mode = this._mode
-        await aset(path, Registry.REG_SZ, mode)
-    }
-}
-
-
 class DirectoryModifierRule extends ModifierRule {
 
     constructor(mode) {
@@ -302,7 +275,6 @@ module.exports = {
     Asset,
     File,
 
-    WinCompatibilityModeModifierRule,
     DirectoryModifierRule,
     XmlModifierRule,
     EjsModifierRule,

@@ -6,7 +6,6 @@ const request = require('request')
 const ConfigManager = require('./configmanager')
 const {
     File,
-    WinCompatibilityModeModifierRule,
     DirectoryModifierRule,
     XmlModifierRule,
     EjsModifierRule,
@@ -102,12 +101,6 @@ class Modifier {
                     break
                 case 'ejs':
                     rules.push(new EjsModifierRule(path.join(versionStoragePath, rule.src)))
-                    break
-                case 'compat':
-                    if (process.platform === 'win32') {
-                        // TODO: temporary ignore this modifier because it prevents passing of envs
-                        // rules.push(new WinCompatibilityModeModifierRule(rule.mode))
-                    }
                     break
             }
         }
