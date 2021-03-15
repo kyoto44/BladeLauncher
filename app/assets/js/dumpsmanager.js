@@ -1,5 +1,4 @@
 const fs = require('fs-extra')
-const reg = require('native-reg')
 const LoggerUtil = require('./loggerutil')
 const logger = LoggerUtil('%c[DumpsManager]', 'color: #a02d2a; font-weight: bold')
 
@@ -7,6 +6,7 @@ const ConfigManager = require('./configmanager')
 
 exports.createRules = async function (binaryName) {
 
+    const reg = require('native-reg')
     const dumpsDirectory = ConfigManager.getCrashDumpDirectory()
     await fs.promises.mkdir(dumpsDirectory, {recursive: true})
 
