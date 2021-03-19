@@ -7,6 +7,7 @@ const path = require('path')
 const request = require('request')
 const arch = require('arch')
 const log = require('electron-log')
+const dirTree = require('directory-tree')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -130,6 +131,43 @@ class AssetGuard extends EventEmitter {
             const configDirPath = toRemove[id]
             await fs.remove(configDirPath)
         })
+    }
+
+    async validatePaths(version) {
+        const versionPath = path.join(ConfigManager.getInstanceDirectory(), version)
+        const binPath = path.join(versionPath, "bin")
+        const resPath = path.join(versionPath, "res")
+        const packsPath = path.join(versionPath, "packs")
+        const pathsPath = path.join(binPath, "paths.json")
+
+        let pathsJSON = {
+            "paths": [],
+            "exportPath": path.relative(binPath, path.join(ConfigManager.getConfigDirectory(), "temp"))
+        }
+
+        pathsJSON.paths.push(path.relative(binPath, resPath))
+        const zpkList = dirTree(packsPath, {extensions: /\.zpk/}).children
+        for (let i = 0; i < zpkList.length; i++) {
+            if (zpkList[i].path.includes("bw.zpk")) {
+                continue
+            }
+            pathsJSON.paths.push(path.relative(binPath, zpkList[i].path))
+        }
+        pathsJSON.paths.push(path.relative(binPath, path.join(versionPath, "packs", "bw.zpk")))
+
+        try {
+            if (fs.existsSync(pathsPath)) {
+                await fs.promises.readFile(pathsPath).then(data => {
+                    pathsJSON = JSON.parse(data)
+                })
+            } else {
+                await fs.promises.writeFile(pathsPath, JSON.stringify(pathsJSON, null, 2))
+            }
+        } catch (err) {
+            log.error(err, `bad paths.json/no paths.json exist, repairing...`)
+            await fs.promises.writeFile(pathsPath, JSON.stringify(pathsJSON, null, 2))
+        }
+
     }
 
     async syncSettings(type) {
@@ -535,6 +573,8 @@ class AssetGuard extends EventEmitter {
             } catch (err) {
                 console.warn(err)
             }
+
+            await this.validatePaths(versionMeta.id)
             return {
                 versionData: versionMeta,
                 forgeData: {}
