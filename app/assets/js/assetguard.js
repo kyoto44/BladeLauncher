@@ -135,25 +135,25 @@ class AssetGuard extends EventEmitter {
 
     async validatePaths(version) {
         const versionPath = path.join(ConfigManager.getInstanceDirectory(), version)
-        const binPath = path.join(versionPath, "bin")
-        const resPath = path.join(versionPath, "res")
-        const packsPath = path.join(versionPath, "packs")
-        const pathsPath = path.join(binPath, "paths.json")
+        const binPath = path.join(versionPath, 'bin')
+        const resPath = path.join(versionPath, 'res')
+        const packsPath = path.join(versionPath, 'packs')
+        const pathsPath = path.join(binPath, 'paths.json')
 
         let pathsJSON = {
-            "paths": [],
-            "exportPath": path.relative(binPath, path.join(ConfigManager.getConfigDirectory(), "temp"))
+            'paths': [],
+            'exportPath': path.relative(binPath, path.join(ConfigManager.getConfigDirectory(), 'temp'))
         }
 
         pathsJSON.paths.push(path.relative(binPath, resPath))
         const zpkList = dirTree(packsPath, {extensions: /\.zpk/}).children
         for (let i = 0; i < zpkList.length; i++) {
-            if (zpkList[i].path.includes("bw.zpk")) {
+            if (zpkList[i].path.includes('bw.zpk')) {
                 continue
             }
             pathsJSON.paths.push(path.relative(binPath, zpkList[i].path))
         }
-        pathsJSON.paths.push(path.relative(binPath, path.join(versionPath, "packs", "bw.zpk")))
+        pathsJSON.paths.push(path.relative(binPath, path.join(versionPath, 'packs', 'bw.zpk')))
 
         try {
             if (fs.existsSync(pathsPath)) {
@@ -164,7 +164,7 @@ class AssetGuard extends EventEmitter {
                 await fs.promises.writeFile(pathsPath, JSON.stringify(pathsJSON, null, 2))
             }
         } catch (err) {
-            log.error(err, `bad paths.json/no paths.json exist, repairing...`)
+            log.error(err, 'bad paths.json/no paths.json exist, repairing...')
             await fs.promises.writeFile(pathsPath, JSON.stringify(pathsJSON, null, 2))
         }
 
