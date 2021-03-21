@@ -262,7 +262,7 @@ function dlAsync(login = true) {
 
     aEx.on('error', async (err) => {
         loggerLaunchSuite.error('Error during launch', err)
-        await LogsReporter.report().catch(console.warn)
+        await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
         showLaunchFailure('Error During Launch', err.message || 'See console (CTRL + Shift + i) for more details.')
         ipcRenderer.removeListener('torrentsNotification', listener)
     })
@@ -272,7 +272,7 @@ function dlAsync(login = true) {
             return
         }
         loggerLaunchSuite.error(`AssetExec exited with code ${code}, assuming error.`)
-        await LogsReporter.report().catch(console.warn)
+        await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
         showLaunchFailure('Error During Launch', 'See console (CTRL + Shift + i) for more details.')
     })
 
@@ -417,7 +417,7 @@ function dlAsync(login = true) {
             // If these properties are not defined it's likely an error.
             if (m.result.forgeData == null || m.result.versionData == null) {
                 loggerLaunchSuite.error('Error during validation:', m.result.error)
-                await LogsReporter.report().catch(console.warn)
+                await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
                 showLaunchFailure('Error During Launch', 'Please check the console (CTRL + Shift + i) for more details.')
 
                 aEx.disconnect()
@@ -464,7 +464,7 @@ function dlAsync(login = true) {
                     // await TorrentHolder.startSeeding()
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)
-                    await LogsReporter.report().catch(console.warn)
+                    await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
                     showLaunchFailure('Error During Launch', 'Please contact support.')
                 }
             }
