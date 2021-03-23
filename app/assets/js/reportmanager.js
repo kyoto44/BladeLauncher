@@ -7,6 +7,7 @@ const os = require('os')
 const arch = require('arch')
 const si = require('systeminformation')
 const dirTree = require('directory-tree')
+const isDev = require('./isdev')
 
 const DistroManager = require('./distromanager')
 const ConfigManager = require('./configmanager')
@@ -95,6 +96,9 @@ function flatten(tree) {
 
 class DumpsReporter {
     static async report() {
+        if (isDev) {
+            return
+        }
         const dumpsDirectory = ConfigManager.getCrashDumpDirectory()
         const filesList = flatten(dirTree(dumpsDirectory, {extensions: /\.dmp/}))
         return await sendReport(filesList, 'dumps', 'crash', '[crush_dumps]')
@@ -104,6 +108,9 @@ class DumpsReporter {
 
 class LogsReporter {
     static async report(launcherVersion) {
+        if (isDev) {
+            return
+        }
         const launcherDirectory = ConfigManager.getLauncherDirectory()
         const filesList = flatten(dirTree(path.join(launcherDirectory, 'logs'), {extensions: /\.log/}))
         return await sendReport(filesList, 'logs', 'launching', '[error_during_launch]', launcherVersion)
