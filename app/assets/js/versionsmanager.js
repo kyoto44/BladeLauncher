@@ -2,6 +2,7 @@ const async = require('async')
 const fs = require('fs-extra')
 const path = require('path')
 const request = require('request')
+const lodash = require('lodash/object')
 
 const ConfigManager = require('./configmanager')
 const {
@@ -16,7 +17,6 @@ const logger = require('./loggerutil')('%c[VersionManager]', 'color: #a02d2a; fo
 
 /** @type {?Storage} */
 let _STORAGE = null
-
 
 class Storage {
     constructor(storagePath, data) {
@@ -184,13 +184,88 @@ class Version {
         this.manifest = manifest
         this.downloads = downloads
         this.modifiers = modifiers
+        this.fetchTime = fetchTime
+    }
+}
 
+class ClientVersion {
+
+    static fromJSON(json, version) {
+        const type = VersionType.getByValue(json.type)
+        if (!type) {
+            throw new Error('Unsupported version type: ' + type)
+        }
+        const manifest = Manifest.fromJSON(json.manifest)
+
+        const versionStoragePath = path.join(ConfigManager.getInstanceDirectory(), version)
+        const downloads = Downloads.fromJSON(json.downloads, versionStoragePath)
+        const modifiers = ClientVersion._resolveModifiers(json.modifiers, versionStoragePath)
+        return new ClientVersion(version, json.type, json.minimumLauncherVersion, manifest, downloads, modifiers)
+    }
+
+
+    static _resolveModifiers(json, versionStoragePath) {
+        const modifiers = []
+        for (let modifier of json) {
+            modifiers.push(Modifier.fromJSON(modifier, versionStoragePath))
+        }
+        return modifiers
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} type
+     * @param {string} minimumLauncherVersion
+     * @param {Manifest} manifest
+     * @param {Downloads} downloads
+     * @param {Array.<Modifier>} modifiers
+     */
+    constructor(id, type, minimumLauncherVersion, manifest, downloads, modifiers) {
+        this.id = id
+        this.type = type
+        this.minimumLauncherVersion = minimumLauncherVersion
+        this.manifest = manifest
+        this.downloads = downloads
+        this.modifiers = modifiers
+    }
+}
+
+class AssetsVersion {
+
+    static fromJSON(json, version, fetchTime = new Date() ) {
+        const versionStoragePath = path.join(ConfigManager.getInstanceDirectory(), version)
+        const downloads = Downloads.fromJSON(json.downloads, versionStoragePath)
+        const modifiers = AssetsVersion._resolveModifiers(json.modifiers, versionStoragePath)
+        return new AssetsVersion(version, json.type,  downloads, modifiers, fetchTime)
+    }
+
+
+    static _resolveModifiers(json, versionStoragePath) {
+        const modifiers = []
+        for (let modifier of json) {
+            modifiers.push(Modifier.fromJSON(modifier, versionStoragePath))
+        }
+        return modifiers
+    }
+
+    /**
+     * @param {string} id
+     * @param {string} type
+     * @param {Downloads} downloads
+     * @param {Array.<Modifier>} modifiers
+     * @param {Date} fetchTime
+     */
+    constructor(id, downloads, modifiers, fetchTime) {
+        this.id = id
+        this.downloads = downloads
+        this.modifiers = modifiers
         this.fetchTime = fetchTime
     }
 }
 
 exports.Version = Version
-
+exports.ClientVersion = ClientVersion
+exports.AssetsVersion = AssetsVersion
 
 async function loadVersionFile(path) {
     const dataPromise = fs.promises.readFile(path)
@@ -268,7 +343,6 @@ exports.fetch = async function (version, force = false) {
     const authAcc = ConfigManager.getSelectedAccount()
 
     const opts = {
-        url: version.url,
         timeout: 5000,
         auth: {
             'bearer': authAcc.accessToken
@@ -278,9 +352,11 @@ exports.fetch = async function (version, force = false) {
         opts.headers = customHeaders
     }
 
-    return await new Promise((resolve, reject) => {
+    return await new Promise(async(resolve, reject) => {
+        let assetsBody, clientBody, assetsMetadata, clientMetadata
+        opts['url'] = version.url[0]
         request(opts, async (error, resp, body) => {
-            console.info(`Downloading ${version.url}`)
+            console.info(`Downloading ${version.url[0]}`)
             if (error) {
                 reject(error)
                 return
@@ -296,18 +372,45 @@ exports.fetch = async function (version, force = false) {
                 return
             }
 
-            let data = JSON.parse(body)
-            const metadata = Version.fromJSON(data)
-
-            try {
-                await fs.promises.mkdir(versionPath, {recursive: true})
-                await fs.promises.writeFile(versionFile, body, 'utf-8')
-                _STORAGE.put(metadata)
-                resolve(metadata)
-            } catch (e) {
-                reject(e)
-            }
+            assetsBody = JSON.parse(body)
+            assetsMetadata = AssetsVersion.fromJSON(assetsBody, version.id)
         })
+
+        opts['url'] = version.url[1]
+        request(opts, async (error, resp, body) => {
+            console.info(`Downloading ${version.url[1]}`)
+            if (error) {
+                reject(error)
+                return
+            }
+
+            if (resp.statusCode === 304) {
+                resolve(existedVersion)
+                return
+            }
+
+            if (resp.statusCode !== 200) {
+                reject(resp.statusMessage || body || 'Failed to retrive version data')
+                return
+            }
+
+            clientBody = JSON.parse(body)
+            clientMetadata = ClientVersion.fromJSON(clientBody, version.id)
+        })
+        
+        clientBody['id'] = version.id
+        const fullBody = lodash.merge(assetsBody, clientBody)
+        const fullMetadata = lodash.merge(assetsMetadata, clientMetadata)
+
+        try {
+            await fs.promises.mkdir(versionPath, {recursive: true})
+            await fs.promises.writeFile(versionFile, JSON.stringify(fullBody, null, 4), 'utf-8')
+            _STORAGE.put(fullMetadata)
+            resolve(fullMetadata)
+        } catch (e) {
+            reject(e)
+        }
+
     })
 }
 
