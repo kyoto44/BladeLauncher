@@ -74,7 +74,6 @@ function showMainUI() {
     // The relaunch frequency is usually far too high.
     let validated
     if (isDev && false) {
-        validated = Promise.resolve(true)
     } else if(/*!isDev &&*/ isLoggedIn){
         validated = validateSelectedAccount()
     } else {
@@ -98,15 +97,13 @@ function showMainUI() {
         distPromise.then(data => onDistroRefresh(data)).then(() => {
             $('#newsContainer *').attr('tabindex', '-1')
         })
-    
+        
         setTimeout(() => {
             document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
             document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.png')`
             $('#main').show()
     
             if(false && ConfigManager.isFirstLaunch()){
-                currentView = VIEWS.welcome
-                $(VIEWS.welcome).fadeIn(1000)
             } else {
                 if (isLoggedIn && isAccountValid) {
                     currentView = VIEWS.landing
@@ -335,9 +332,10 @@ document.addEventListener('readystatechange', function(){
 }, false)
 
 // Actions that must be performed after the distribution index is downloaded.
-ipcRenderer.on('distributionIndexDone', (event, ready) => {
+ipcRenderer.on('distributionIndexDone', async (event, ready) => {
     if(document.readyState === 'interactive' || document.readyState === 'complete'){
         showMainUI()
+        await ConfigManager.setFingerprint()
     } else {
         rscShouldLoad = true
     }
