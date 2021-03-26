@@ -1,6 +1,5 @@
 const fs = require('fs-extra')
 const path = require('path')
-const Registry = require('winreg')
 const parserxml = require('fast-xml-parser')
 const util = require('util')
 
