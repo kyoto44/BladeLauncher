@@ -8,8 +8,6 @@ const request = require('request')
 const arch = require('arch')
 const log = require('electron-log')
 const dirTree = require('directory-tree')
-const lodash = require('lodash/object')
-const array = require('lodash/array')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')

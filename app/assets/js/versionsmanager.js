@@ -268,7 +268,7 @@ async function loadVersionFile(path, type) {
 }
 
 exports.isInited = function () {
-    return (_APPLICATION_STORAGE !== null || undefined)  && (_ASSETS_STORAGE !== null || undefined ) 
+    return _APPLICATION_STORAGE !== null && _ASSETS_STORAGE !== null
 }
 
 
@@ -283,7 +283,7 @@ function getAssetsPath() {
 
 exports.init = async function () {
 
-    const initStorage = async (storagePath, descriptorType) => {
+    const initStorage = async function (storagePath, descriptorType) {
         const result = {}
         await fs.promises.mkdir(storagePath, {recursive: true})
         const versionDirs = await fs.promises.readdir(storagePath, {withFileTypes: true})
@@ -332,10 +332,10 @@ exports.init = async function () {
  * @param {boolean} force Optional. If true, the version index will be downloaded even if it exists locally. Defaults to false.
  * @returns {Promise.<Version>} Promise which resolves to the version data object.
  */
-exports.fetch = async function (version, force = true) {
+exports.fetch = async function (version, force = false) {
     const [existedApplication, existedAssets]  = [_APPLICATION_STORAGE.get(version.applicationId), _ASSETS_STORAGE.get(version.assetsId)]
     if (existedApplication && existedAssets && !force) {
-        return {existedApplication, existedAssets}
+        return [existedApplication, existedAssets]
     }
     const token = ConfigManager.getSelectedAccount().accessToken
     const customHeaders = {

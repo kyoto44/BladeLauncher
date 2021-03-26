@@ -252,7 +252,6 @@ class PatchFetcher extends Fetcher {
             throw new Error(`Unsupported sub uri protocol: ${subUrl.protocol}.`)
         }
 
-        console.log(baseVersionId)
         const baseVersion = VersionsManager.get(baseVersionId, 'assets')
         if (!baseVersion) {
             throw new Error(`Base version not exists: ${baseVersionId}.`)
