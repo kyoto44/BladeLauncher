@@ -97,7 +97,8 @@ const DEFAULT_CONFIG = {
                 timeout: 10000,
                 uploadLimit: Number.MAX_VALUE,
             },
-            assetDownloadLimit: Number.MAX_VALUE
+            assetDownloadLimit: Number.MAX_VALUE,
+            releaseChannel: 0
         }
     },
     newsCache: {
@@ -264,6 +265,10 @@ exports.getCrashDumpDirectory = function () {
  */
 exports.getInstanceDirectory = function () {
     return path.join(exports.getDataDirectory(), 'instances')
+}
+
+exports.getApplicationDirectory = function () {
+    return path.join(exports.getDataDirectory(), 'applications')
 }
 
 exports.getConfigDirectory = function () {
@@ -691,4 +696,12 @@ exports.setFingerprint = async function () {
         config.fingerprint.push(currentFingerprint)
     }
     exports.save()
+}
+
+exports.getReleaseChannel = function (def = 0) {
+    return !def ? config.settings.launcher.releaseChannel : DEFAULT_CONFIG.settings.launcher.releaseChannel
+}
+
+exports.setReleaseChannel = function (releaseChannel) {
+    config.settings.launcher.releaseChannel = releaseChannel
 }

@@ -8,6 +8,8 @@ const request = require('request')
 const arch = require('arch')
 const log = require('electron-log')
 const dirTree = require('directory-tree')
+const lodash = require('lodash/object')
+const array = require('lodash/array')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -133,11 +135,12 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async validatePaths(version) {
-        const versionPath = path.join(ConfigManager.getInstanceDirectory(), version)
-        const binPath = path.join(versionPath, 'bin')
-        const resPath = path.join(versionPath, 'res')
-        const packsPath = path.join(versionPath, 'packs')
+    async validatePaths(applicationVersion, assetsVersion) {
+        const applicationPath = path.join(ConfigManager.getApplicationDirectory(), applicationVersion.id)
+        const assetsPath = path.join(ConfigManager.getInstanceDirectory(), assetsVersion.id)
+        const binPath = path.join(applicationPath, 'bin')
+        const resPath = path.join(assetsPath, 'res')
+        const packsPath = path.join(assetsPath, 'packs')
         const pathsPath = path.join(binPath, 'paths.json')
 
         let pathsJSON = {
@@ -153,7 +156,7 @@ class AssetGuard extends EventEmitter {
             }
             pathsJSON.paths.push(path.relative(binPath, zpkList[i].path))
         }
-        pathsJSON.paths.push(path.relative(binPath, path.join(versionPath, 'packs', 'bw.zpk')))
+        pathsJSON.paths.push(path.relative(binPath, path.join(assetsPath, 'packs', 'bw.zpk')))
 
         try {
             if (fs.existsSync(pathsPath)) {
@@ -370,35 +373,39 @@ class AssetGuard extends EventEmitter {
      * @param {Object} versionData The version data for the assets.
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
      */
-    async validateVersion(versionData) {
+    async validateVersion(versionMeta) {
         const self = this
-
+        
         const libDlQueue = []
         let dlSize = 0
         let currentid = 0
+        let idsLen = 0
+    
+        for (const meta of versionMeta) {
+            const ids = Object.keys(meta.downloads)
+            idsLen += ids.length
+            await async.eachLimit(ids, 5, async (id) => {
+                const lib = meta.downloads[id]
+                if (!Asset.validateRules(lib.rules, lib.natives)) {
+                    return
+                }
+
+                if (!await lib.validateLocal()) {
+                    dlSize += (lib.size * 1)
+                    libDlQueue.push(lib)
+                }
+
+                currentid++
+                self.emit('progress', 'validating', currentid, idsLen)
+            })
+        }
 
         // Check validity of each library. If the hashs don't match, download the library.
-        const ids = Object.keys(versionData.downloads)
-        await async.eachLimit(ids, 5, async (id) => {
-            const lib = versionData.downloads[id]
-            if (!Asset.validateRules(lib.rules, lib.natives)) {
-                return
-            }
-
-            if (!await lib.validateLocal()) {
-                dlSize += (lib.size * 1)
-                libDlQueue.push(lib)
-            }
-
-            currentid++
-            self.emit('progress', 'validating', currentid, ids.length)
-        })
-
         self.libraries = new DLTracker(libDlQueue, dlSize)
     }
 
-    async validateModifiers(versionData) {
-        this.modifiers = [...versionData.modifiers]
+    async validateModifiers(versionMeta) {
+        this.modifiers = [...versionMeta.modifiers]
     }
 
     async validateConfig() {
@@ -540,9 +547,13 @@ class AssetGuard extends EventEmitter {
                 await VersionManager.init()
             }
 
-            const versionMeta = await VersionManager.fetch(server.getVersions()[0])
+            let applicationMeta, assetsMeta
+            await VersionManager.fetch(server.getVersions()[ConfigManager.getReleaseChannel()]).then(metaList => {
+                applicationMeta = metaList[0]
+                assetsMeta = metaList[1]
+            })
 
-            await this.validateLauncherVersion(versionMeta)
+            await this.validateLauncherVersion(applicationMeta)
 
             const parallelTasks = []
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
@@ -556,16 +567,17 @@ class AssetGuard extends EventEmitter {
             await this._stopAllTorrents()
 
             this.emit('validate', 'version')
-            await this.validateVersion(versionMeta)
+            await this.validateVersion([applicationMeta, assetsMeta])
             this.emit('validate', 'libraries')
-            await this.validateModifiers(versionMeta)
+            await this.validateModifiers(applicationMeta)
             //await this.syncSettings('download')
-            this.torrentsProxy.setMaxListeners(Object.keys(versionMeta.downloads).length)
-            const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), versionMeta, this.torrentsProxy)
+            this.torrentsProxy.setMaxListeners(Object.keys(applicationMeta.downloads).length+Object.keys(assetsMeta.downloads).length)
+            const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), [applicationMeta, assetsMeta], this.torrentsProxy)
             await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server, fetcher)
 
+            await this.validatePaths(applicationMeta, assetsMeta)
             await Promise.all(parallelTasks)
             //this.emit('complete', 'download')
             try {
@@ -574,9 +586,8 @@ class AssetGuard extends EventEmitter {
                 console.warn(err)
             }
 
-            await this.validatePaths(versionMeta.id)
             return {
-                versionData: versionMeta,
+                versionData: applicationMeta,
                 forgeData: {}
             }
 
