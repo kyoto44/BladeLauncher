@@ -397,11 +397,10 @@ class AssetGuard extends EventEmitter {
         const libDlQueue = []
         let dlSize = 0
         let currentid = 0
-        let idsLen = 0
+        let idsLen = Object.keys(versionMeta[0].downloads).length+Object.keys(versionMeta[1].downloads).length
     
         for (const meta of versionMeta) {
             const ids = Object.keys(meta.downloads)
-            idsLen += ids.length
             await async.eachLimit(ids, 5, async (id) => {
                 const lib = meta.downloads[id]
                 if (!Asset.validateRules(lib.rules, lib.natives)) {
