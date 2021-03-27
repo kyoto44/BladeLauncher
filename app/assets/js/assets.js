@@ -238,43 +238,9 @@ class XmlModifierRule extends ModifierRule {
     }
 }
 
-
-class EjsModifierRule extends ModifierRule {
-
-    constructor(src) {
-        super()
-        this._src = src
-    }
-
-    async ensure(filePath, server) {
-        const exists = await fs.pathExists(this._src)
-        if (!exists) {
-            throw new Error('Source does not exists: ' + this._src)
-        }
-
-        const configDir = path.join(ConfigManager.getConfigDirectory(), 'temp')
-        await fs.promises.mkdir(configDir, {recursive: true})
-
-        // TODO: quick hack
-        const dirname = path.dirname(filePath)
-        const relativeConfigDirPath = path.relative(dirname, configDir)
-
-        const ejs = require('ejs')
-        const arenderFile = util.promisify(ejs.renderFile).bind(ejs)
-        const result = await arenderFile(this._src, {
-            server_address: server.getAddress(),
-            config_dir: relativeConfigDirPath
-        })
-
-        await fs.promises.writeFile(filePath, result, 'ascii')
-    }
-}
-
 module.exports = {
     Asset,
     File,
-
     DirectoryModifierRule,
     XmlModifierRule,
-    EjsModifierRule,
 }

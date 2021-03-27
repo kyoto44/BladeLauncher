@@ -8,7 +8,6 @@ const {
     File,
     DirectoryModifierRule,
     XmlModifierRule,
-    EjsModifierRule,
 } = require('./assets')
 const {Util} = require('./helpers')
 
@@ -99,9 +98,6 @@ class Modifier {
                     break
                 case 'dir':
                     rules.push(new DirectoryModifierRule(rule.ensure))
-                    break
-                case 'ejs':
-                    rules.push(new EjsModifierRule(path.join(versionStoragePath, rule.src)))
                     break
             }
         }

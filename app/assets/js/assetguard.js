@@ -8,6 +8,7 @@ const request = require('request')
 const arch = require('arch')
 const log = require('electron-log')
 const dirTree = require('directory-tree')
+const xml = require('fast-xml-parser')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -139,8 +140,17 @@ class AssetGuard extends EventEmitter {
         const binPath = path.join(applicationPath, 'bin')
         const resPath = path.join(assetsPath, 'res')
         const packsPath = path.join(assetsPath, 'packs')
-        const pathsPath = path.join(binPath, 'paths.json')
+        const pathsJsonPath = path.join(binPath, 'paths.json')
+        const pathsXmlPath = path.join(binPath, 'paths.xml')
 
+        const pathsXML = {
+            'root': {
+                'Paths': {
+                    'Path': []
+                }
+            }
+        }
+        
         let pathsJSON = {
             'paths': [],
             'exportPath': path.relative(binPath, path.join(ConfigManager.getConfigDirectory(), 'temp'))
@@ -156,17 +166,27 @@ class AssetGuard extends EventEmitter {
         }
         pathsJSON.paths.push(path.relative(binPath, path.join(assetsPath, 'packs', 'bw.zpk')))
 
+        pathsXML.root.Paths.Path.push(...pathsJSON.paths)
+        pathsXML.root.Paths.Path.push(pathsJSON.exportPath)
+        
         try {
-            if (fs.existsSync(pathsPath)) {
-                await fs.promises.readFile(pathsPath).then(data => {
+            if (fs.existsSync(pathsJsonPath) && fs.existsSync(pathsXmlPath)) {
+                await fs.promises.readFile(pathsJsonPath).then(data => {
                     pathsJSON = JSON.parse(data)
                 })
+
+                const data = await fs.promises.readFile(pathsXmlPath, 'ascii')
+                if (xml.validate(data) !== true) {
+                    throw new Error('bad paths.xml file!')
+                }
             } else {
-                await fs.promises.writeFile(pathsPath, JSON.stringify(pathsJSON, null, 2))
+                await fs.promises.writeFile(pathsJsonPath, JSON.stringify(pathsJSON, null, 2))
+                await fs.promises.writeFile(pathsXmlPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
             }
         } catch (err) {
-            log.error(err, 'bad paths.json/no paths.json exist, repairing...')
-            await fs.promises.writeFile(pathsPath, JSON.stringify(pathsJSON, null, 2))
+            log.error(err, 'bad paths file/no paths file exist, repairing...')
+            await fs.promises.writeFile(pathsJsonPath, JSON.stringify(pathsJSON, null, 2))
+            await fs.promises.writeFile(pathsXmlPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
         }
 
     }
