@@ -5,7 +5,6 @@ const arch = require('arch')
 const child_process = require('child_process')
 const path = require('path')
 const ThrottleGroup = require('stream-throttle').ThrottleGroup
-const lodash = require('lodash/object')
 
 const isDev = require('./isdev')
 const {File} = require('./assets')
@@ -252,7 +251,7 @@ class PatchFetcher extends Fetcher {
             throw new Error(`Unsupported sub uri protocol: ${subUrl.protocol}.`)
         }
 
-        const baseVersion = VersionsManager.get(baseVersionId, 'assets')
+        const baseVersion = VersionsManager.get(baseVersionId)
         if (!baseVersion) {
             throw new Error(`Base version not exists: ${baseVersionId}.`)
         }
@@ -446,40 +445,35 @@ function _compareArtifactInfo(a, b) {
 function analyzePreviousVersionAssets(targetVersionMeta) {
     const versions = VersionsManager.versions()
 
-    let i = 0 
-    const resultArr = []
-    for (let descriptorType of versions) {
-        const modules = targetVersionMeta[i].downloads
-        const ids = Object.keys(modules)
-        const result = {}
-        for (let version of descriptorType) {
-            if (version.id === targetVersionMeta[i].id) {
-                continue
-            }
+    const modules = targetVersionMeta[1].downloads
+    const ids = Object.keys(modules)
 
-            const previousModules = version.downloads
-            for (let id of ids) {
-                const targetModule = modules[id]
-                const previousModule = previousModules[id]
-                if (!previousModule)
-                    continue
-                if (typeof previousModule === typeof targetModule)
-                    continue
-
-                if (_compareArtifactInfo(targetModule, previousModule)) {
-                    let versions = result[id] || []
-                    versions.push(previousModule)
-                    result[id] = versions
-                }
-            }
-            i++
+    /** @type {Object.<string, Array.<Asset>>} */
+    const result = {}
+    for (let version of versions) {
+        if (version.id === targetVersionMeta[1].id) {
+            continue
         }
-        resultArr.push(result)
-    }
-    
-    return lodash.merge(resultArr[0], resultArr[1])
-}
 
+        const previousModules = version.downloads
+        for (let id of ids) {
+            const targetModule = modules[id]
+            const previousModule = previousModules[id]
+            if (!previousModule)
+                continue
+            if (typeof previousModule === typeof targetModule)
+                continue
+
+            if (_compareArtifactInfo(targetModule, previousModule)) {
+                let versions = result[id] || []
+                versions.push(previousModule)
+                result[id] = versions
+            }
+        }
+    }
+
+    return result
+}
 
 /**
  * @param account

@@ -134,7 +134,7 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async validatePaths(applicationVersion, assetsVersion) {
+    async generatePaths(applicationVersion, assetsVersion) {
         const applicationPath = path.join(ConfigManager.getApplicationDirectory(), applicationVersion.id)
         const assetsPath = path.join(ConfigManager.getInstanceDirectory(), assetsVersion.id)
         const binPath = path.join(applicationPath, 'bin')
@@ -150,8 +150,8 @@ class AssetGuard extends EventEmitter {
                 }
             }
         }
-        
-        let pathsJSON = {
+
+        const pathsJSON = {
             'paths': [],
             'exportPath': path.relative(binPath, path.join(ConfigManager.getConfigDirectory(), 'temp'))
         }
@@ -168,26 +168,11 @@ class AssetGuard extends EventEmitter {
 
         pathsXML.root.Paths.Path.push(...pathsJSON.paths)
         pathsXML.root.Paths.Path.push(pathsJSON.exportPath)
-        
-        try {
-            if (fs.existsSync(pathsJsonPath) && fs.existsSync(pathsXmlPath)) {
-                await fs.promises.readFile(pathsJsonPath).then(data => {
-                    pathsJSON = JSON.parse(data)
-                })
 
-                const data = await fs.promises.readFile(pathsXmlPath, 'ascii')
-                if (xml.validate(data) !== true) {
-                    throw new Error('bad paths.xml file!')
-                }
-            } else {
-                await fs.promises.writeFile(pathsJsonPath, JSON.stringify(pathsJSON, null, 2))
-                await fs.promises.writeFile(pathsXmlPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
-            }
-        } catch (err) {
-            log.error(err, 'bad paths file/no paths file exist, repairing...')
-            await fs.promises.writeFile(pathsJsonPath, JSON.stringify(pathsJSON, null, 2))
-            await fs.promises.writeFile(pathsXmlPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
-        }
+        await Promise.all([
+            fs.promises.writeFile(pathsJsonPath, JSON.stringify(pathsJSON, null, 2)),
+            fs.promises.writeFile(pathsXmlPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
+        ])
 
     }
 
@@ -393,12 +378,12 @@ class AssetGuard extends EventEmitter {
      */
     async validateVersion(versionMeta) {
         const self = this
-        
+
         const libDlQueue = []
         let dlSize = 0
         let currentid = 0
-        let idsLen = Object.keys(versionMeta[0].downloads).length+Object.keys(versionMeta[1].downloads).length
-    
+        const idsLen = Object.keys(versionMeta[0].downloads).length + Object.keys(versionMeta[1].downloads).length
+
         for (const meta of versionMeta) {
             const ids = Object.keys(meta.downloads)
             await async.eachLimit(ids, 5, async (id) => {
@@ -564,11 +549,7 @@ class AssetGuard extends EventEmitter {
                 await VersionManager.init()
             }
 
-            let applicationMeta, assetsMeta
-            await VersionManager.fetch(server.getVersions()[ConfigManager.getReleaseChannel()]).then(metaList => {
-                applicationMeta = metaList[0]
-                assetsMeta = metaList[1]
-            })
+            let [applicationMeta, assetsMeta] = await VersionManager.fetch(server.getVersions()[ConfigManager.getReleaseChannel()])
 
             await this.validateLauncherVersion(applicationMeta)
 
@@ -588,13 +569,13 @@ class AssetGuard extends EventEmitter {
             this.emit('validate', 'libraries')
             await this.validateModifiers(applicationMeta)
             //await this.syncSettings('download')
-            this.torrentsProxy.setMaxListeners(Object.keys(applicationMeta.downloads).length+Object.keys(assetsMeta.downloads).length)
+            this.torrentsProxy.setMaxListeners(Object.keys(applicationMeta.downloads).length + Object.keys(assetsMeta.downloads).length)
             const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), [applicationMeta, assetsMeta], this.torrentsProxy)
             await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server, fetcher)
 
-            await this.validatePaths(applicationMeta, assetsMeta)
+            await this.generatePaths(applicationMeta, assetsMeta)
             await Promise.all(parallelTasks)
             //this.emit('complete', 'download')
             try {
