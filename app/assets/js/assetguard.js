@@ -9,6 +9,7 @@ const arch = require('arch')
 const log = require('electron-log')
 const dirTree = require('directory-tree')
 const xml = require('fast-xml-parser')
+const _ = require('lodash')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -134,22 +135,12 @@ class AssetGuard extends EventEmitter {
         })
     }
 
-    async generatePaths(applicationVersion, assetsVersion) {
+    async generatePaths(applicationVersion, assetsVersion, fileType) {
         const applicationPath = path.join(ConfigManager.getApplicationDirectory(), applicationVersion.id)
         const assetsPath = path.join(ConfigManager.getInstanceDirectory(), assetsVersion.id)
         const binPath = path.join(applicationPath, 'bin')
         const resPath = path.join(assetsPath, 'res')
         const packsPath = path.join(assetsPath, 'packs')
-        const pathsJsonPath = path.join(binPath, 'paths.json')
-        const pathsXmlPath = path.join(binPath, 'paths.xml')
-
-        const pathsXML = {
-            'root': {
-                'Paths': {
-                    'Path': []
-                }
-            }
-        }
 
         const pathsJSON = {
             'paths': [],
@@ -166,14 +157,30 @@ class AssetGuard extends EventEmitter {
         }
         pathsJSON.paths.push(path.relative(binPath, path.join(assetsPath, 'packs', 'bw.zpk')))
 
-        pathsXML.root.Paths.Path.push(...pathsJSON.paths)
-        pathsXML.root.Paths.Path.push(pathsJSON.exportPath)
+        switch (fileType) {
+            case 'json': {
+                const pathsJSONPath = path.join(binPath, 'paths.json')
+                await fs.promises.writeFile(pathsJSONPath, JSON.stringify(pathsJSON, null, 2))
+            }
+                break
+            case 'xml': {
+                const pathsXMLPath = path.join(binPath, 'paths.xml')
+                const pathsXML = {
+                    'root': {
+                        'Paths': {
+                            'Path': []
+                        }
+                    }
+                }
 
-        await Promise.all([
-            fs.promises.writeFile(pathsJsonPath, JSON.stringify(pathsJSON, null, 2)),
-            fs.promises.writeFile(pathsXmlPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
-        ])
-
+                pathsXML.root.Paths.Path.push(...pathsJSON.paths)
+                pathsXML.root.Paths.Path.push(pathsJSON.exportPath)
+                await fs.promises.writeFile(pathsXMLPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
+            }
+                break
+            default:
+                throw 'Wrong type of file'
+        }
     }
 
     async syncSettings(type) {
@@ -382,7 +389,7 @@ class AssetGuard extends EventEmitter {
         const libDlQueue = []
         let dlSize = 0
         let currentid = 0
-        const idsLen = Object.keys(versionMeta[0].downloads).length + Object.keys(versionMeta[1].downloads).length
+        const idsLen = _(versionMeta).map('downloads').map(_.size).sum(_.values)
 
         for (const meta of versionMeta) {
             const ids = Object.keys(meta.downloads)
@@ -569,13 +576,14 @@ class AssetGuard extends EventEmitter {
             this.emit('validate', 'libraries')
             await this.validateModifiers(applicationMeta)
             //await this.syncSettings('download')
-            this.torrentsProxy.setMaxListeners(Object.keys(applicationMeta.downloads).length + Object.keys(assetsMeta.downloads).length)
+            this.torrentsProxy.setMaxListeners(_([applicationMeta, assetsMeta]).map('downloads').map(_.size).sum(_.values))
             const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), [applicationMeta, assetsMeta], this.torrentsProxy)
             await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server, fetcher)
 
-            await this.generatePaths(applicationMeta, assetsMeta)
+            await this.generatePaths(applicationMeta, assetsMeta, 'json')
+            await this.generatePaths(applicationMeta, assetsMeta, 'xml')
             await Promise.all(parallelTasks)
             //this.emit('complete', 'download')
             try {

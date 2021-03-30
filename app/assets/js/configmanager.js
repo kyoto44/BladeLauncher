@@ -699,7 +699,6 @@ exports.setFingerprint = async function () {
 }
 
 exports.getReleaseChannel = function (def = false) {
-    console.log(config.settings.launcher.releaseChannel)
     if (!def && config.settings.launcher.releaseChannel === 'release' || def) {
         return 0
     }

@@ -445,13 +445,13 @@ function _compareArtifactInfo(a, b) {
 function analyzePreviousVersionAssets(targetVersionMeta) {
     const versions = VersionsManager.versions()
 
-    const modules = targetVersionMeta[1].downloads
+    const modules = targetVersionMeta.downloads
     const ids = Object.keys(modules)
 
     /** @type {Object.<string, Array.<Asset>>} */
     const result = {}
     for (let version of versions) {
-        if (version.id === targetVersionMeta[1].id) {
+        if (version.id === targetVersionMeta.id) {
             continue
         }
 
@@ -481,6 +481,6 @@ function analyzePreviousVersionAssets(targetVersionMeta) {
  * @returns {Facade}
  */
 exports.init = async function (account, targetVersionMeta, torrentsProxy) {
-    const reusableModules = analyzePreviousVersionAssets(targetVersionMeta)
+    const reusableModules = analyzePreviousVersionAssets(targetVersionMeta[1])
     return new Facade(account, reusableModules, torrentsProxy)
 }

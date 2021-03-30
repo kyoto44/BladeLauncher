@@ -315,7 +315,7 @@ exports.Module
 
 exports.VersionType = {
     RELEASE: 'release',
-    SNAPSHOT: 'snapshot'
+    TESTING: 'testing'
 }
 
 class Version {

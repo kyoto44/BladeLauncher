@@ -176,13 +176,9 @@ class Application extends ArtifactsHolder {
      */
     constructor(id, type, minimumLauncherVersion, manifest, downloads, modifiers, fetchTime) {
         super(id, downloads, modifiers, fetchTime)
-        this.id = id
         this.type = type
         this.minimumLauncherVersion = minimumLauncherVersion
         this.manifest = manifest
-        this.downloads = downloads
-        this.modifiers = modifiers
-        this.fetchTime = fetchTime
     }
 
     static fromJSON(json, fetchTime = new Date()) {
@@ -208,10 +204,6 @@ class Assets extends ArtifactsHolder {
          */
     constructor(id, downloads, modifiers, fetchTime) {
         super(id, downloads, modifiers, fetchTime)
-        this.id = id
-        this.downloads = downloads
-        this.modifiers = modifiers
-        this.fetchTime = fetchTime
     }
 
     static fromJSON(json, fetchTime = new Date()) {
@@ -269,7 +261,12 @@ exports.init = async function () {
                 return
             }
 
-            const version = await loadVersionFile(versionFilePath, descriptorParser)
+            let version
+            try {
+                version = await loadVersionFile(versionFilePath, descriptorParser)
+            } catch (err) {
+                logger.err(err)
+            }
             result[version.id] = version
         })
 
@@ -293,13 +290,10 @@ exports.init = async function () {
  * @returns {Promise.<Version>} Promise which resolves to the version data object.
  */
 exports.fetch = async function (version, force = false) {
+
     const existedApplication = _APPLICATION_STORAGE.get(version.applicationId)
     const existedAssets = _ASSETS_STORAGE.get(version.assetsId)
-    if (existedApplication && existedAssets && !force) {
-        return [existedApplication, existedAssets]
-    }
     const token = ConfigManager.getSelectedAccount().accessToken
-
     const getMeta = (existedDescriptor, descriptorParser, url, token, writePath) => {
         return new Promise((resolve, reject) => {
             const customHeaders = {
@@ -348,14 +342,20 @@ exports.fetch = async function (version, force = false) {
         })
     }
 
+    let promises = []
+    if (existedApplication && !force) {
+        promises.push(Promise.resolve(existedApplication))
+    } else {
+        promises.push(getMeta(existedApplication, Application.fromJSON, version.url[0], token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
+    }
 
-    let [applicationMetadata, assetsMetadata] = await Promise.all([
-        getMeta(existedApplication, Application.fromJSON, version.url[0], token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}),
-        getMeta(existedAssets, Assets.fromJSON, version.url[1], token, getAssetsPath()).then(m => {_ASSETS_STORAGE.put(m); return m})
-    ])
+    if (existedAssets && !force) {
+        promises.push(Promise.resolve(existedAssets))
+    } else {
+        promises.push(getMeta(existedAssets, Assets.fromJSON, version.url[1], token, getAssetsPath()).then(m => {_ASSETS_STORAGE.put(m); return m}))
+    }
 
-
-    return [applicationMetadata, assetsMetadata]
+    return await Promise.all(promises)
 }
 
 /**
