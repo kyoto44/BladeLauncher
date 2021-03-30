@@ -3,12 +3,12 @@
  * Loaded after core UI functions are initialized in uicore.js.
  */
 // Requirements
-const path          = require('path')
+const path = require('path')
 
-const AuthManager   = require('./assets/js/authmanager')
+const AuthManager = require('./assets/js/authmanager')
 const ConfigManager = require('./assets/js/configmanager')
 const DistroManager = require('./assets/js/distromanager')
-const Lang          = require('./assets/js/langloader')
+const Lang = require('./assets/js/langloader')
 
 let rscShouldLoad = false
 let fatalStartupError = false
@@ -36,7 +36,7 @@ let currentView
  * @param {*} onNextFade Optional. Callback function to execute when the next view
  * fades in.
  */
-function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, onCurrentFade = () => {}, onNextFade = () => {}){
+function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, onCurrentFade = () => { }, onNextFade = () => { }) {
     currentView = next
     $(`${current}`).fadeOut(currentFadeTime, () => {
         onCurrentFade()
@@ -51,15 +51,15 @@ function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, on
  * 
  * @returns {string} The currently shown view container.
  */
-function getCurrentView(){
+function getCurrentView() {
     return currentView
 }
 
 function showMainUI() {
-    
+
     // Load ConfigManager
     ConfigManager.load()
-
+    fingerprint = ConfigManager.setFingerprint()
     if (!isDev) {
         loggerAutoUpdater.log('Initializing..')
         ipcRenderer.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
@@ -73,8 +73,9 @@ function showMainUI() {
     // If this is enabled in a development environment we'll get ratelimited.
     // The relaunch frequency is usually far too high.
     let validated
-    if (isDev && false) {
-    } else if(/*!isDev &&*/ isLoggedIn){
+    if (isDev) {
+        validated = Promise.resolve(true)
+    } else if (/*!isDev &&*/ isLoggedIn) {
         validated = validateSelectedAccount()
     } else {
         validated = Promise.resolve(false)
@@ -97,37 +98,35 @@ function showMainUI() {
         distPromise.then(data => onDistroRefresh(data)).then(() => {
             $('#newsContainer *').attr('tabindex', '-1')
         })
-        
+
         setTimeout(() => {
             document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
             document.body.style.backgroundImage = `url('assets/images/backgrounds/${document.body.getAttribute('bkid')}.png')`
             $('#main').show()
-    
-            if(false && ConfigManager.isFirstLaunch()){
+
+            if (isLoggedIn && isAccountValid) {
+                currentView = VIEWS.landing
+                $(VIEWS.landing).fadeIn(1000)
             } else {
-                if (isLoggedIn && isAccountValid) {
-                    currentView = VIEWS.landing
-                    $(VIEWS.landing).fadeIn(1000)
-                } else {
-                    currentView = VIEWS.login
-                    $(VIEWS.login).fadeIn(1000)
-                }
+                currentView = VIEWS.login
+                $(VIEWS.login).fadeIn(1000)
             }
 
             ipcRenderer.send('torrents', 'init')
-    
-            setTimeout(() => {
+
+            setTimeout(async () => {
+                await fingerprint
                 $('#loadingContainer').fadeOut(500, () => {
                     $('#loadSpinnerImage').removeClass('rotating')
                 })
             }, 250)
-            
+
         }, 750)
 
     })
 }
 
-function showFatalStartupError(){
+function showFatalStartupError() {
     setTimeout(() => {
         $('#loadingContainer').fadeOut(250, () => {
             document.getElementById('overlayContainer').style.background = 'none'
@@ -150,10 +149,10 @@ function showFatalStartupError(){
  * 
  * @param {Object} data The distro index object.
  */
-function onDistroRefresh(data){
+function onDistroRefresh(data) {
     const selected = ConfigManager.getSelectedServer()
     // Resolve the selected server if its value has yet to be set.
-    if(selected == null || data.getServer(selected) == null){
+    if (selected == null || data.getServer(selected) == null) {
         ConfigManager.setSelectedServer(data.getMainServer().getID())
         ConfigManager.save()
     }
@@ -170,21 +169,21 @@ function onDistroRefresh(data){
  * 
  * @returns {boolean | Object} The resolved mod configuration.
  */
-function scanOptionalSubModules(mdls, origin){
-    if(mdls != null){
+function scanOptionalSubModules(mdls, origin) {
+    if (mdls != null) {
         const mods = {}
 
-        for(let mdl of mdls){
+        for (let mdl of mdls) {
             const type = mdl.getType()
             // Optional types.
-            if(type === DistroManager.Types.ForgeMod || type === DistroManager.Types.LiteMod || type === DistroManager.Types.LiteLoader){
+            if (type === DistroManager.Types.ForgeMod || type === DistroManager.Types.LiteMod || type === DistroManager.Types.LiteLoader) {
                 // It is optional.
-                if(!mdl.getRequired().isRequired()){
+                if (!mdl.getRequired().isRequired()) {
                     mods[mdl.getVersionlessID()] = scanOptionalSubModules(mdl.getSubModules(), mdl)
                 } else {
-                    if(mdl.hasSubModules()){
+                    if (mdl.hasSubModules()) {
                         const v = scanOptionalSubModules(mdl.getSubModules(), mdl)
-                        if(typeof v === 'object'){
+                        if (typeof v === 'object') {
                             mods[mdl.getVersionlessID()] = v
                         }
                     }
@@ -192,11 +191,11 @@ function scanOptionalSubModules(mdls, origin){
             }
         }
 
-        if(Object.keys(mods).length > 0){
+        if (Object.keys(mods).length > 0) {
             const ret = {
                 mods
             }
-            if(!origin.getRequired().isRequired()){
+            if (!origin.getRequired().isRequired()) {
                 ret.value = origin.getRequired().isDefault()
             }
             return ret
@@ -214,27 +213,27 @@ function scanOptionalSubModules(mdls, origin){
  * 
  * @returns {boolean | Object} The merged configuration.
  */
-function mergeModConfiguration(o, n, nReq = false){
-    if(typeof o === 'boolean'){
-        if(typeof n === 'boolean') return o
-        else if(typeof n === 'object'){
-            if(!nReq){
+function mergeModConfiguration(o, n, nReq = false) {
+    if (typeof o === 'boolean') {
+        if (typeof n === 'boolean') return o
+        else if (typeof n === 'object') {
+            if (!nReq) {
                 n.value = o
             }
             return n
         }
-    } else if(typeof o === 'object'){
-        if(typeof n === 'boolean') return typeof o.value !== 'undefined' ? o.value : true
-        else if(typeof n === 'object'){
-            if(!nReq){
+    } else if (typeof o === 'object') {
+        if (typeof n === 'boolean') return typeof o.value !== 'undefined' ? o.value : true
+        else if (typeof n === 'object') {
+            if (!nReq) {
                 n.value = typeof o.value !== 'undefined' ? o.value : true
             }
 
             const newMods = Object.keys(n.mods)
-            for(let i=0; i<newMods.length; i++){
+            for (let i = 0; i < newMods.length; i++) {
 
                 const mod = newMods[i]
-                if(o.mods[mod] != null){
+                if (o.mods[mod] != null) {
                     n.mods[mod] = mergeModConfiguration(o.mods[mod], n.mods[mod])
                 }
             }
@@ -247,7 +246,7 @@ function mergeModConfiguration(o, n, nReq = false){
     return n
 }
 
-async function validateSelectedAccount(){
+async function validateSelectedAccount() {
     const selectedAcc = ConfigManager.getSelectedAccount()
     if (selectedAcc == null) {
         return true
@@ -274,7 +273,7 @@ async function validateSelectedAccount(){
         validateEmail(selectedAcc.username)
         loginViewOnSuccess = getCurrentView()
         loginViewOnCancel = getCurrentView()
-        if(accLen > 0){
+        if (accLen > 0) {
             loginViewCancelHandler = () => {
                 ConfigManager.addAuthAccount(selectedAcc.uuid, selectedAcc.accessToken, selectedAcc.username, selectedAcc.displayName)
                 ConfigManager.save()
@@ -286,7 +285,7 @@ async function validateSelectedAccount(){
         switchView(getCurrentView(), VIEWS.login)
     })
     setDismissHandler(() => {
-        if(accLen > 1){
+        if (accLen > 1) {
             prepareAccountSelectionList()
             $('#overlayContent').fadeOut(250, () => {
                 bindOverlayKeys(true, 'accountSelectContent', true)
@@ -310,7 +309,7 @@ async function validateSelectedAccount(){
  * 
  * @param {string} uuid The UUID of the account.
  */
-function setSelectedAccount(uuid){
+function setSelectedAccount(uuid) {
     const authAcc = ConfigManager.setSelectedAccount(uuid)
     ConfigManager.save()
     updateSelectedAccount(authAcc)
@@ -318,24 +317,23 @@ function setSelectedAccount(uuid){
 }
 
 // Synchronous Listener
-document.addEventListener('readystatechange', function(){
-    if (document.readyState === 'interactive' || document.readyState === 'complete'){
-        if(rscShouldLoad){
+document.addEventListener('readystatechange', function () {
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+        if (rscShouldLoad) {
             rscShouldLoad = false
-            if(!fatalStartupError){
+            if (!fatalStartupError) {
                 showMainUI()
             } else {
                 showFatalStartupError()
             }
-        } 
+        }
     }
 }, false)
 
 // Actions that must be performed after the distribution index is downloaded.
 ipcRenderer.on('distributionIndexDone', async (event, ready) => {
-    if(document.readyState === 'interactive' || document.readyState === 'complete'){
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
         showMainUI()
-        await ConfigManager.setFingerprint()
     } else {
         rscShouldLoad = true
     }
