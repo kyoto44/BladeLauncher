@@ -325,10 +325,11 @@ class Version {
      * @param {string} type
      * @param {string} url
      */
-    constructor(id, type, url) {
+    constructor(id, type, url, applications) {
         this.id = id
         this.type = type // TODO: check type
         this.url = url
+        this.applications = applications
     }
 }
 
@@ -368,7 +369,7 @@ class Server {
     static _resolveVersions(json) {
         const result = []
         for (const d of json) {
-            const v = new Version(d.id, d.type, d.url)
+            const v = new Version(d.id, d.type, d.url, d.applications)
             result.push(v)
         }
         return result

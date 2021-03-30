@@ -261,13 +261,11 @@ exports.init = async function () {
                 return
             }
 
-            let version
             try {
-                version = await loadVersionFile(versionFilePath, descriptorParser)
+                result.push(await loadVersionFile(versionFilePath, descriptorParser))
             } catch (err) {
-                logger.err(err)
+                logger.error(err)
             }
-            result[version.id] = version
         })
 
         return result
@@ -291,8 +289,7 @@ exports.init = async function () {
  */
 exports.fetch = async function (version, force = false) {
 
-    const existedApplication = _APPLICATION_STORAGE.get(version.applicationId)
-    const existedAssets = _ASSETS_STORAGE.get(version.assetsId)
+
     const token = ConfigManager.getSelectedAccount().accessToken
     const getMeta = (existedDescriptor, descriptorParser, url, token, writePath) => {
         return new Promise((resolve, reject) => {
@@ -343,16 +340,18 @@ exports.fetch = async function (version, force = false) {
     }
 
     let promises = []
+    const existedApplication = _APPLICATION_STORAGE.get(version.applications[0].id)
     if (existedApplication && !force) {
         promises.push(Promise.resolve(existedApplication))
     } else {
-        promises.push(getMeta(existedApplication, Application.fromJSON, version.url[0], token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
+        promises.push(getMeta(existedApplication, Application.fromJSON, version.applications[0].url, token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
     }
 
+    const existedAssets = _ASSETS_STORAGE.get(version.id)
     if (existedAssets && !force) {
         promises.push(Promise.resolve(existedAssets))
     } else {
-        promises.push(getMeta(existedAssets, Assets.fromJSON, version.url[1], token, getAssetsPath()).then(m => {_ASSETS_STORAGE.put(m); return m}))
+        promises.push(getMeta(existedAssets, Assets.fromJSON, version.url, token, getAssetsPath()).then(m => {_ASSETS_STORAGE.put(m); return m}))
     }
 
     return await Promise.all(promises)
