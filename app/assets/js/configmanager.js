@@ -98,7 +98,7 @@ const DEFAULT_CONFIG = {
                 uploadLimit: Number.MAX_VALUE,
             },
             assetDownloadLimit: Number.MAX_VALUE,
-            releaseChannel: 0
+            releaseChannel: 'release'
         }
     },
     newsCache: {
@@ -698,10 +698,19 @@ exports.setFingerprint = async function () {
     exports.save()
 }
 
-exports.getReleaseChannel = function (def = 0) {
-    return !def ? config.settings.launcher.releaseChannel : DEFAULT_CONFIG.settings.launcher.releaseChannel
+exports.getReleaseChannel = function (def = false) {
+    console.log(config.settings.launcher.releaseChannel)
+    if (!def && config.settings.launcher.releaseChannel === 'release' || def) {
+        return 0
+    }
+    return 1
+
 }
 
-exports.setReleaseChannel = function (releaseChannel) {
-    config.settings.launcher.releaseChannel = releaseChannel
+exports.switchReleaseChannel = function () {
+    if (config.settings.launcher.releaseChannel === 'release') {
+        config.settings.launcher.releaseChannel = 'testing'
+    } else {
+        config.settings.launcher.releaseChannel = 'release'
+    }
 }
