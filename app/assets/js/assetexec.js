@@ -1,6 +1,6 @@
 let target = require('./assetguard')[process.argv[2]]
 if (target == null) {
-    process.send({ context: 'error', data: null, error: 'Invalid class name' })
+    process.send({context: 'error', data: null, error: 'Invalid class name'})
     console.error('Invalid class name passed to argv[2], cannot continue.')
     process.exit(1)
 }
@@ -15,22 +15,26 @@ console.log('AssetExec Started')
 process.on('unhandledRejection', r => console.log(r))
 
 let percent = 0
+
 function assignListeners() {
     tracker.on('validate', (data) => {
-        process.send({ context: 'validate', data })
+        process.send({context: 'validate', data})
     })
     tracker.on('progress', (data, acc, total) => {
         const currPercent = parseInt((acc / total) * 100)
         if (currPercent !== percent) {
             percent = currPercent
-            process.send({ context: 'progress', data, value: acc, total, percent })
+            process.send({context: 'progress', data, value: acc, total, percent})
         }
     })
     tracker.on('complete', (data, ...args) => {
-        process.send({ context: 'complete', data, args })
+        process.send({context: 'complete', data, args})
+    })
+    tracker.on('torrents', (args) => {
+        process.send({context: 'torrents', args})
     })
     tracker.on('error', (data, error) => {
-        process.send({ context: 'error', data, error })
+        process.send({context: 'error', data, error})
     })
 }
 
@@ -46,20 +50,20 @@ process.on('message', (msg) => {
             const res = f.apply(f === nS ? tracker : null, msg.argsArr)
             if (res instanceof Promise) {
                 res.then((v) => {
-                    process.send({ result: v, context: func })
+                    process.send({result: v, context: func})
                 }).catch((err) => {
-                    process.send({ result: err.message || err, context: func })
+                    process.send({result: err.message || err, context: func})
                 })
             } else {
-                process.send({ result: res, context: func })
+                process.send({result: res, context: func})
             }
         } else {
-            process.send({ context: 'error', data: null, error: `Function ${func} not found on ${process.argv[2]}` })
+            process.send({context: 'error', data: null, error: `Function ${func} not found on ${process.argv[2]}`})
         }
     } else if (msg.task === 'changeContext') {
         target = require('./assetguard')[msg.class]
         if (target == null) {
-            process.send({ context: 'error', data: null, error: `Invalid class ${msg.class}` })
+            process.send({context: 'error', data: null, error: `Invalid class ${msg.class}`})
         } else {
             tracker = new target(...(msg.args))
             assignListeners()

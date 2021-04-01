@@ -5,7 +5,6 @@
 const cp = require('child_process')
 const crypto = require('crypto')
 const {URL} = require('url')
-const electron = require('electron')
 
 // Internal Requirements
 const DiscordWrapper = require('./assets/js/discordwrapper')
@@ -252,24 +251,36 @@ function dlAsync(login = true) {
         log.info(data)
     })
 
+    const listener = (event, ...args) => {
+        aEx.send({
+            task: 'execute',
+            function: 'torrentsNotification',
+            argsArr: args
+        })
+    }
+    ipcRenderer.on('torrentsNotification', listener)
+
     aEx.on('error', async (err) => {
         loggerLaunchSuite.error('Error during launch', err)
-        await LogsReporter.report().catch(console.warn)
+        await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
         showLaunchFailure('Error During Launch', err.message || 'See console (CTRL + Shift + i) for more details.')
+        ipcRenderer.removeListener('torrentsNotification', listener)
     })
     aEx.on('close', async (code, signal) => {
+        ipcRenderer.removeListener('torrentsNotification', listener)
         if (code === 0) {
             return
         }
         loggerLaunchSuite.error(`AssetExec exited with code ${code}, assuming error.`)
-        await LogsReporter.report().catch(console.warn)
+        await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
         showLaunchFailure('Error During Launch', 'See console (CTRL + Shift + i) for more details.')
     })
 
     // Establish communications between the AssetExec and current process.
     aEx.on('message', async (m) => {
-
-        if (m.context === 'validate') {
+        if (m.context === 'torrents') {
+            ipcRenderer.send.apply(ipcRenderer, ['torrents', ...m.args])
+        } else if (m.context === 'validate') {
             switch (m.data) {
                 case 'distribution':
                     setLaunchPercentage(20, 100)
@@ -406,7 +417,7 @@ function dlAsync(login = true) {
             // If these properties are not defined it's likely an error.
             if (m.result.forgeData == null || m.result.versionData == null) {
                 loggerLaunchSuite.error('Error during validation:', m.result.error)
-                await LogsReporter.report().catch(console.warn)
+                await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
                 showLaunchFailure('Error During Launch', 'Please check the console (CTRL + Shift + i) for more details.')
 
                 aEx.disconnect()
@@ -450,9 +461,10 @@ function dlAsync(login = true) {
                     pb.build()
                     setLaunchDetails('Клиент запущен, приятной игры!')
                     await LogsReporter.truncateLogs()
+                    // await TorrentHolder.startSeeding()
                 } catch (err) {
                     loggerLaunchSuite.error('Error during launch', err)
-                    await LogsReporter.report().catch(console.warn)
+                    await LogsReporter.report(remote.app.getVersion()).catch(console.warn)
                     showLaunchFailure('Error During Launch', 'Please contact support.')
                 }
             }

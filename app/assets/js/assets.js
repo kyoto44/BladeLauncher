@@ -1,10 +1,6 @@
 const fs = require('fs-extra')
 const path = require('path')
-const Registry = require('winreg')
 const parserxml = require('fast-xml-parser')
-const util = require('util')
-
-const ConfigManager = require('./configmanager')
 const {Util} = require('./helpers')
 
 
@@ -137,33 +133,6 @@ class ModifierRule {
     }
 }
 
-
-class WinCompatibilityModeModifierRule extends ModifierRule {
-
-    constructor(mode) {
-        super()
-        this._mode = mode
-    }
-
-    async ensure(path, server) {
-        let regKey = new Registry({
-            hive: Registry.HKCU,
-            key: '\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-        })
-        const akeyExists = util.promisify(regKey.keyExists).bind(regKey)
-        const acreate = util.promisify(regKey.create).bind(regKey)
-        const aset = util.promisify(regKey.set).bind(regKey)
-
-        let keyExists = await akeyExists()
-        if (!keyExists) {
-            await acreate()
-        }
-        let mode = this._mode
-        await aset(path, Registry.REG_SZ, mode)
-    }
-}
-
-
 class DirectoryModifierRule extends ModifierRule {
 
     constructor(mode) {
@@ -266,44 +235,9 @@ class XmlModifierRule extends ModifierRule {
     }
 }
 
-
-class EjsModifierRule extends ModifierRule {
-
-    constructor(src) {
-        super()
-        this._src = src
-    }
-
-    async ensure(filePath, server) {
-        const exists = await fs.pathExists(this._src)
-        if (!exists) {
-            throw new Error('Source does not exists: ' + this._src)
-        }
-
-        const configDir = path.join(ConfigManager.getConfigDirectory(), 'temp')
-        await fs.promises.mkdir(configDir, {recursive: true})
-
-        // TODO: quick hack
-        const dirname = path.dirname(filePath)
-        const relativeConfigDirPath = path.relative(dirname, configDir)
-
-        const ejs = require('ejs')
-        const arenderFile = util.promisify(ejs.renderFile).bind(ejs)
-        const result = await arenderFile(this._src, {
-            server_address: server.getAddress(),
-            config_dir: relativeConfigDirPath
-        })
-
-        await fs.promises.writeFile(filePath, result, 'ascii')
-    }
-}
-
 module.exports = {
     Asset,
     File,
-
-    WinCompatibilityModeModifierRule,
     DirectoryModifierRule,
     XmlModifierRule,
-    EjsModifierRule,
 }

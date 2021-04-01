@@ -1,44 +1,44 @@
 const fs = require('fs-extra')
-const util = require('util')
-const Registry = require('winreg')
+const LoggerUtil = require('./loggerutil')
+const logger = LoggerUtil('%c[DumpsManager]', 'color: #a02d2a; font-weight: bold')
 
 const ConfigManager = require('./configmanager')
 
 exports.createRules = async function (binaryName) {
-    let regKeyWER = new Registry({
-        hive: Registry.HKCU,
-        key: '\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting',
 
-    })
-
-    let regKeyDumps = new Registry({
-        hive: Registry.HKCU,
-        key: `\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\${binaryName}`,
-
-    })
-
-    const aWERKeyExists = util.promisify(regKeyWER.keyExists).bind(regKeyWER)
-    const aDumpsKeyExists = util.promisify(regKeyDumps.keyExists).bind(regKeyDumps)
-    const aCreateWERKey = util.promisify(regKeyWER.create).bind(regKeyWER)
-    const aCreateDumpsKey = util.promisify(regKeyDumps.create).bind(regKeyDumps)
-    const asetWER = util.promisify(regKeyWER.set).bind(regKeyWER)
-    const asetDumps = util.promisify(regKeyDumps.set).bind(regKeyDumps)
-
-    let keyExists = await aWERKeyExists()
-    if (!keyExists) {
-        await aCreateWERKey()
-    }
-    keyExists = await aDumpsKeyExists()
-    if (!keyExists) {
-        await aCreateDumpsKey()
-    }
-
+    const reg = require('native-reg')
     const dumpsDirectory = ConfigManager.getCrashDumpDirectory()
     await fs.promises.mkdir(dumpsDirectory, {recursive: true})
+
+    const processWERkey = await new Promise((resolve, reject) => {
+        let regKeyWER = reg.openKey(reg.HKCU, 'SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting', reg.Access.ALL_ACCESS)
+        if (regKeyWER === null) {
+            logger.warn('WER registry key doesn\'t exist, creating...')
+            regKeyWER = reg.createKey(reg.HKCU, 'SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting', reg.Access.ALL_ACCESS)
+            reg.setValueDWORD(regKeyWER, 'Disabled', '1')
+        } else if (reg.getValue(regKeyWER, '', 'Disabled') !== 1) {
+            logger.warn('WER is disabled, enabling...')
+            reg.setValueDWORD(regKeyWER, 'Disabled', '1')
+        }
+        reg.closeKey(regKeyWER)
+        resolve()
+    })
+
+    const processDumpsKey = await new Promise((resolve, reject) => {
+        let regKeyDumps = reg.openKey(reg.HKCU, `SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\${binaryName}`, reg.Access.ALL_ACCESS)
+        if (regKeyDumps === null) {
+            logger.warn('Dumps registry key doesn\'t exist, creating...')
+            regKeyDumps = reg.createKey(reg.HKCU, `SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\${binaryName}`, reg.Access.ALL_ACCESS)
+            reg.setValueDWORD(regKeyDumps, 'DumpCount', '3')
+            reg.setValueDWORD(regKeyDumps, 'DumpType', '1')
+            reg.setValueEXPAND_SZ(regKeyDumps, 'DumpFolder', dumpsDirectory)
+        }
+        reg.closeKey(regKeyDumps)
+        resolve()
+    })
+
     await Promise.all([
-        asetWER('Disabled', Registry.REG_DWORD, '1'),
-        asetDumps('DumpFolder', Registry.REG_EXPAND_SZ, dumpsDirectory),
-        asetDumps('DumpCount', Registry.REG_DWORD, '3'),
-        asetDumps('DumpType', Registry.REG_DWORD, '1'),
+        processWERkey,
+        processDumpsKey
     ])
 }

@@ -4,11 +4,25 @@ const path = require('path')
 const Fingerprint = require('./fingerprint')
 const logger = require('./loggerutil')('%c[ConfigManager]', 'color: #a02d2a; font-weight: bold')
 
-const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
+const sysRoot = process.env.APPDATA || (process.platform === 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
 const defaultDataPathRoot = path.join(sysRoot, '.nblade')
 
+
+function _getLauncherDir() {
+    let config = process.env.CONFIG_DIRECT_PATH
+    if (config) {
+        return config
+    }
+    const electron = require('electron')
+    if (electron.remote) {
+        return electron.remote.app.getPath('userData')
+    }
+    return electron.app.getPath('userData')
+}
+
+
 // Forked processes do not have access to electron, so we have this workaround.
-const launcherDir = process.env.CONFIG_DIRECT_PATH || require('electron').remote.app.getPath('userData')
+const launcherDir = _getLauncherDir()
 
 /**
  * Retrieve the absolute path of the launcher directory.
@@ -52,15 +66,6 @@ exports.getAbsoluteMaxRAM = function () {
     return Math.floor((mem - 1000000000 - (gT16 > 0 ? (Number.parseInt(gT16 / 8) + 16000000000 / 4) : mem / 4)) / 1000000000)
 }
 
-function resolveMaxRAM() {
-    const mem = os.totalmem()
-    return mem >= 8000000000 ? '4G' : (mem >= 6000000000 ? '3G' : '2G')
-}
-
-function resolveMinRAM() {
-    return resolveMaxRAM()
-}
-
 /**
  * Three types of values:
  * Static = Explicitly declared.
@@ -83,7 +88,8 @@ const DEFAULT_CONFIG = {
                 timeout: 10000,
                 uploadLimit: Number.MAX_VALUE,
             },
-            assetDownloadLimit: Number.MAX_VALUE
+            assetDownloadLimit: Number.MAX_VALUE,
+            releaseChannel: 'stable'
         }
     },
     newsCache: {
@@ -250,6 +256,10 @@ exports.getCrashDumpDirectory = function () {
  */
 exports.getInstanceDirectory = function () {
     return path.join(exports.getDataDirectory(), 'instances')
+}
+
+exports.getApplicationDirectory = function () {
+    return path.join(exports.getDataDirectory(), 'applications')
 }
 
 exports.getConfigDirectory = function () {
@@ -677,4 +687,16 @@ exports.setFingerprint = async function () {
         config.fingerprint.push(currentFingerprint)
     }
     exports.save()
+}
+
+exports.getReleaseChannel = function (def = false) {
+    return !def ? config.settings.launcher.releaseChannel : DEFAULT_CONFIG.settings.launcher.releaseChannel
+}
+
+exports.switchReleaseChannel = function (useBeta) {
+    if (useBeta) {
+        config.settings.launcher.releaseChannel = 'beta'
+    } else {
+        config.settings.launcher.releaseChannel = 'stable'
+    }
 }

@@ -2,22 +2,21 @@ const async = require('async')
 const fs = require('fs-extra')
 const path = require('path')
 const request = require('request')
+const _ = require('lodash')
 
 const ConfigManager = require('./configmanager')
 const {
     File,
-    WinCompatibilityModeModifierRule,
     DirectoryModifierRule,
     XmlModifierRule,
-    EjsModifierRule,
 } = require('./assets')
 const {Util} = require('./helpers')
 
 const logger = require('./loggerutil')('%c[VersionManager]', 'color: #a02d2a; font-weight: bold')
 
 /** @type {?Storage} */
-let _STORAGE = null
-
+let _APPLICATION_STORAGE = null
+let _ASSETS_STORAGE = null
 
 class Storage {
     constructor(storagePath, data) {
@@ -100,15 +99,6 @@ class Modifier {
                 case 'dir':
                     rules.push(new DirectoryModifierRule(rule.ensure))
                     break
-                case 'ejs':
-                    rules.push(new EjsModifierRule(path.join(versionStoragePath, rule.src)))
-                    break
-                case 'compat':
-                    if (process.platform === 'win32') {
-                        // TODO: temporary ignore this modifier because it prevents passing of envs
-                        // rules.push(new WinCompatibilityModeModifierRule(rule.mode))
-                    }
-                    break
             }
         }
         return new Modifier(path.join(versionStoragePath, json.path), rules)
@@ -147,25 +137,24 @@ const VersionType = Object.freeze(function (o) {
     }).bind(o)
     return o
 }({
-    RELEASE: Symbol('release'),
-    SNAPSHOT: Symbol('snapshot')
+    RELEASE: Symbol('release'), //just for compability
+    STABLE: Symbol('stable'),
+    BETA: Symbol('beta')
 }))
 
-class Version {
-
-    static fromJSON(json, fetchTime = new Date()) {
-        const type = VersionType.getByValue(json.type)
-        if (!type) {
-            throw new Error('Unsupported version type: ' + type)
-        }
-        const manifest = Manifest.fromJSON(json.manifest)
-
-        const versionStoragePath = path.join(ConfigManager.getInstanceDirectory(), json.id)
-        const downloads = Downloads.fromJSON(json.downloads, versionStoragePath)
-        const modifiers = Version._resolveModifiers(json.modifiers, versionStoragePath)
-        return new Version(json.id, json.type, json.minimumLauncherVersion, manifest, downloads, modifiers, fetchTime)
+class ArtifactsHolder {
+    /**
+     * @param {string} id
+     * @param {Downloads} downloads
+     * @param {Array.<Modifier>} modifiers
+     * @param {Date} fetchTime
+     */
+    constructor(id, downloads, modifiers, fetchTime) {
+        this.id = id
+        this.downloads = downloads
+        this.modifiers = modifiers
+        this.fetchTime = fetchTime
     }
-
 
     static _resolveModifiers(json, versionStoragePath) {
         const modifiers = []
@@ -174,6 +163,9 @@ class Version {
         }
         return modifiers
     }
+}
+
+class Application extends ArtifactsHolder {
 
     /**
      * @param {string} id
@@ -185,65 +177,108 @@ class Version {
      * @param {Date} fetchTime
      */
     constructor(id, type, minimumLauncherVersion, manifest, downloads, modifiers, fetchTime) {
-        this.id = id
+        super(id, downloads, modifiers, fetchTime)
         this.type = type
         this.minimumLauncherVersion = minimumLauncherVersion
         this.manifest = manifest
-        this.downloads = downloads
-        this.modifiers = modifiers
+    }
 
-        this.fetchTime = fetchTime
+    static fromJSON(json, fetchTime = new Date()) {
+        const type = VersionType.getByValue(json.type)
+        if (!type) {
+            throw new Error('Unsupported version type: ' + type)
+        }
+        const manifest = Manifest.fromJSON(json.manifest)
+        const versionStoragePath = path.join(ConfigManager.getApplicationDirectory(), json.id)
+        const downloads = Downloads.fromJSON(json.downloads, versionStoragePath)
+        const modifiers = Application._resolveModifiers(json.modifiers, ConfigManager.getConfigDirectory())
+        return new Application(json.id, json.type, json.minimumLauncherVersion, manifest, downloads, modifiers, fetchTime)
     }
 }
 
-exports.Version = Version
+class Assets extends ArtifactsHolder {
 
+    /**
+         * @param {string} id
+         * @param {Downloads} downloads
+         * @param {Array.<Modifier>} modifiers
+         * @param {Date} fetchTime
+         */
+    constructor(id, downloads, modifiers, fetchTime) {
+        super(id, downloads, modifiers, fetchTime)
+    }
 
-async function loadVersionFile(path) {
+    static fromJSON(json, fetchTime = new Date()) {
+        const versionStoragePath = path.join(ConfigManager.getInstanceDirectory(), json.id)
+        const downloads = Downloads.fromJSON(json.downloads, versionStoragePath)
+        const modifiers = Assets._resolveModifiers(json.modifiers, versionStoragePath)
+        return new Assets(json.id, downloads, modifiers, fetchTime)
+    }
+}
+
+exports.ArtifactsHolder = ArtifactsHolder
+exports.Assets = Assets
+exports.Application = Application
+
+async function loadVersionFile(path, descriptorParser) {
     const dataPromise = fs.promises.readFile(path)
     const statsPromise = fs.stat(path)
     const data = await dataPromise
     const stats = await statsPromise
     const versionInfo = JSON.parse(data)
-    return Version.fromJSON(versionInfo, stats.mtime)
+    return descriptorParser(versionInfo, stats.mtime)
 }
 
 exports.isInited = function () {
-    return _STORAGE !== null
+    return _APPLICATION_STORAGE !== null && _ASSETS_STORAGE !== null
 }
 
 
-function getVersionsPath() {
-    return path.join(ConfigManager.getCommonDirectory(), 'versions')
+function getApplicationsPath() {
+    return path.join(ConfigManager.getCommonDirectory(), 'versions', 'application')
+}
+
+function getAssetsPath() {
+    return path.join(ConfigManager.getCommonDirectory(), 'versions', 'assets')
 }
 
 
 exports.init = async function () {
-    const result = {}
 
-    const versionsPath = getVersionsPath()
-    await fs.promises.mkdir(versionsPath, {recursive: true})
-    const versionDirs = await fs.promises.readdir(versionsPath, {withFileTypes: true})
+    const initStorage = async function (storagePath, descriptorParser) {
+        const result = []
+        await fs.promises.mkdir(storagePath, {recursive: true})
+        const versionDirs = await fs.promises.readdir(storagePath, {withFileTypes: true})
+
+        await async.each(versionDirs, async (versionDir) => {
+            if (!versionDir.isDirectory())
+                return
+
+            const versionId = versionDir.name
+            const versionFilePath = path.join(storagePath, versionId, versionId + '.json')
+            try {
+                await fs.promises.access(versionFilePath, fs.constants.R_OK)
+            } catch (err) {
+                logger.warn('Failed to access storage data', storagePath)
+                return
+            }
+
+            try {
+                result.push(await loadVersionFile(versionFilePath, descriptorParser))
+            } catch (err) {
+                logger.error(err)
+            }
+        })
+
+        return result
+    }
 
 
-    await async.each(versionDirs, async (versionDir) => {
-        if (!versionDir.isDirectory())
-            return
+    await Promise.all([
+        initStorage(getApplicationsPath(), Application.fromJSON).then(f => _APPLICATION_STORAGE = new Storage(ConfigManager.getApplicationDirectory(), f)),
+        initStorage(getAssetsPath(), Assets.fromJSON).then(f => _ASSETS_STORAGE = new Storage(ConfigManager.getInstanceDirectory(), f))
+    ])
 
-        const versionId = versionDir.name
-        const versionFilePath = path.join(versionsPath, versionId, versionId + '.json')
-        try {
-            await fs.promises.access(versionFilePath, fs.constants.R_OK)
-        } catch (err) {
-            logger.warn('Failed to access version data', versionsPath)
-            return
-        }
-
-        const version = await loadVersionFile(versionFilePath)
-        result[version.id] = version
-    })
-
-    _STORAGE = new Storage(ConfigManager.getInstanceDirectory(), result)
 }
 
 
@@ -255,74 +290,87 @@ exports.init = async function () {
  * @returns {Promise.<Version>} Promise which resolves to the version data object.
  */
 exports.fetch = async function (version, force = false) {
-    const existedVersion = _STORAGE.get(version.id)
-    if (existedVersion && !force) {
-        return existedVersion
-    }
-    const versionPath = path.join(getVersionsPath(), version.id)
-    const versionFile = path.join(versionPath, version.id + '.json')
 
-    const customHeaders = {
-        'User-Agent': 'BladeLauncher/' + this.launcherVersion
-    }
-
-    if (existedVersion && existedVersion.fetchTime) {
-        customHeaders['If-Modified-Since'] = existedVersion.fetchTime
-    }
-
-    console.log(`Fetching version '${version.id}' metadata.`)
-
-    const authAcc = ConfigManager.getSelectedAccount()
-
-    const opts = {
-        url: version.url,
-        timeout: 5000,
-        auth: {
-            'bearer': authAcc.accessToken
-        }
-    }
-    if (Object.keys(customHeaders).length > 0) {
-        opts.headers = customHeaders
-    }
-
-    return await new Promise((resolve, reject) => {
-        request(opts, async (error, resp, body) => {
-            console.info(`Downloading ${version.url}`)
-            if (error) {
-                reject(error)
-                return
+    const token = ConfigManager.getSelectedAccount().accessToken
+    const getMeta = (existedDescriptor, descriptorParser, url, token, writePath) => {
+        return new Promise((resolve, reject) => {
+            const customHeaders = {
+                'User-Agent': 'BladeLauncher/' + this.launcherVersion
+            }
+            if (existedDescriptor && existedDescriptor.fetchTime) {
+                customHeaders['If-Modified-Since'] = existedDescriptor.fetchTime.toUTCString()
             }
 
-            if (resp.statusCode === 304) {
-                resolve(existedVersion)
-                return
+            console.log(`Fetching descriptor '${url}' metadata.`)
+
+            const opts = {
+                url: url,
+                timeout: 5000,
+                auth: {
+                    'bearer': token
+                }
             }
 
-            if (resp.statusCode !== 200) {
-                reject(resp.statusMessage || body || 'Failed to retrive version data')
-                return
+            if (Object.keys(customHeaders).length > 0) {
+                opts.headers = customHeaders
             }
 
-            let data = JSON.parse(body)
-            const metadata = Version.fromJSON(data)
+            request(opts, async (error, resp, body) => {
+                console.info(`Downloading ${url}`)
+                if (error) {
+                    reject(error)
+                    return
+                }
 
-            try {
-                await fs.promises.mkdir(versionPath, {recursive: true})
-                await fs.promises.writeFile(versionFile, body, 'utf-8')
-                _STORAGE.put(metadata)
-                resolve(metadata)
-            } catch (e) {
-                reject(e)
-            }
+                if (resp.statusCode === 304) {
+                    resolve(existedDescriptor)
+                    return
+                }
+
+                if (resp.statusCode !== 200) {
+                    reject(resp.statusMessage || body || 'Failed to retrive version data')
+                    return
+                }
+
+                const data = JSON.parse(body)
+                await fs.promises.mkdir(path.join(writePath, data.id), {recursive: true})
+                await fs.promises.writeFile(path.join(writePath, data.id, data.id + '.json'), body, 'utf-8')
+                resolve(descriptorParser(data))
+            })
         })
-    })
+    }
+
+    const resolvedApplication = () => {
+        const app = _.find(version.applications, {'type': ConfigManager.getReleaseChannel()})
+        if (app === undefined) {
+            return _.find(version.applications, {'type': 'stable'}) //fallback
+        }
+        return app
+    }
+
+    let promises = []
+    const existedApplication = _APPLICATION_STORAGE.get(resolvedApplication().id)
+    if (existedApplication && !force) {
+        promises.push(Promise.resolve(existedApplication))
+    } else {
+        promises.push(getMeta(existedApplication, Application.fromJSON, resolvedApplication().url, token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
+    }
+
+    const existedAssets = _ASSETS_STORAGE.get(version.id)
+    if (existedAssets && !force) {
+        promises.push(Promise.resolve(existedAssets))
+    } else {
+        promises.push(getMeta(existedAssets, Assets.fromJSON, version.url, token, getAssetsPath()).then(m => {_ASSETS_STORAGE.put(m); return m}))
+    }
+
+    return await Promise.all(promises)
 }
 
 /**
  * @returns {Array<Version>}
  */
 exports.versions = function () {
-    return Object.values(_STORAGE.data)
+    return Object.values(_ASSETS_STORAGE.data)
 }
 
 /**
@@ -330,5 +378,5 @@ exports.versions = function () {
  * @returns {?Version}
  */
 exports.get = function (versionId) {
-    return _STORAGE.get(versionId)
+    return _ASSETS_STORAGE.get(versionId)
 }

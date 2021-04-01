@@ -7,6 +7,9 @@ const path = require('path')
 const request = require('request')
 const arch = require('arch')
 const log = require('electron-log')
+const dirTree = require('directory-tree')
+const xml = require('fast-xml-parser')
+const _ = require('lodash')
 
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
@@ -79,6 +82,11 @@ class AssetGuard extends EventEmitter {
         this.files = new DLTracker([], 0)
         this.forge = new DLTracker([], 0)
 
+        this.torrentsProxy = new EventEmitter()
+        this.torrentsProxy.on('torrents', (...args) => {
+            this.emit('torrents', args)
+        })
+
         /** @type {Array<VersionManager.Modifier>} */
         this.modifiers = []
         this.launcherVersion = launcherVersion
@@ -127,6 +135,54 @@ class AssetGuard extends EventEmitter {
         })
     }
 
+    async generatePaths(applicationVersion, assetsVersion, fileType) {
+        const applicationPath = path.join(ConfigManager.getApplicationDirectory(), applicationVersion.id)
+        const assetsPath = path.join(ConfigManager.getInstanceDirectory(), assetsVersion.id)
+        const binPath = path.join(applicationPath, 'bin')
+        const resPath = path.join(assetsPath, 'res')
+        const packsPath = path.join(assetsPath, 'packs')
+
+        const pathsJSON = {
+            'paths': [],
+            'exportPath': path.relative(binPath, path.join(ConfigManager.getConfigDirectory(), 'temp'))
+        }
+
+        pathsJSON.paths.push(path.relative(binPath, resPath))
+        const zpkList = dirTree(packsPath, {extensions: /\.zpk/}).children
+        for (let i = 0; i < zpkList.length; i++) {
+            if (zpkList[i].path.includes('bw.zpk')) {
+                continue
+            }
+            pathsJSON.paths.push(path.relative(binPath, zpkList[i].path))
+        }
+        pathsJSON.paths.push(path.relative(binPath, path.join(assetsPath, 'packs', 'bw.zpk')))
+
+        switch (fileType) {
+            case 'json': {
+                const pathsJSONPath = path.join(binPath, 'paths.json')
+                await fs.promises.writeFile(pathsJSONPath, JSON.stringify(pathsJSON, null, 2))
+            }
+                break
+            case 'xml': {
+                const pathsXMLPath = path.join(binPath, 'paths.xml')
+                const pathsXML = {
+                    'root': {
+                        'Paths': {
+                            'Path': []
+                        }
+                    }
+                }
+
+                pathsXML.root.Paths.Path.push(...pathsJSON.paths)
+                pathsXML.root.Paths.Path.push(pathsJSON.exportPath)
+                await fs.promises.writeFile(pathsXMLPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
+            }
+                break
+            default:
+                throw 'Wrong type of file'
+        }
+    }
+
     async syncSettings(type) {
         // TODO: will be used to sync user setting between devices
     }
@@ -152,25 +208,18 @@ class AssetGuard extends EventEmitter {
         }
 
         async function checkVCPP08() {
-            const Registry = require('winreg')
+            const reg = require('native-reg')
             let regKey
             if (arch() === 'x64') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
-                })
-                log.info('64bit system detected')
+                log.info('x64 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.ALL_ACCESS)
             } else if (arch() === 'x86') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}'
-                })
-                log.info('32bit system detected')
+                log.info('x32 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.ALL_ACCESS)
             } else {
                 throw 'Unknown architecture'
             }
-            let keyExists = await defer(cb => regKey.keyExists(cb))
-            if (!keyExists) {
+            if (regKey === null) {
                 log.warn('VC++ 2008 x86 Missing!')
                 return true
             }
@@ -178,73 +227,86 @@ class AssetGuard extends EventEmitter {
         }
 
         async function checkVCPP19() {
-            const Registry = require('winreg')
+            const reg = require('native-reg')
             let regKey
             if (arch() === 'x64') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86'
-                })
-                log.info('64bit system detected')
+                log.info('x64 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.ALL_ACCESS)
             } else if (arch() === 'x86') {
-                regKey = new Registry({
-                    hive: Registry.HKLM,
-                    key: '\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86'
-                })
-                log.info('32bit system detected')
+                log.info('x32 system detected')
+                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.ALL_ACCESS)
             } else {
                 throw 'Unknown architecture'
             }
-            regKey.values((err, items) => {
-                if (err) {
-                    log.error('VC++ 2019 key doesn\'t exist')
-                    return false
-                }
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].name == 'Installed' && items[i].value != 1) {
-                        log.warn('VC++ 2019 x86 Missing!')
-                        return false
-                    }
-                    if (items[i].name == 'Bld' && parseInt(items[i].value, 16) < 29325) {
-                        log.warn('Current VC++ 2019 x86 version is lower than 29325!')
-                        return false
-                    }
-                }
+
+            if (regKey === null) {
+                log.warn('VC++ 2019 key doesn\'t exist')
                 return true
-            })
+            }
+
+            if (reg.getValue(regKey, '', 'Installed') !== 1) {
+                log.warn('VC++ 2019 x86 Missing!')
+                return true
+            }
+
+            if (reg.getValue(regKey, '', 'Bld') < 29325) {
+                log.warn('Current VC++ 2019 x86 version is lower than 29325!')
+                return true
+            }
+
+            return false
         }
 
         function downloadReq(reqName, url, path, hash) {
             return new Promise((resolve, reject) => {
-                log.info(`Downloading ${reqName}...`)
-                request(url)
-                    .on('response', res => {
-                        if (res.statusCode >= 400) {
-                            reject(`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
-                        }
-                    })
-                    .pipe(fs.createWriteStream(path))
-                    .on('finish', () => {
-                        log.info(`${reqName} download completed`)
-                        let calculatedHash = crypto.createHash('md5')
-                        fs.createReadStream(path)
-                            .on('data', data => calculatedHash.update(data))
-                            .on('end', () => {
-                                calculatedHash = calculatedHash.digest('hex')
-                                if (calculatedHash !== hash) {
-                                    reject(`Wrong Hash! ${calculatedHash} !== ${hash}`)
-                                } else {
-                                    resolve()
-                                }
-                            })
-                    })
-                    .on('error', reject)
+                let corrupted = false
+                if (fs.existsSync(path)) {
+                    let calculatedHash = crypto.createHash('md5')
+                    fs.createReadStream(path)
+                        .on('data', data => calculatedHash.update(data))
+                        .on('end', () => {
+                            calculatedHash = calculatedHash.digest('hex')
+                            if (calculatedHash === hash) {
+                                log.info(`${reqName} executable exist and not corrupted`)
+                                resolve()
+                            } else {
+                                corrupted = true
+                            }
+                        })
+                } else {
+                    corrupted = true
+                }
+                if (corrupted) {
+                    log.info(`Downloading ${reqName}...`)
+                    request(url)
+                        .on('response', res => {
+                            if (res.statusCode >= 400) {
+                                reject(`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
+                            }
+                        })
+                        .pipe(fs.createWriteStream(path))
+                        .on('finish', () => {
+                            log.info(`${reqName} download completed`)
+                            let calculatedHash = crypto.createHash('md5')
+                            fs.createReadStream(path)
+                                .on('data', data => calculatedHash.update(data))
+                                .on('end', () => {
+                                    calculatedHash = calculatedHash.digest('hex')
+                                    if (calculatedHash !== hash) {
+                                        reject(`Wrong Hash! ${calculatedHash} !== ${hash}`)
+                                    } else {
+                                        resolve()
+                                    }
+                                })
+                        })
+                        .on('error', reject)
+                }
             })
         }
 
-        function installReq(reqName, path, flags) {
+        function installReq(reqName, path, ...flags) {
             return new Promise((resolve, reject) => {
-                child_process.exec(`${path} ${flags}`, (error, stdout, stderr) => {
+                child_process.execFile(path, flags, (error, stdout, stderr) => {
                     if (stdout) {
                         log.info(`stdout: ${stdout}`)
                     }
@@ -289,11 +351,11 @@ class AssetGuard extends EventEmitter {
         }
 
         if (isVCPP19Missing) {
-            await installReq('VC++ 2019 x86', VC19exePath, '/passive /norestart')
+            await installReq('VC++ 2019 x86', VC19exePath, '/passive', '/norestart')
         }
 
         if (isDirectXMissing) {
-            await installReq('DirectX Redist', DXRedistPath, `/Q /T:${DXSETUPexePath}`)
+            await installReq('DirectX Redist', DXRedistPath, '/Q', `/T:${DXSETUPexePath}`)
             await installReq('DirectX Jun 2010', path.join(DXSETUPexePath, '/DXSETUP.exe'), '/silent')
         }
 
@@ -313,43 +375,46 @@ class AssetGuard extends EventEmitter {
     }
 
     /**
- * Public library validation function. This function will handle the validation of libraries.
- * It will parse the version data, analyzing each library entry. In this analysis, it will
- * check to see if the local file exists and is valid. If not, it will be added to the download
- * queue for the 'libraries' identifier.
- *
- * @param {Object} versionData The version data for the assets.
- * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
- */
-    async validateVersion(versionData) {
+     * Public library validation function. This function will handle the validation of libraries.
+     * It will parse the version data, analyzing each library entry. In this analysis, it will
+     * check to see if the local file exists and is valid. If not, it will be added to the download
+     * queue for the 'libraries' identifier.
+     *
+     * @param {Object} versionData The version data for the assets.
+     * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
+     */
+    async validateVersion(versionMeta) {
         const self = this
 
         const libDlQueue = []
         let dlSize = 0
         let currentid = 0
+        const idsLen = _(versionMeta).map('downloads').map(_.size).sum(_.values)
+
+        for (const meta of versionMeta) {
+            const ids = Object.keys(meta.downloads)
+            await async.eachLimit(ids, 5, async (id) => {
+                const lib = meta.downloads[id]
+                if (!Asset.validateRules(lib.rules, lib.natives)) {
+                    return
+                }
+
+                if (!await lib.validateLocal()) {
+                    dlSize += (lib.size * 1)
+                    libDlQueue.push(lib)
+                }
+
+                currentid++
+                self.emit('progress', 'validating', currentid, idsLen)
+            })
+        }
 
         // Check validity of each library. If the hashs don't match, download the library.
-        const ids = Object.keys(versionData.downloads)
-        await async.eachLimit(ids, 5, async (id) => {
-            const lib = versionData.downloads[id]
-            if (!Asset.validateRules(lib.rules, lib.natives)) {
-                return
-            }
-
-            if (!await lib.validateLocal()) {
-                dlSize += (lib.size * 1)
-                libDlQueue.push(lib)
-            }
-
-            currentid++
-            self.emit('progress', 'validating', currentid, ids.length)
-        })
-
         self.libraries = new DLTracker(libDlQueue, dlSize)
     }
 
-    async validateModifiers(versionData) {
-        this.modifiers = [...versionData.modifiers]
+    async validateModifiers(versionMeta) {
+        this.modifiers = [...versionMeta.modifiers]
     }
 
     async validateConfig() {
@@ -368,13 +433,13 @@ class AssetGuard extends EventEmitter {
     }
 
     /**
- * Initiate an async download process for an AssetGuard DLTracker.
- *
- * @param fetcher
- * @param {string} identifier The identifier of the AssetGuard DLTracker.
- * @param {number} limit Optional. The number of async processes to run in parallel.
- * @returns {boolean} True if the process began, otherwise false.
- */
+     * Initiate an async download process for an AssetGuard DLTracker.
+     *
+     * @param fetcher
+     * @param {string} identifier The identifier of the AssetGuard DLTracker.
+     * @param {number} limit Optional. The number of async processes to run in parallel.
+     * @returns {boolean} True if the process began, otherwise false.
+     */
     startAsyncProcess(fetcher, identifier, limit = 5) {
 
         const self = this
@@ -427,17 +492,17 @@ class AssetGuard extends EventEmitter {
     }
 
     /**
- * This function will initiate the download processed for the specified identifiers. If no argument is
- * given, all identifiers will be initiated. Note that in order for files to be processed you need to run
- * the processing function corresponding to that identifier. If you run this function without processing
- * the files, it is likely nothing will be enqueued in the object and processing will complete
- * immediately. Once all downloads are complete, this function will fire the 'complete' event on the
- * global object instance.
- *
- * @param {Server} server
- * @param fetcher
- * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
- */
+     * This function will initiate the download processed for the specified identifiers. If no argument is
+     * given, all identifiers will be initiated. Note that in order for files to be processed you need to run
+     * the processing function corresponding to that identifier. If you run this function without processing
+     * the files, it is likely nothing will be enqueued in the object and processing will complete
+     * immediately. Once all downloads are complete, this function will fire the 'complete' event on the
+     * global object instance.
+     *
+     * @param {Server} server
+     * @param fetcher
+     * @param {Array.<{id: string, limit: number}>} identifiers Optional. The identifiers to process and corresponding parallel async task limit.
+     */
     processDlQueues(server, fetcher, identifiers = [
         {id: 'assets', limit: 20},
         {id: 'libraries', limit: 20},
@@ -491,30 +556,34 @@ class AssetGuard extends EventEmitter {
                 await VersionManager.init()
             }
 
-            const versionMeta = await VersionManager.fetch(server.getVersions()[0])
+            let [applicationMeta, assetsMeta] = await VersionManager.fetch(server.getVersions()[0])
 
-            await this.validateLauncherVersion(versionMeta)
-
-            await ConfigManager.setFingerprint()
+            await this.validateLauncherVersion(applicationMeta)
 
             const parallelTasks = []
             if (process.platform === 'win32') {  // Install requirements/create rule/send dumps only for windows
                 parallelTasks.push(
-                    DumpsManager.createRules().catch(console.warn),
+                    DumpsManager.createRules('nblade.exe').catch(console.warn),
                     DumpsReporter.report().catch(console.warn),
                     this.validateRequirements()
                 )
             }
+
+            await this._stopAllTorrents()
+
             this.emit('validate', 'version')
-            await this.validateVersion(versionMeta)
+            await this.validateVersion([applicationMeta, assetsMeta])
             this.emit('validate', 'libraries')
-            await this.validateModifiers(versionMeta)
+            await this.validateModifiers(applicationMeta)
             //await this.syncSettings('download')
-            const fetcher = FetchManager.init(ConfigManager.getSelectedAccount(), versionMeta)
+            this.torrentsProxy.setMaxListeners(_([applicationMeta, assetsMeta]).map('downloads').map(_.size).sum(_.values))
+            const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), [applicationMeta, assetsMeta], this.torrentsProxy)
             await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server, fetcher)
 
+            await this.generatePaths(applicationMeta, assetsMeta, 'json')
+            await this.generatePaths(applicationMeta, assetsMeta, 'xml')
             await Promise.all(parallelTasks)
             //this.emit('complete', 'download')
             try {
@@ -522,8 +591,9 @@ class AssetGuard extends EventEmitter {
             } catch (err) {
                 console.warn(err)
             }
+
             return {
-                versionData: versionMeta,
+                versionData: applicationMeta,
                 forgeData: {}
             }
 
@@ -537,7 +607,33 @@ class AssetGuard extends EventEmitter {
         }
     }
 
+    torrentsNotification(cmd, ...args) {
+        this.torrentsProxy.emit.apply(this.torrentsProxy, ['torrentsNotification', cmd, ...args])
+    }
 
+    _stopAllTorrents() {
+        let listener
+        return new Promise((resolve, reject) => {
+            listener = (...args) => {
+                switch (args[0]) {
+                    case 'stopped': {
+                        resolve()
+                        break
+                    }
+                    case 'error': {
+                        reject(args[1])
+                        break
+                    }
+                    default:
+                        reject(`Unexpected cmd ${args[0]} in 'torrentsNotification' channel`)
+                }
+            }
+            this.torrentsProxy.on('torrentsNotification', listener)
+            this.torrentsProxy.emit('torrents', 'stop')
+        }).finally(() => {
+            this.torrentsProxy.removeListener('torrentsNotification', listener)
+        })
+    }
 }
 
 module.exports = {

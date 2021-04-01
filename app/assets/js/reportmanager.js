@@ -7,6 +7,7 @@ const os = require('os')
 const arch = require('arch')
 const si = require('systeminformation')
 const dirTree = require('directory-tree')
+const isDev = require('./isdev')
 
 const DistroManager = require('./distromanager')
 const ConfigManager = require('./configmanager')
@@ -14,11 +15,10 @@ const ConfigManager = require('./configmanager')
 const SUPPORT_URI = 'https://www.northernblade.ru/api/submit/support/request'
 
 
-
-async function gatherSystemInfo(account, versionId) {
+async function gatherSystemInfo(account, versionId, launcherVersion = 'unnecessary') {
     return {
         'accountid': account.uuid,
-        'launcher': remote.app.getVersion(),
+        'launcher': launcherVersion,
         'fingerprint': ConfigManager.getFingerprint(),
         'version': versionId,
         'cpumodel': os.cpus()[0].model,
@@ -41,7 +41,7 @@ function addIfAccess(zip, filePath) {
 }
 
 
-async function sendReport(filesList, archivePrefix, metaSubsection, metaDescription) {
+async function sendReport(filesList, archivePrefix, metaSubsection, metaDescription, launcherVersion) {
     const account = ConfigManager.getSelectedAccount()
     const versionId = DistroManager.getDistribution().getServer(ConfigManager.getSelectedServer()).getVersion()
 
@@ -64,7 +64,7 @@ async function sendReport(filesList, archivePrefix, metaSubsection, metaDescript
         await addIfAccess(zip, filesList[i])
     }
 
-    const sysinfo = await gatherSystemInfo(account, versionId)
+    const sysinfo = await gatherSystemInfo(account, versionId, launcherVersion)
     zip.addFile('sysinfo.json', JSON.stringify(sysinfo))
 
     dumpForm.append(archivePrefix, zip.toBuffer(), {filename: `${archivePrefix}-${account.username}.zip`})
@@ -96,6 +96,9 @@ function flatten(tree) {
 
 class DumpsReporter {
     static async report() {
+        if (isDev) {
+            return
+        }
         const dumpsDirectory = ConfigManager.getCrashDumpDirectory()
         const filesList = flatten(dirTree(dumpsDirectory, {extensions: /\.dmp/}))
         return await sendReport(filesList, 'dumps', 'crash', '[crush_dumps]')
@@ -104,10 +107,13 @@ class DumpsReporter {
 
 
 class LogsReporter {
-    static async report() {
+    static async report(launcherVersion) {
+        if (isDev) {
+            return
+        }
         const launcherDirectory = ConfigManager.getLauncherDirectory()
         const filesList = flatten(dirTree(path.join(launcherDirectory, 'logs'), {extensions: /\.log/}))
-        return await sendReport(filesList, 'logs', 'launching', '[error_during_launch]')
+        return await sendReport(filesList, 'logs', 'launching', '[error_during_launch]', launcherVersion)
     }
     static async truncateLogs() {
         const launcherDirectory = ConfigManager.getLauncherDirectory()
