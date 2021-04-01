@@ -270,7 +270,7 @@ exports.init = async function () {
             }
         })
 
-        return result[0]
+        return result
     }
 
 
