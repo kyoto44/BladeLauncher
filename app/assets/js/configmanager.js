@@ -66,15 +66,6 @@ exports.getAbsoluteMaxRAM = function () {
     return Math.floor((mem - 1000000000 - (gT16 > 0 ? (Number.parseInt(gT16 / 8) + 16000000000 / 4) : mem / 4)) / 1000000000)
 }
 
-function resolveMaxRAM() {
-    const mem = os.totalmem()
-    return mem >= 8000000000 ? '4G' : (mem >= 6000000000 ? '3G' : '2G')
-}
-
-function resolveMinRAM() {
-    return resolveMaxRAM()
-}
-
 /**
  * Three types of values:
  * Static = Explicitly declared.
@@ -98,7 +89,7 @@ const DEFAULT_CONFIG = {
                 uploadLimit: Number.MAX_VALUE,
             },
             assetDownloadLimit: Number.MAX_VALUE,
-            releaseChannel: 'release'
+            releaseChannel: 'stable'
         }
     },
     newsCache: {
@@ -699,17 +690,13 @@ exports.setFingerprint = async function () {
 }
 
 exports.getReleaseChannel = function (def = false) {
-    if (!def && config.settings.launcher.releaseChannel === 'release' || def) {
-        return 0
-    }
-    return 1
-
+    return !def ? config.settings.launcher.releaseChannel : DEFAULT_CONFIG.settings.launcher.releaseChannel
 }
 
-exports.switchReleaseChannel = function () {
-    if (config.settings.launcher.releaseChannel === 'release') {
-        config.settings.launcher.releaseChannel = 'testing'
+exports.switchReleaseChannel = function (useBeta) {
+    if (useBeta) {
+        config.settings.launcher.releaseChannel = 'beta'
     } else {
-        config.settings.launcher.releaseChannel = 'release'
+        config.settings.launcher.releaseChannel = 'stable'
     }
 }

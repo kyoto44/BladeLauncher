@@ -556,7 +556,7 @@ class AssetGuard extends EventEmitter {
                 await VersionManager.init()
             }
 
-            let [applicationMeta, assetsMeta] = await VersionManager.fetch(server.getVersions()[ConfigManager.getReleaseChannel()])
+            let [applicationMeta, assetsMeta] = await VersionManager.fetch(server.getVersions()[0])
 
             await this.validateLauncherVersion(applicationMeta)
 

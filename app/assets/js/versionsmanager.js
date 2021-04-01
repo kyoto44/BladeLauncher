@@ -2,6 +2,7 @@ const async = require('async')
 const fs = require('fs-extra')
 const path = require('path')
 const request = require('request')
+const _ = require('lodash')
 
 const ConfigManager = require('./configmanager')
 const {
@@ -136,8 +137,9 @@ const VersionType = Object.freeze(function (o) {
     }).bind(o)
     return o
 }({
-    RELEASE: Symbol('release'),
-    TESTING: Symbol('testing')
+    RELEASE: Symbol('release'), //just for compability
+    STABLE: Symbol('stable'),
+    BETA: Symbol('beta')
 }))
 
 class ArtifactsHolder {
@@ -244,7 +246,7 @@ function getAssetsPath() {
 exports.init = async function () {
 
     const initStorage = async function (storagePath, descriptorParser) {
-        const result = {}
+        const result = []
         await fs.promises.mkdir(storagePath, {recursive: true})
         const versionDirs = await fs.promises.readdir(storagePath, {withFileTypes: true})
 
@@ -268,7 +270,7 @@ exports.init = async function () {
             }
         })
 
-        return result
+        return result[0]
     }
 
 
@@ -288,7 +290,6 @@ exports.init = async function () {
  * @returns {Promise.<Version>} Promise which resolves to the version data object.
  */
 exports.fetch = async function (version, force = false) {
-
 
     const token = ConfigManager.getSelectedAccount().accessToken
     const getMeta = (existedDescriptor, descriptorParser, url, token, writePath) => {
@@ -339,12 +340,20 @@ exports.fetch = async function (version, force = false) {
         })
     }
 
+    const resolvedApplication = () => {
+        const app = _.find(version.applications, {'type': ConfigManager.getReleaseChannel()})
+        if (app === undefined) {
+            return _.find(version.applications, {'type': 'stable'}) //fallback
+        }
+        return app
+    }
+
     let promises = []
-    const existedApplication = _APPLICATION_STORAGE.get(version.applications[0].id)
+    const existedApplication = _APPLICATION_STORAGE.get(resolvedApplication().id)
     if (existedApplication && !force) {
         promises.push(Promise.resolve(existedApplication))
     } else {
-        promises.push(getMeta(existedApplication, Application.fromJSON, version.applications[0].url, token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
+        promises.push(getMeta(existedApplication, Application.fromJSON, resolvedApplication().url, token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
     }
 
     const existedAssets = _ASSETS_STORAGE.get(version.id)

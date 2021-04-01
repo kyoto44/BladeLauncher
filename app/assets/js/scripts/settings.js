@@ -937,6 +937,7 @@ const settingsMaxRAMLabel = document.getElementById('settingsMaxRAMLabel')
 const settingsMinRAMLabel = document.getElementById('settingsMinRAMLabel')
 const settingsMemoryTotal = document.getElementById('settingsMemoryTotal')
 const settingsMemoryAvail = document.getElementById('settingsMemoryAvail')
+const settingsReleaseChannel = document.getElementById('settingsReleaseChannel')
 
 const settingsMaxDownloadSpeedRange = document.getElementById('settingsMaxDownloadSpeedRange')
 const settingsDownloadSpeedLabel = document.getElementById('settingsDownloadSpeedLabel')
@@ -956,6 +957,16 @@ if (ConfigManager.getAssetDownloadSpeedLimit() === Number.MAX_VALUE) {
     settingsMaxDownloadSpeedRange.setAttribute('value', 10000)
 } else {
     settingsMaxDownloadSpeedRange.setAttribute('value', ConfigManager.getAssetDownloadSpeedLimit())
+}
+
+settingsReleaseChannel.onchange = (e) => {
+    const releaseChannelValue = document.getElementById('settingsReleaseChannelValue')
+    if (releaseChannelValue.checked) {
+        ConfigManager.switchReleaseChannel(true)
+    } else {
+        ConfigManager.switchReleaseChannel(false)
+    }
+    ConfigManager.save()
 }
 
 // Bind on change event for max dl speed container.

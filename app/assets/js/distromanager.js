@@ -314,8 +314,9 @@ exports.Module
 
 
 exports.VersionType = {
-    RELEASE: 'release',
-    TESTING: 'testing'
+    RELEASE: 'release', //compatibility
+    STABLE: 'stable',
+    BETA: 'beta'
 }
 
 class Version {
