@@ -101,12 +101,12 @@ class TorrentsEventsListener {
                 case 'init': {
                     // Load ConfigManager
                     ConfigManager.load()
-                    this._manager = new TorrentManager()
-                    this._manager.startAll().then(() => {
-                        event.sender.send('torrentsNotification', 'inited')
-                    }, (err) => {
-                        event.sender.send('torrentsNotification', 'error', err)
-                    })
+                    // this._manager = new TorrentManager()
+                    // this._manager.startAll().then(() => {
+                    //     event.sender.send('torrentsNotification', 'inited')
+                    // }, (err) => {
+                    //     event.sender.send('torrentsNotification', 'error', err)
+                    // })
                     break
                 }
                 case 'fetch': {

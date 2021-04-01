@@ -569,7 +569,7 @@ class AssetGuard extends EventEmitter {
                 )
             }
 
-            await this._stopAllTorrents()
+            //await this._stopAllTorrents()
 
             this.emit('validate', 'version')
             await this.validateVersion([applicationMeta, assetsMeta])
