@@ -191,7 +191,7 @@ class Application extends ArtifactsHolder {
         const manifest = Manifest.fromJSON(json.manifest)
         const versionStoragePath = path.join(ConfigManager.getApplicationDirectory(), json.id)
         const downloads = Downloads.fromJSON(json.downloads, versionStoragePath)
-        const modifiers = Application._resolveModifiers(json.modifiers, versionStoragePath)
+        const modifiers = Application._resolveModifiers(json.modifiers, ConfigManager.getConfigDirectory())
         return new Application(json.id, json.type, json.minimumLauncherVersion, manifest, downloads, modifiers, fetchTime)
     }
 }
