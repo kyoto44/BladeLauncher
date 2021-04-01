@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@kaciras-blog/nativelib": "github:kaciras-blog/nativelib#v0.2.4",
-    "adm-zip": "^0.5.4",
+    "adm-zip": "^0.5.5",
     "arch": "^2.2.0",
     "async": "^3.2.0",
     "directory-tree": "^2.2.7",
