@@ -1,6 +1,6 @@
 const fs = require('fs-extra')
 const path = require('path')
-const parserxml = require('fast-xml-parser')
+const xml = require('fast-xml-parser')
 const {Util} = require('./helpers')
 
 
@@ -165,8 +165,8 @@ class XmlModifierRule extends ModifierRule {
         let json = {}
         if (exists === true) {
             const data = await fs.promises.readFile(filePath, 'ascii')
-            if (parserxml.validate(data) === true) {
-                json = await parserxml.parse(data)
+            if (xml.validate(data) === true) {
+                json = await xml.parse(data)
             } else {
                 console.log(`Bad XML config file! Path ${filePath} Removing...`)
                 await fs.promises.unlink(filePath)
@@ -228,10 +228,7 @@ class XmlModifierRule extends ModifierRule {
 
         const dirname = path.dirname(filePath)
         await fs.promises.mkdir(dirname, {recursive: true})
-
-        const j2x = new parserxml.j2xParser()
-        const xml = j2x.parse(result)
-        await fs.promises.writeFile(filePath, xml, 'ascii')
+        await fs.promises.writeFile(filePath, new xml.j2xParser({format: true, indentBy: '  '}).parse(result), 'ascii')
     }
 }
 
