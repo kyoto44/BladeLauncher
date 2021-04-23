@@ -209,34 +209,44 @@ class AssetGuard extends EventEmitter {
 
         async function checkVCPP08() {
             const reg = require('native-reg')
-            let regKey
-            if (arch() === 'x64') {
-                log.info('x64 system detected')
-                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.ALL_ACCESS)
-            } else if (arch() === 'x86') {
-                log.info('x32 system detected')
-                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.ALL_ACCESS)
-            } else {
-                throw 'Unknown architecture'
+            let regKey = null
+            try {
+                if (arch() === 'x64') {
+                    log.info('x64 system detected')
+                    regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.READ)
+                } else if (arch() === 'x86') {
+                    log.info('x32 system detected')
+                    regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.READ)
+                } else {
+                    throw 'Unknown architecture'
+                }
+            } catch (e) {
+                log.error(e)
             }
             if (regKey === null) {
                 log.warn('VC++ 2008 x86 Missing!')
                 return true
             }
+            reg.closeKey(regKey)
             return false
         }
 
         async function checkVCPP19() {
             const reg = require('native-reg')
-            let regKey
-            if (arch() === 'x64') {
-                log.info('x64 system detected')
-                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.ALL_ACCESS)
-            } else if (arch() === 'x86') {
-                log.info('x32 system detected')
-                regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.ALL_ACCESS)
-            } else {
-                throw 'Unknown architecture'
+            let regKey = null
+            try{
+                if (arch() === 'x64') {
+                    log.info('x64 system detected')
+                    regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.READ)
+                } else if (arch() === 'x86') {
+                    log.info('x32 system detected')
+                    regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.READ)
+                } else {
+                    throw 'Unknown architecture'
+                }
+                
+            } catch (e) {
+                log.error(e)
             }
 
             if (regKey === null) {
@@ -246,14 +256,17 @@ class AssetGuard extends EventEmitter {
 
             if (reg.getValue(regKey, '', 'Installed') !== 1) {
                 log.warn('VC++ 2019 x86 Missing!')
+                reg.closeKey(regKey)
                 return true
             }
 
             if (reg.getValue(regKey, '', 'Bld') < 29325) {
                 log.warn('Current VC++ 2019 x86 version is lower than 29325!')
+                reg.closeKey(regKey)
                 return true
             }
 
+            reg.closeKey(regKey)
             return false
         }
 
