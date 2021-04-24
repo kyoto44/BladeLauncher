@@ -246,7 +246,7 @@ function getAssetsPath() {
 exports.init = async function () {
 
     const initStorage = async function (storagePath, descriptorParser) {
-        const result = []
+        const result = {}
         await fs.promises.mkdir(storagePath, {recursive: true})
         const versionDirs = await fs.promises.readdir(storagePath, {withFileTypes: true})
 
@@ -264,7 +264,8 @@ exports.init = async function () {
             }
 
             try {
-                result.push(await loadVersionFile(versionFilePath, descriptorParser))
+                const version = await loadVersionFile(versionFilePath, descriptorParser)
+                result[version.id] = version
             } catch (err) {
                 logger.error(err)
             }
@@ -301,7 +302,7 @@ exports.fetch = async function (version, force = false) {
                 customHeaders['If-Modified-Since'] = existedDescriptor.fetchTime.toUTCString()
             }
 
-            console.log(`Fetching descriptor '${url}' metadata.`)
+            logger.log(`Fetching descriptor '${url}' metadata.`)
 
             const opts = {
                 url: url,
@@ -316,19 +317,21 @@ exports.fetch = async function (version, force = false) {
             }
 
             request(opts, async (error, resp, body) => {
-                console.info(`Downloading ${url}`)
                 if (error) {
+                    logger.error(`Failed to download ${url}: `, error)
                     reject(error)
                     return
                 }
 
                 if (resp.statusCode === 304) {
+                    logger.info(`No need to downloading ${url} - up to date`)
                     resolve(existedDescriptor)
                     return
                 }
 
+                logger.info(`Download ${url}`)
                 if (resp.statusCode !== 200) {
-                    reject(resp.statusMessage || body || 'Failed to retrive version data')
+                    reject(resp.statusMessage || body || 'Failed to retrieve version data')
                     return
                 }
 
@@ -349,11 +352,12 @@ exports.fetch = async function (version, force = false) {
     }
 
     let promises = []
-    const existedApplication = _APPLICATION_STORAGE.get(resolvedApplication().id)
+    const application = resolvedApplication()
+    const existedApplication = _APPLICATION_STORAGE.get(application.id)
     if (existedApplication && !force) {
         promises.push(Promise.resolve(existedApplication))
     } else {
-        promises.push(getMeta(existedApplication, Application.fromJSON, resolvedApplication().url, token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
+        promises.push(getMeta(existedApplication, Application.fromJSON, application.url, token, getApplicationsPath()).then(m => {_APPLICATION_STORAGE.put(m); return m}))
     }
 
     const existedAssets = _ASSETS_STORAGE.get(version.id)
