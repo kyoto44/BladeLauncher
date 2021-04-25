@@ -214,11 +214,8 @@ exports.validate = async (accessToken, clientToken) => {
             }
         })
 
-        if (response.statusCode === 204) {
-            return true
-        } else {
-            return false
-        }
+        return response.statusCode === 204
+
     } catch (error) {
         throw new Error('Error during validation.', error)
     }
@@ -242,11 +239,10 @@ exports.invalidate = async (accessToken, clientToken) => {
             }
         })
 
-        if (response.statusCode === 204) {
-            return
-        } else {
-            throw new Error(JSON.parse(response.body))
+        if (response.statusCode !== 204) {
+            throw new Error(response.body)
         }
+
     } catch (error) {
         throw new Error('Error during invalidation.', error)
     }
@@ -273,11 +269,10 @@ exports.refresh = async (accessToken, clientToken, requestUser = true) => {
             }
         })
 
-        if (response.statusCode === 200) {
-            return JSON.parse(response.body)
-        } else {
-            throw new Error(JSON.parse(response.body))
+        if (response.statusCode !== 200) {
+            throw new Error(response.body)
         }
+        return JSON.parse(response.body)
     } catch (error) {
         throw new Error('Error during refresh.', error)
     }

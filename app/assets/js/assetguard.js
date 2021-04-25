@@ -308,7 +308,6 @@ class AssetGuard extends EventEmitter {
                                 if (calculatedHash !== hash) {
                                     throw (`Wrong Hash! ${calculatedHash} !== ${hash}`)
                                 }
-                                return
                             })
                     })
                     .on('error', Promise.reject())
@@ -571,7 +570,7 @@ class AssetGuard extends EventEmitter {
             if (versions.length < 1) {
                 throw new Error('Server do not have any available versions')
             }
-            let [applicationMeta, assetsMeta] = await VersionManager.fetch(versions[0])
+            let [applicationMeta, assetsMeta] = await VersionManager.fetch(versions[0], this.launcherVersion)
 
             await this.validateLauncherVersion(applicationMeta)
 
@@ -592,7 +591,7 @@ class AssetGuard extends EventEmitter {
             await this.validateModifiers(applicationMeta)
             //await this.syncSettings('download')
             this.torrentsProxy.setMaxListeners(_([applicationMeta, assetsMeta]).map('downloads').map(_.size).sum(_.values))
-            const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), [applicationMeta, assetsMeta], this.torrentsProxy)
+            const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), [applicationMeta, assetsMeta], this.torrentsProxy, this.launcherVersion)
             await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server, fetcher)

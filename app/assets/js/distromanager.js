@@ -578,7 +578,7 @@ let _HOLDER = null
 /**
  * @returns {Promise.<DistroIndex>}
  */
-exports.pullRemote = async function () {
+exports.pullRemote = async () => {
     if (DEV_MODE) {
         return exports.pullLocal()
     }
@@ -606,8 +606,7 @@ exports.pullRemote = async function () {
     }
 
     try {
-        const response = await got(distroURL, {
-            method: 'get',
+        const response = await got.get(distroURL, {
             headers: customHeaders,
             timeout: 5000
         })
@@ -617,21 +616,12 @@ exports.pullRemote = async function () {
                 return exports.pullLocal()
             }
             case 200: {
-                try {
-                    _HOLDER = DistroIndex.fromJSON(JSON.parse(response.body))
-                } catch (e) {
-                    return Promise.reject(e)
-                }
-
-                try {
-                    await fs.promises.writeFile(distroDest, response.body, 'utf-8')
-                    return _HOLDER
-                } catch (error) {
-                    throw error
-                }
+                _HOLDER = DistroIndex.fromJSON(JSON.parse(response.body))
+                await fs.promises.writeFile(distroDest, response.body, 'utf-8')
+                return _HOLDER
             }
             default: {
-                throw response.statusCode
+                throw new Error('Something went wrong, status code: ', response.statusCode)
             }
         }
     } catch (error) {

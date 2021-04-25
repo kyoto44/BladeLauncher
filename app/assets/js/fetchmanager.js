@@ -102,7 +102,6 @@ class HttpFetcher extends Fetcher {
             req.on('error', reject)
             req.on('response', (resp) => {
                 if (resp.statusCode !== 200) {
-                    req.abort()
                     const msg = `Failed to download ${this.url}. Response code ${resp.statusCode}`
                     reject(msg)
                     return
@@ -341,10 +340,11 @@ class Facade {
      * @param account
      * @param {Object.<string, Array.<File>>} reusableModules
      */
-    constructor(account, reusableModules, torrentsProxy) {
+    constructor(account, reusableModules, torrentsProxy, launcherVersion) {
         this.account = account
         this.reusableModules = reusableModules
         this.torrentsProxy = torrentsProxy
+        this.launcherVersion = launcherVersion
     }
 
     /**
@@ -366,11 +366,11 @@ class Facade {
         for (const url of asset.urls) {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 1})
+                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 3})
             } else if (urlObj.protocol === 'magnet:') {
                 fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.torrentsProxy), priority: 2})
             } else if (urlObj.protocol === 'patch:') {
-                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 3})
+                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 1})
             } else {
                 logger.warn('Unsupported url type for asset', asset.id)
             }
@@ -473,7 +473,7 @@ function analyzePreviousVersionAssets(targetVersionMeta) {
  * @param {Version} targetVersionMeta
  * @returns {Facade}
  */
-exports.init = async function (account, targetVersionMeta, torrentsProxy) {
+exports.init = async function (account, targetVersionMeta, torrentsProxy, launcherVersion) {
     const reusableModules = analyzePreviousVersionAssets(targetVersionMeta[1])
-    return new Facade(account, reusableModules, torrentsProxy)
+    return new Facade(account, reusableModules, torrentsProxy, launcherVersion)
 }

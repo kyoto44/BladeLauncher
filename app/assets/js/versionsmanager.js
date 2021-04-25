@@ -290,13 +290,13 @@ exports.init = async function () {
  * @param {boolean} force Optional. If true, the version index will be downloaded even if it exists locally. Defaults to false.
  * @returns {Promise.<Version>} Promise which resolves to the version data object.
  */
-exports.fetch = async function (version, force = false) {
+exports.fetch = async function (version, launcherVersion, force = false) {
 
     const token = ConfigManager.getSelectedAccount().accessToken
     const getMeta = async (existedDescriptor, descriptorParser, url, token, writePath) => {
 
         const customHeaders = {
-            'User-Agent': 'BladeLauncher/' + this.launcherVersion,
+            'User-Agent': 'BladeLauncher/' + launcherVersion,
             'Authorization': `Bearer ${token}`
         }
 
