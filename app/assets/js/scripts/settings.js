@@ -962,9 +962,9 @@ if (ConfigManager.getAssetDownloadSpeedLimit() === Number.MAX_VALUE) {
 settingsReleaseChannel.onchange = (e) => {
     const releaseChannelValue = document.getElementById('settingsReleaseChannelValue')
     if (releaseChannelValue.checked) {
-        ConfigManager.switchReleaseChannel(true)
+        ConfigManager.switchReleaseChannel("beta")
     } else {
-        ConfigManager.switchReleaseChannel(false)
+        ConfigManager.switchReleaseChannel("stable")
     }
     ConfigManager.save()
 }
