@@ -310,7 +310,9 @@ class AssetGuard extends EventEmitter {
                                 }
                             })
                     })
-                    .on('error', Promise.reject())
+                    .on('error', e => {
+                        throw e
+                    })
             }
         }
 
