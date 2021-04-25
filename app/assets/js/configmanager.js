@@ -694,7 +694,7 @@ exports.getReleaseChannel = function (def = false) {
 }
 
 exports.getIsBetaChannel = function () {
-    if (config.settings.launcher.releaseChannel === "beta") {
+    if (config.settings.launcher.releaseChannel === 'beta') {
         return true
     }
     return false
@@ -703,4 +703,5 @@ exports.getIsBetaChannel = function () {
 
 exports.switchReleaseChannel = function (channel) {
     config.settings.launcher.releaseChannel = channel
+    exports.save()
 }

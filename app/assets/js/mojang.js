@@ -184,13 +184,13 @@ exports.authenticate = async (username, password, clientToken, requestUser = tru
             logger.error('Error during authentication with status code (' + request.statusCode + '): ', response)
         }
 
-        throw ({
+        throw {
             error: errorTitle,
             errorMessage
-        })
+        }
 
     } catch (error) {
-        throw new Error('Error during authentication.', error)
+        throw ('Error during authentication.', error.response.body)
     }
 
 
@@ -213,11 +213,9 @@ exports.validate = async (accessToken, clientToken) => {
                 'clientToken': clientToken
             }
         })
-
         return response.statusCode === 204
-
     } catch (error) {
-        throw new Error('Error during validation.', error)
+        return error.response.statusCode === 204
     }
 }
 
@@ -244,7 +242,7 @@ exports.invalidate = async (accessToken, clientToken) => {
         }
 
     } catch (error) {
-        throw new Error('Error during invalidation.', error)
+        throw ('Error during invalidation.', error.response.body)
     }
 }
 
@@ -274,6 +272,6 @@ exports.refresh = async (accessToken, clientToken, requestUser = true) => {
         }
         return JSON.parse(response.body)
     } catch (error) {
-        throw new Error('Error during refresh.', error)
+        throw ('Error during refresh.', error.response.body)
     }
 }

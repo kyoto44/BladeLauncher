@@ -962,11 +962,10 @@ if (ConfigManager.getAssetDownloadSpeedLimit() === Number.MAX_VALUE) {
 settingsReleaseChannel.onchange = (e) => {
     const releaseChannelValue = document.getElementById('settingsReleaseChannelValue')
     if (releaseChannelValue.checked) {
-        ConfigManager.switchReleaseChannel("beta")
+        ConfigManager.switchReleaseChannel('beta')
     } else {
-        ConfigManager.switchReleaseChannel("stable")
+        ConfigManager.switchReleaseChannel('stable')
     }
-    ConfigManager.save()
 }
 
 // Bind on change event for max dl speed container.
