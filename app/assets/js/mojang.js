@@ -6,10 +6,10 @@
  * @module mojang
  */
 // Requirements
-const request = require('request')
+const got = require('got')
 const crypto = require('crypto')
 const {remote} = require('electron')
-const logger  = require('./loggerutil')('%c[Mojang]', 'color: #a02d2a; font-weight: bold')
+const logger = require('./loggerutil')('%c[Mojang]', 'color: #a02d2a; font-weight: bold')
 
 // Constants
 const minecraftAgent = {
@@ -67,8 +67,8 @@ const statuses = [
  * @param {string} status A valid status code.
  * @returns {string} The hex color of the status code.
  */
-exports.statusToHex = function(status){
-    switch(status.toLowerCase()){
+exports.statusToHex = function (status) {
+    switch (status.toLowerCase()) {
         case 'green':
             return '#a5c325'
         case 'yellow':
@@ -89,29 +89,30 @@ exports.statusToHex = function(status){
  * 
  * @see http://wiki.vg/Mojang_API#API_Status
  */
-exports.status = function(){
+exports.status = function () {
+    /*
     return new Promise((resolve, reject) => {
-        request.get('https://status.mojang.com/check',
+        got.get('https://status.mojang.com/check',
             {
                 json: true,
                 timeout: 2500
             },
-            function(error, response, body){
+            function (error, response, body) {
 
-                if(error || response.statusCode !== 200){
+                if (error || response.statusCode !== 200) {
                     logger.warn('Unable to retrieve Mojang status.')
                     logger.debug('Error while retrieving Mojang statuses:', error)
                     //reject(error || response.statusCode)
-                    for(let i=0; i<statuses.length; i++){
+                    for (let i = 0; i < statuses.length; i++) {
                         statuses[i].status = 'grey'
                     }
                     resolve(statuses)
                 } else {
-                    for(let i=0; i<body.length; i++){
+                    for (let i = 0; i < body.length; i++) {
                         const key = Object.keys(body[i])[0]
                         inner:
-                        for(let j=0; j<statuses.length; j++){
-                            if(statuses[j].service === key) {
+                        for (let j = 0; j < statuses.length; j++) {
+                            if (statuses[j].service === key) {
                                 statuses[j].status = body[i][key]
                                 break inner
                             }
@@ -121,6 +122,7 @@ exports.status = function(){
                 }
             })
     })
+    */
 }
 
 /**
@@ -134,68 +136,64 @@ exports.status = function(){
  * 
  * @see http://wiki.vg/Authentication#Authenticate
  */
-exports.authenticate = function(username, password, clientToken, requestUser = true, agent = minecraftAgent){
-    return new Promise((resolve, reject) => {
+exports.authenticate = async (username, password, clientToken, requestUser = true, agent = minecraftAgent) => {
+    const authJSON = {
+        'agent': agent,
+        'username': username,
+        'requestUser': requestUser,
+        'password': crypto.createHash('md5').update(password).digest('hex'),
+    }
 
-        const password_hash = crypto.createHash('md5').update(password).digest('hex')
+    if (clientToken != null) {
+        authJSON['clientToken'] = clientToken
+    }
 
-        const body = {
-            agent,
-            username,
-            requestUser
+    try {
+        const request = await got.post(authpath + '/authenticate', {
+            json: authJSON
+        })
+
+        const response = JSON.parse(request.body)
+
+        if (request.statusCode === 200) {
+            return response
         }
-        body.password = password_hash
 
-        if (clientToken != null) {
-            body.clientToken = clientToken
-        }
-
-        request.post(authpath + '/authenticate',
-            {
-                json: true,
-                body
-            },
-            function(error, response, body){
-                if(error){
-                    logger.error('Error during authentication.', error)
-                    reject(error)
-                    return
-                }
-                if(response.statusCode === 200 && typeof body === 'object'){
-                    resolve(body)
-                    return
-                } 
-                let errorTitle = 'Error during authentication'
-                let errorMessage = 'Please contact support'
-                if (typeof body === 'object' && typeof body.error === 'object') {
-                    switch (body.error.code) {
-                        case 'email_not_confirmed':
-                            errorTitle = 'Registration was not completed'
-                            errorMessage = 'Please confirm you email address first.'
-                            if (body.error.url) {
-                                errorMessage += `<br/>Visit <a href="${body.error.url}">link</a> for more information`
-                            }
-                            break
-                        case 'too_many_bad_login_attempts':
-                            errorTitle = 'ForbiddenOperationException'
-                            errorMessage = 'Invalid credentials.'
-                            break
-                        case 'invalid_credential':
-                            errorTitle = 'ForbiddenOperationException'
-                            errorMessage = 'Invalid credentials. Invalid username or password.'
-                            break
-                            
+        let errorTitle = 'Error during authentication'
+        let errorMessage = 'Please contact support'
+        if (typeof response === 'object' && typeof response.error === 'object') {
+            switch (response.error.code) {
+                case 'email_not_confirmed':
+                    errorTitle = 'Registration was not completed'
+                    errorMessage = 'Please confirm you email address first.'
+                    if (response.error.url) {
+                        errorMessage += `<br/>Visit <a href="${response.error.url}">link</a> for more information`
                     }
-                } else {
-                    logger.error('Error during authentication with status (' + response.statusCode + '): ' + response.statusMessage, body)
-                }
+                    break
+                case 'too_many_bad_login_attempts':
+                    errorTitle = 'ForbiddenOperationException'
+                    errorMessage = 'Invalid credentials.'
+                    break
+                case 'invalid_credential':
+                    errorTitle = 'ForbiddenOperationException'
+                    errorMessage = 'Invalid credentials. Invalid username or password.'
+                    break
 
-                reject({
-                    error: errorTitle,
-                    errorMessage
-                })
-            })
-    })
+            }
+        } else {
+            logger.error('Error during authentication with status code (' + request.statusCode + '): ', response)
+        }
+
+        throw ({
+            error: errorTitle,
+            errorMessage
+        })
+
+    } catch (error) {
+        throw new Error('Error during authentication.', error)
+    }
+
+
 }
 
 /**
@@ -207,30 +205,23 @@ exports.authenticate = function(username, password, clientToken, requestUser = t
  * 
  * @see http://wiki.vg/Authentication#Validate
  */
-exports.validate = function(accessToken, clientToken){
-    return new Promise((resolve, reject) => {
-        request.post(authpath + '/validate',
-            {
-                json: true,
-                body: {
-                    accessToken,
-                    clientToken
-                }
-            },
-            function(error, response, body){
-                if(error){
-                    logger.error('Error during validation.', error)
-                    reject(error)
-                } else {
-                    if(response.statusCode === 204){
-                        resolve(true)
-                    } else {
-                    // 403 if not valid
-                        resolve(false)
-                    }
-                }
-            })
-    })
+exports.validate = async (accessToken, clientToken) => {
+    try {
+        const response = await got.post(authpath + '/validate', {
+            json: {
+                'accessToken': accessToken,
+                'clientToken': clientToken
+            }
+        })
+
+        if (response.statusCode === 204) {
+            return true
+        } else {
+            return false
+        }
+    } catch (error) {
+        throw new Error('Error during validation.', error)
+    }
 }
 
 /**
@@ -242,29 +233,23 @@ exports.validate = function(accessToken, clientToken){
  * 
  * @see http://wiki.vg/Authentication#Invalidate
  */
-exports.invalidate = function(accessToken, clientToken){
-    return new Promise((resolve, reject) => {
-        request.post(authpath + '/invalidate',
-            {
-                json: true,
-                body: {
-                    accessToken,
-                    clientToken
-                }
-            },
-            function(error, response, body){
-                if(error){
-                    logger.error('Error during invalidation.', error)
-                    reject(error)
-                } else {
-                    if(response.statusCode === 204){
-                        resolve()
-                    } else {
-                        reject(body)
-                    }
-                }
-            })
-    })
+exports.invalidate = async (accessToken, clientToken) => {
+    try {
+        const response = await got.post(authpath + '/invalidate', {
+            json: {
+                'accessToken': accessToken,
+                'clientToken': clientToken
+            }
+        })
+
+        if (response.statusCode === 204) {
+            return
+        } else {
+            throw new Error(JSON.parse(response.body))
+        }
+    } catch (error) {
+        throw new Error('Error during invalidation.', error)
+    }
 }
 
 /**
@@ -278,28 +263,22 @@ exports.invalidate = function(accessToken, clientToken){
  * 
  * @see http://wiki.vg/Authentication#Refresh
  */
-exports.refresh = function(accessToken, clientToken, requestUser = true){
-    return new Promise((resolve, reject) => {
-        request.post(authpath + '/refresh',
-            {
-                json: true,
-                body: {
-                    accessToken,
-                    clientToken,
-                    requestUser
-                }
-            },
-            function(error, response, body){
-                if(error){
-                    logger.error('Error during refresh.', error)
-                    reject(error)
-                } else {
-                    if(response.statusCode === 200 && typeof body === 'object'){
-                        resolve(body)
-                    } else {
-                        reject(body)
-                    }
-                }
-            })
-    })
+exports.refresh = async (accessToken, clientToken, requestUser = true) => {
+    try {
+        const response = await got.post(authpath + '/refresh', {
+            json: {
+                'accessToken': accessToken,
+                'clientToken': clientToken,
+                'requestUser': requestUser
+            }
+        })
+
+        if (response.statusCode === 200) {
+            return JSON.parse(response.body)
+        } else {
+            throw new Error(JSON.parse(response.body))
+        }
+    } catch (error) {
+        throw new Error('Error during refresh.', error)
+    }
 }

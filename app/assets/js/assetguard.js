@@ -4,7 +4,7 @@ const crypto = require('crypto')
 const EventEmitter = require('events')
 const fs = require('fs-extra')
 const path = require('path')
-const request = require('request')
+const got = require('got')
 const arch = require('arch')
 const log = require('electron-log')
 const dirTree = require('directory-tree')
@@ -234,7 +234,7 @@ class AssetGuard extends EventEmitter {
         async function checkVCPP19() {
             const reg = require('native-reg')
             let regKey = null
-            try{
+            try {
                 if (arch() === 'x64') {
                     log.info('x64 system detected')
                     regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.READ)
@@ -244,7 +244,6 @@ class AssetGuard extends EventEmitter {
                 } else {
                     throw 'Unknown architecture'
                 }
-                
             } catch (e) {
                 log.error(e)
             }
@@ -270,51 +269,50 @@ class AssetGuard extends EventEmitter {
             return false
         }
 
-        function downloadReq(reqName, url, path, hash) {
-            return new Promise((resolve, reject) => {
-                let corrupted = false
-                if (fs.existsSync(path)) {
-                    let calculatedHash = crypto.createHash('md5')
-                    fs.createReadStream(path)
-                        .on('data', data => calculatedHash.update(data))
-                        .on('end', () => {
-                            calculatedHash = calculatedHash.digest('hex')
-                            if (calculatedHash === hash) {
-                                log.info(`${reqName} executable exist and not corrupted`)
-                                resolve()
-                            } else {
-                                corrupted = true
-                            }
-                        })
-                } else {
-                    corrupted = true
-                }
-                if (corrupted) {
-                    log.info(`Downloading ${reqName}...`)
-                    request(url)
-                        .on('response', res => {
-                            if (res.statusCode >= 400) {
-                                reject(`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
-                            }
-                        })
-                        .pipe(fs.createWriteStream(path))
-                        .on('finish', () => {
-                            log.info(`${reqName} download completed`)
-                            let calculatedHash = crypto.createHash('md5')
-                            fs.createReadStream(path)
-                                .on('data', data => calculatedHash.update(data))
-                                .on('end', () => {
-                                    calculatedHash = calculatedHash.digest('hex')
-                                    if (calculatedHash !== hash) {
-                                        reject(`Wrong Hash! ${calculatedHash} !== ${hash}`)
-                                    } else {
-                                        resolve()
-                                    }
-                                })
-                        })
-                        .on('error', reject)
-                }
-            })
+        async function downloadReq(reqName, url, path, hash) {
+            let corrupted = false
+            try {
+                await fs.promises.access(path)
+                let calculatedHash = crypto.createHash('md5')
+                fs.createReadStream(path)
+                    .on('data', data => calculatedHash.update(data))
+                    .on('end', () => {
+                        calculatedHash = calculatedHash.digest('hex')
+                        if (calculatedHash === hash) {
+                            log.info(`${reqName} executable exist and not corrupted`)
+                            return
+                        } else {
+                            corrupted = true
+                        }
+                    })
+            } catch (err) {
+                corrupted = true
+            }
+
+            if (corrupted) {
+                log.info(`Downloading ${reqName}...`)
+                got.stream(url)
+                    .on('response', res => {
+                        if (res.statusCode >= 400) {
+                            throw (`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
+                        }
+                    })
+                    .pipe(fs.createWriteStream(path))
+                    .on('finish', () => {
+                        log.info(`${reqName} download completed`)
+                        let calculatedHash = crypto.createHash('md5')
+                        fs.createReadStream(path)
+                            .on('data', data => calculatedHash.update(data))
+                            .on('end', () => {
+                                calculatedHash = calculatedHash.digest('hex')
+                                if (calculatedHash !== hash) {
+                                    throw (`Wrong Hash! ${calculatedHash} !== ${hash}`)
+                                }
+                                return
+                            })
+                    })
+                    .on('error', Promise.reject())
+            }
         }
 
         function installReq(reqName, path, ...flags) {

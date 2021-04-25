@@ -1,6 +1,6 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
-const request = require('request')
 
 const ConfigManager = require('./configmanager')
 const logger = require('./loggerutil')('%c[DistroManager]', 'color: #a02d2a; font-weight: bold')
@@ -578,7 +578,7 @@ let _HOLDER = null
 /**
  * @returns {Promise.<DistroIndex>}
  */
-exports.pullRemote = function () {
+exports.pullRemote = async function () {
     if (DEV_MODE) {
         return exports.pullLocal()
     }
@@ -588,60 +588,55 @@ exports.pullRemote = function () {
         return Promise.reject('Unauthorized user can not fetch distribution information')
     }
 
-    return new Promise((resolve, reject) => {
-        const distroURL = 'https://www.northernblade.ru/api/distribution'
+    const distroURL = 'https://www.northernblade.ru/api/distribution'
+    const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
+    // TODO: move version into config
+    const {remote} = require('electron')
+    const customHeaders = {
+        'User-Agent': 'BladeLauncher/' + remote.app.getVersion(),
+        'Authorization': `Bearer ${authAcc.accessToken}`
+    }
 
-        const distroDest = path.join(ConfigManager.getLauncherDirectory(), 'distribution.json')
-        // TODO: move version into config
-        const {remote} = require('electron')
-        const opts = {
-            url: distroURL,
-            timeout: 5000,
-            headers: {
-                'User-Agent': 'BladeLauncher/' + remote.app.getVersion()
-            },
-            auth: {
-                'bearer': authAcc.accessToken
-            }
-        }
+    try {
+        await fs.promises.access(distroDest)
+        const stats = await fs.promises.stat(distroDest)
+        customHeaders['If-Modified-Since'] = stats.mtime.toUTCString()
+    } catch (error) {
+        logger.warn(error)
+    }
 
-        const fileExists = fs.existsSync(distroDest)
-        if (fileExists) {
-            const stats = fs.statSync(distroDest)
-            opts.headers['If-Modified-Since'] = stats.mtime.toUTCString()
-        }
-
-        request(opts, (error, resp, body) => {
-            if (error) {
-                reject(error)
-                return
-            }
-
-            if (resp.statusCode === 304) {
-                resolve(exports.pullLocal())
-                return
-            }
-            if (resp.statusCode !== 200) {
-                reject(resp.statusMessage)
-                return
-            }
-
-            try {
-                _HOLDER = DistroIndex.fromJSON(JSON.parse(body))
-            } catch (e) {
-                reject(e)
-                return
-            }
-
-            fs.writeFile(distroDest, body, 'utf-8', (err) => {
-                if (err) {
-                    reject(err)
-                } else {
-                    resolve(_HOLDER)
-                }
-            })
+    try {
+        const response = await got(distroURL, {
+            method: 'get',
+            headers: customHeaders,
+            timeout: 5000
         })
-    })
+
+        switch (response.statusCode) {
+            case 304: {
+                return exports.pullLocal()
+            }
+            case 200: {
+                try {
+                    _HOLDER = DistroIndex.fromJSON(JSON.parse(response.body))
+                } catch (e) {
+                    return Promise.reject(e)
+                }
+
+                try {
+                    await fs.promises.writeFile(distroDest, response.body, 'utf-8')
+                    return _HOLDER
+                } catch (error) {
+                    throw error
+                }
+            }
+            default: {
+                throw response.statusCode
+            }
+        }
+    } catch (error) {
+        throw error
+    }
 }
 
 /**

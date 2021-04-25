@@ -1,5 +1,5 @@
 const EventEmitter = require('events')
-const request = require('request')
+const got = require('got')
 const fs = require('fs-extra')
 const arch = require('arch')
 const child_process = require('child_process')
@@ -84,19 +84,13 @@ class HttpFetcher extends Fetcher {
     }
 
     async fetch(targetPath) {
-        const opt = {
-            url: this.url,
+        const req = await got.stream(this.url, {
             headers: {
                 'User-Agent': 'BladeLauncher/' + this.launcherVersion,
-                'Accept': '*/*'
-            },
-            auth: {
-                'bearer': this.account.accessToken
+                'Accept': '*/*',
+                'Authorization': `Bearer ${this.account.accessToken}`
             }
-        }
-
-        let req = request(opt)
-        req.pause()
+        })
 
         req.on('data', (chunk) => {
             this.reporter.download(chunk.length)
@@ -109,7 +103,7 @@ class HttpFetcher extends Fetcher {
             req.on('response', (resp) => {
                 if (resp.statusCode !== 200) {
                     req.abort()
-                    const msg = `Failed to download ${typeof opt['url'] === 'object' ? opt['url'].url : opt['url']}. Response code ${resp.statusCode}: ${resp.statusMessage}`
+                    const msg = `Failed to download ${this.url}. Response code ${resp.statusCode}`
                     reject(msg)
                     return
                 }
@@ -117,7 +111,6 @@ class HttpFetcher extends Fetcher {
                 let writeStream = fs.createWriteStream(targetPath)
                 writeStream.on('close', resolve)
                 req.pipe(tg.throttle()).pipe(writeStream)
-                req.resume()
             })
         })
     }
@@ -373,11 +366,11 @@ class Facade {
         for (const url of asset.urls) {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 3})
+                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 1})
             } else if (urlObj.protocol === 'magnet:') {
                 fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.torrentsProxy), priority: 2})
             } else if (urlObj.protocol === 'patch:') {
-                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 1})
+                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 3})
             } else {
                 logger.warn('Unsupported url type for asset', asset.id)
             }

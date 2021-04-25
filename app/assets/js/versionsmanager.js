@@ -1,7 +1,7 @@
 const async = require('async')
 const fs = require('fs-extra')
 const path = require('path')
-const request = require('request')
+const got = require('got')
 const _ = require('lodash')
 
 const ConfigManager = require('./configmanager')
@@ -293,54 +293,42 @@ exports.init = async function () {
 exports.fetch = async function (version, force = false) {
 
     const token = ConfigManager.getSelectedAccount().accessToken
-    const getMeta = (existedDescriptor, descriptorParser, url, token, writePath) => {
-        return new Promise((resolve, reject) => {
-            const customHeaders = {
-                'User-Agent': 'BladeLauncher/' + this.launcherVersion
-            }
-            if (existedDescriptor && existedDescriptor.fetchTime) {
-                customHeaders['If-Modified-Since'] = existedDescriptor.fetchTime.toUTCString()
-            }
+    const getMeta = async (existedDescriptor, descriptorParser, url, token, writePath) => {
 
+        const customHeaders = {
+            'User-Agent': 'BladeLauncher/' + this.launcherVersion,
+            'Authorization': `Bearer ${token}`
+        }
+
+        if (existedDescriptor && existedDescriptor.fetchTime) {
+            customHeaders['If-Modified-Since'] = existedDescriptor.fetchTime.toUTCString()
+        }
+
+        try {
             logger.log(`Fetching descriptor '${url}' metadata.`)
-
-            const opts = {
-                url: url,
-                timeout: 5000,
-                auth: {
-                    'bearer': token
-                }
-            }
-
-            if (Object.keys(customHeaders).length > 0) {
-                opts.headers = customHeaders
-            }
-
-            request(opts, async (error, resp, body) => {
-                if (error) {
-                    logger.error(`Failed to download ${url}: `, error)
-                    reject(error)
-                    return
-                }
-
-                if (resp.statusCode === 304) {
-                    logger.info(`No need to downloading ${url} - up to date`)
-                    resolve(existedDescriptor)
-                    return
-                }
-
-                logger.info(`Download ${url}`)
-                if (resp.statusCode !== 200) {
-                    reject(resp.statusMessage || body || 'Failed to retrieve version data')
-                    return
-                }
-
-                const data = JSON.parse(body)
-                await fs.promises.mkdir(path.join(writePath, data.id), {recursive: true})
-                await fs.promises.writeFile(path.join(writePath, data.id, data.id + '.json'), body, 'utf-8')
-                resolve(descriptorParser(data))
+            const response = await got.get(url, {
+                headers: customHeaders,
+                timeout: 5000
             })
-        })
+            switch (response.statusCode) {
+                case 304: {
+                    logger.info(`No need to downloading ${url} - up to date`)
+                    return existedDescriptor
+                }
+                case 200: {
+                    const descriptor = JSON.parse(response.body)
+                    await fs.promises.mkdir(path.join(writePath, descriptor.id), {recursive: true})
+                    await fs.promises.writeFile(path.join(writePath, descriptor.id, descriptor.id + '.json'), JSON.stringify(descriptor), 'utf-8')
+                    return descriptorParser(descriptor)
+                }
+                default:
+                    throw (response.statusCode, 'Failed to retrieve version data')
+
+            }
+        } catch (error) {
+            logger.error(`Failed to download ${url}: `, error)
+            return
+        }
     }
 
     const resolvedApplication = () => {
