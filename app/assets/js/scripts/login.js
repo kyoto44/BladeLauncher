@@ -227,6 +227,7 @@ function resolveError(err) {
             }
         }
     }
+    loggerLogin.error('Unexpected authentication error, FIX ME!', err)
     return {
         title: Lang.queryJS('login.error.unknown.title'),
         desc: Lang.queryJS('login.error.unknown.desc')
@@ -300,16 +301,16 @@ loginButton.addEventListener('click', () => {
                 })
             }, 1000)
         }).catch((err) => {
-        loginLoading(false)
-        const errF = resolveError(err)
-        setOverlayContent(errF.title, errF.desc, Lang.queryJS('login.tryAgain'))
-        setOverlayHandler(() => {
-            formDisabled(false)
-            toggleOverlay(false)
+            loginLoading(false)
+            const errF = resolveError(err)
+            setOverlayContent(errF.title, errF.desc, Lang.queryJS('login.tryAgain'))
+            setOverlayHandler(() => {
+                formDisabled(false)
+                toggleOverlay(false)
+            })
+            toggleOverlay(true)
+            loggerLogin.warn('Error while logging in.', err)
         })
-        toggleOverlay(true)
-        loggerLogin.warn('Error while logging in.', err)
-    })
 
 })
 

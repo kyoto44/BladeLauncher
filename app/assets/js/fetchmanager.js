@@ -77,10 +77,11 @@ class HttpFetcher extends Fetcher {
      * @param {string} chosenUrl
      * @param account
      */
-    constructor(reporter, chosenUrl, account) {
+    constructor(reporter, chosenUrl, account, launcherVersion) {
         super(reporter)
         this.url = chosenUrl
         this.account = account
+        this.launcherVersion = launcherVersion
     }
 
     async fetch(targetPath) {
@@ -177,12 +178,13 @@ class PatchFetcher extends Fetcher {
      * @param account
      * @param {File} asset
      */
-    constructor(reporter, chosenUrl, account, asset) {
+    constructor(reporter, chosenUrl, account, asset, launcherVersion) {
         super(reporter)
         this.url = chosenUrl
         this.account = account
         this.assetId = asset.id
         this.assetSize = asset.size
+        this.launcherVersion = launcherVersion
     }
 
     static async getPatcherPath() {
@@ -268,7 +270,7 @@ class PatchFetcher extends Fetcher {
             }
         }
 
-        const httpFetcher = new HttpFetcher(new AdjustReporter(), subURI, this.account)
+        const httpFetcher = new HttpFetcher(new AdjustReporter(), subURI, this.account, this.launcherVersion)
 
         const patchTargetPath = targetPath + '.patch'
         const isAlreadyValid = await Util.validateLocal(patchTargetPath, checksum.algo, checksum.hash, expectedLength)
@@ -366,11 +368,11 @@ class Facade {
         for (const url of asset.urls) {
             const urlObj = new URL(url)
             if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account), priority: 3})
+                fetchers.push({fetcher: new HttpFetcher(reporter, url, this.account, this.launcherVersion), priority: 3})
             } else if (urlObj.protocol === 'magnet:') {
                 fetchers.push({fetcher: new TorrentFetcher(reporter, url, this.torrentsProxy), priority: 2})
             } else if (urlObj.protocol === 'patch:') {
-                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset), priority: 1})
+                fetchers.push({fetcher: new PatchFetcher(reporter, url, this.account, asset, this.launcherVersion), priority: 1})
             } else {
                 logger.warn('Unsupported url type for asset', asset.id)
             }

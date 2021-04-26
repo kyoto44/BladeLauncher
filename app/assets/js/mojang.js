@@ -18,6 +18,7 @@ const minecraftAgent = {
     // Todo: add fingerprint
 }
 const authpath = 'https://www.northernblade.ru/api'
+/*
 const statuses = [
     {
         service: 'sessionserver.mojang.com',
@@ -56,6 +57,7 @@ const statuses = [
         essential: false
     }
 ]
+*/
 
 // Functions
 
@@ -134,7 +136,6 @@ exports.status = function () {
  * @param {boolean} requestUser Optional. Adds user object to the reponse.
  * @param {Object} agent Optional. Provided by default. Adds user info to the response.
  * 
- * @see http://wiki.vg/Authentication#Authenticate
  */
 exports.authenticate = async (username, password, clientToken, requestUser = true, agent = minecraftAgent) => {
     const authJSON = {
@@ -148,51 +149,49 @@ exports.authenticate = async (username, password, clientToken, requestUser = tru
         authJSON['clientToken'] = clientToken
     }
 
+    let errorData = {}
     try {
-        const request = await got.post(authpath + '/authenticate', {
+        const response = await got.post(authpath + '/authenticate', {
             json: authJSON
         })
-
-        const response = JSON.parse(request.body)
-
-        if (request.statusCode === 200) {
-            return response
-        }
-
-        let errorTitle = 'Error during authentication'
-        let errorMessage = 'Please contact support'
-        if (typeof response === 'object' && typeof response.error === 'object') {
-            switch (response.error.code) {
-                case 'email_not_confirmed':
-                    errorTitle = 'Registration was not completed'
-                    errorMessage = 'Please confirm you email address first.'
-                    if (response.error.url) {
-                        errorMessage += `<br/>Visit <a href="${response.error.url}">link</a> for more information`
-                    }
-                    break
-                case 'too_many_bad_login_attempts':
-                    errorTitle = 'ForbiddenOperationException'
-                    errorMessage = 'Invalid credentials.'
-                    break
-                case 'invalid_credential':
-                    errorTitle = 'ForbiddenOperationException'
-                    errorMessage = 'Invalid credentials. Invalid username or password.'
-                    break
-
-            }
-        } else {
-            logger.error('Error during authentication with status code (' + request.statusCode + '): ', response)
-        }
-
-        throw {
-            error: errorTitle,
-            errorMessage
-        }
-
+        return JSON.parse(response.body)
     } catch (error) {
-        throw ('Error during authentication.', error.response.body)
+        logger.error('Error during authentication', error)
+        if (error instanceof got.HTTPError) {
+            errorData = JSON.parse(error.response.body).error
+        } else {
+            throw error
+        }
     }
 
+    let errorTitle = 'Error during authentication'
+    let errorMessage = 'Please contact support'
+
+    switch (errorData.code) {
+        case 'email_not_confirmed':
+            errorTitle = 'Registration was not completed'
+            errorMessage = 'Please confirm you email address first.'
+            if (errorData.url) {
+                errorMessage += `<br/>Visit <a href="${errorData.url}">link</a> for more information`
+            }
+            break
+        case 'too_many_bad_login_attempts':
+            errorTitle = 'ForbiddenOperationException'
+            errorMessage = 'Invalid credentials.'
+            break
+        case 'invalid_credential':
+            errorTitle = 'ForbiddenOperationException'
+            errorMessage = 'Invalid credentials. Invalid username or password.'
+            break
+        default:
+            errorTitle = errorData.title
+            errorMessage = errorData.message
+    }
+
+    throw {
+        error: errorTitle,
+        errorMessage
+    }
 
 }
 
@@ -203,7 +202,6 @@ exports.authenticate = async (username, password, clientToken, requestUser = tru
  * @param {string} accessToken The access token to validate.
  * @param {string} clientToken The launcher's client token.
  * 
- * @see http://wiki.vg/Authentication#Validate
  */
 exports.validate = async (accessToken, clientToken) => {
     try {
@@ -215,7 +213,8 @@ exports.validate = async (accessToken, clientToken) => {
         })
         return response.statusCode === 204
     } catch (error) {
-        return error.response.statusCode === 204
+        logger.error('Error during validation.', error)
+        return false
     }
 }
 
@@ -226,23 +225,17 @@ exports.validate = async (accessToken, clientToken) => {
  * @param {string} accessToken The access token to invalidate.
  * @param {string} clientToken The launcher's client token.
  * 
- * @see http://wiki.vg/Authentication#Invalidate
  */
 exports.invalidate = async (accessToken, clientToken) => {
-    try {
-        const response = await got.post(authpath + '/invalidate', {
-            json: {
-                'accessToken': accessToken,
-                'clientToken': clientToken
-            }
-        })
-
-        if (response.statusCode !== 204) {
-            throw new Error(response.body)
+    const response = await got.post(authpath + '/invalidate', {
+        json: {
+            'accessToken': accessToken,
+            'clientToken': clientToken
         }
+    })
 
-    } catch (error) {
-        throw ('Error during invalidation.', error.response.body)
+    if (response.statusCode !== 204) {
+        throw ('Error during invalidation.', response.statusCode)
     }
 }
 
@@ -255,23 +248,17 @@ exports.invalidate = async (accessToken, clientToken) => {
  * @param {string} clientToken The launcher's client token.
  * @param {boolean} requestUser Optional. Adds user object to the reponse.
  * 
- * @see http://wiki.vg/Authentication#Refresh
  */
 exports.refresh = async (accessToken, clientToken, requestUser = true) => {
-    try {
-        const response = await got.post(authpath + '/refresh', {
-            json: {
-                'accessToken': accessToken,
-                'clientToken': clientToken,
-                'requestUser': requestUser
-            }
-        })
-
-        if (response.statusCode !== 200) {
-            throw new Error(response.body)
+    const response = await got.post(authpath + '/refresh', {
+        json: {
+            'accessToken': accessToken,
+            'clientToken': clientToken,
+            'requestUser': requestUser
         }
-        return JSON.parse(response.body)
-    } catch (error) {
-        throw ('Error during refresh.', error.response.body)
+    })
+    if (response.statusCode !== 200) {
+        throw new Error(response.body)
     }
+    return JSON.parse(response.body)
 }
