@@ -1,6 +1,6 @@
 {
   "name": "bladelauncher",
-  "version": "1.0.44",
+  "version": "1.0.45",
   "productName": "Blade Launcher",
   "description": "Northern Blade Launcher",
   "author": "N-Blade LCC",
@@ -29,15 +29,16 @@
     "adm-zip": "^0.5.5",
     "arch": "^2.2.0",
     "async": "^3.2.0",
+    "better-sqlite3": "^7.1.5",
     "directory-tree": "^2.2.7",
     "discord-rpc": "^3.2.0",
     "ejs": "^3.1.6",
     "ejs-electron": "^2.1.1",
-    "electron-log": "^4.3.2",
+    "electron-log": "^4.3.5",
     "electron-updater": "^4.3.8",
     "fast-xml-parser": "^3.19.0",
     "form-data": "^4.0.0",
-    "fs-extra": "^9.1.0",
+    "fs-extra": "^10.0.0",
     "github-syntax-dark": "^0.5.0",
     "got": "^11.8.2",
     "jquery": "^3.6.0",
@@ -53,11 +54,11 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "electron": "^12.0.5",
+    "electron": "^12.0.6",
     "electron-builder": "^22.10.5",
     "electron-rebuild": "^2.3.5",
     "electron-reloader": "^1.1.0",
-    "eslint": "^7.23.0"
+    "eslint": "^7.25.0"
   },
   "repository": {
     "type": "git",

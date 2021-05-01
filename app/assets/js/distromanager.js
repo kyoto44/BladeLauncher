@@ -312,13 +312,6 @@ class Module {
 
 exports.Module
 
-
-exports.VersionType = {
-    RELEASE: 'release', //compatibility
-    STABLE: 'stable',
-    BETA: 'beta'
-}
-
 class Version {
 
     /**
@@ -605,28 +598,25 @@ exports.pullRemote = async () => {
         logger.warn(error)
     }
 
-    try {
-        const response = await got.get(distroURL, {
-            headers: customHeaders,
-            timeout: 5000
-        })
+    const response = await got.get(distroURL, {
+        headers: customHeaders,
+        timeout: 5000
+    })
 
-        switch (response.statusCode) {
-            case 304: {
-                return exports.pullLocal()
-            }
-            case 200: {
-                _HOLDER = DistroIndex.fromJSON(JSON.parse(response.body))
-                await fs.promises.writeFile(distroDest, response.body, 'utf-8')
-                return _HOLDER
-            }
-            default: {
-                throw new Error('Something went wrong, status code: ', response.statusCode)
-            }
+    switch (response.statusCode) {
+        case 304: {
+            return exports.pullLocal()
         }
-    } catch (error) {
-        throw error
+        case 200: {
+            _HOLDER = DistroIndex.fromJSON(JSON.parse(response.body))
+            await fs.promises.writeFile(distroDest, response.body, 'utf-8')
+            return _HOLDER
+        }
+        default: {
+            throw new Error('Something went wrong, status code: ', response.statusCode)
+        }
     }
+
 }
 
 /**

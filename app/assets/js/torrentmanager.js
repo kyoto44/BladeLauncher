@@ -1,5 +1,4 @@
 const EventEmitter = require('events')
-const fs = require('fs-extra')
 const path = require('path')
 
 const parseTorrent = require('parse-torrent')
@@ -9,48 +8,19 @@ const FSChunkStore = require('fs-chunk-store')
 const ConfigManager = require('./configmanager')
 const LoggerUtil = require('./loggerutil')
 const {TimeoutEmitter} = require('./helpers')
+const {TorrentDBManager} = require('./databasemanager')
 
 const logger = LoggerUtil('%c[TorrentManager]', 'color: #a02d2a; font-weight: bold')
 
 
 class TorrentHolder {
 
-    static get torrentsBlobPath() {
-        return path.join(ConfigManager.getCommonDirectory(), 'torrents.blob')
-    }
-
     static async add(targetPath, torrentFile) {
-        const torrentsBlob = await this._readBlob()
-        torrentsBlob[targetPath] = {torrent: torrentFile.toString('base64')}
-        await fs.promises.writeFile(this.torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
+        TorrentDBManager.addTorrent(targetPath, torrentFile)
     }
 
     static async getData() {
-        const torrentsBlob = await this._readBlob()
-        const promises = []
-        const entries = Object.keys(torrentsBlob)
-        for (const targetPath of entries) {
-            promises.push(fs.promises.access(targetPath).catch((_) => {
-                delete torrentsBlob[targetPath]
-            }))
-        }
-        await Promise.all(promises)
-        if (entries.length !== promises.length) {
-            await fs.promises.writeFile(this.torrentsBlobPath, JSON.stringify(torrentsBlob), 'UTF8')
-        }
-        return torrentsBlob
-    }
-
-    static async _readBlob() {
-        try {
-            await fs.promises.access(this.torrentsBlobPath, fs.constants.R_OK)
-            const data = await fs.readFile(this.torrentsBlobPath, 'UTF8')
-            return JSON.parse(data)
-        } catch (e) {
-            logger.warn('bad blob file, skipping...', e)
-            await fs.promises.writeFile(this.torrentsBlobPath, JSON.stringify({}), 'UTF8')
-            return {}
-        }
+        return TorrentDBManager.getAllTorrents()
     }
 }
 
