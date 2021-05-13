@@ -75,6 +75,7 @@ class AssetGuard extends EventEmitter {
      */
     constructor(launcherVersion) {
         super()
+        this.syncURI = "https://sync.n-blade.ru"
         this.totaldlsize = 0
         this.progress = 0
         this.assets = new DLTracker([], 0)
@@ -175,8 +176,58 @@ class AssetGuard extends EventEmitter {
         }
     }
 
-    async syncSettings(type) {
-        // TODO: will be used to sync user setting between devices
+    async syncSettings(assetsMeta) {
+        const preferencesPath = ConfigManager.getGameConfigPath()
+        const abilityBarSettingsPath = path.join(ConfigManager.getInstanceDirectory(), assetsMeta.id, 'ability_bar_settings.xml')
+
+        const [oldPreferencesHash, oldAbilityBarHash] = await ConfigManager.getSettingsFileHashes()
+        let preferencesHash, abilityBarHash
+        try {
+            preferencesHash = await Util.calculateHash(preferencesPath, 'xxh128')
+            abilityBarHash = await Util.calculateHash(abilityBarSettingsPath, 'xxh128')
+            if (oldPreferencesHash == preferencesHash && oldAbilityBarHash == abilityBarHash) {
+                return
+            }
+        } catch (error) {
+            log.warn('Some files are not exists', error)
+        }
+
+        if (preferencesHash && abilityBarHash) {
+            try {
+                const preferences = await fs.promises.readFile(preferencesPath, 'ascii')
+                const abilityBar = await fs.promises.readFile(abilityBarSettingsPath, 'ascii')
+                const postJSON = {
+                    'userid': parseInt(ConfigManager.getSelectedAccount().uuid, 10),
+                    'preferences': preferences,
+                    'abilityBar': abilityBar
+                }
+                await got.post(this.syncURI + "/post", {
+                    json: postJSON,
+                    headers: {
+                        'User-Agent': 'BladeLauncher/' + this.launcherVersion,
+                        'Authorization': `Bearer ${ConfigManager.getSelectedAccount().accessToken}`
+                    }
+                })
+                await ConfigManager.setSettingsFileHashes(preferencesHash, abilityBarHash)
+            } catch (error) {
+                log.error(error)
+            }
+        } else {
+            try {
+                const response = await got.get(this.syncURI + "/get", {
+                    headers: {
+                        'userid': ConfigManager.getSelectedAccount().uuid,
+                        'User-Agent': 'BladeLauncher/' + this.launcherVersion,
+                        'Authorization': `Bearer ${ConfigManager.getSelectedAccount().accessToken}`
+                    }
+                })
+                const res = JSON.parse(response.body)
+                await fs.promises.writeFile(preferencesPath, res.preferences)
+                await fs.promises.writeFile(abilityBarSettingsPath, res.abilityBar)
+            } catch (error) {
+                log.error(error)
+            }
+        }
     }
 
     async validateRequirements() {
@@ -579,13 +630,13 @@ class AssetGuard extends EventEmitter {
             await this.validateVersion([applicationMeta, assetsMeta])
             this.emit('validate', 'libraries')
             await this.validateModifiers(applicationMeta)
-            //await this.syncSettings('download')
             this.torrentsProxy.setMaxListeners(_([applicationMeta, assetsMeta]).map('downloads').map(_.size).sum(_.values))
             const fetcher = await FetchManager.init(ConfigManager.getSelectedAccount(), [applicationMeta, assetsMeta], this.torrentsProxy, this.launcherVersion)
             await this.validateConfig()
             this.emit('validate', 'files')
             await this.processDlQueues(server, fetcher)
 
+            await this.syncSettings(assetsMeta)
             await this.generatePaths(applicationMeta, assetsMeta, 'json')
             await this.generatePaths(applicationMeta, assetsMeta, 'xml')
             await Promise.all(parallelTasks)
