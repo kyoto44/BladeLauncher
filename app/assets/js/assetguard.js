@@ -116,7 +116,7 @@ class AssetGuard extends EventEmitter {
         const applicationDirs = await fs.readdir(this.applicationsPath, {withFileTypes: true})
         const instancesDirs = await fs.readdir(this.instancesPath, {withFileTypes: true})
 
-        const toRemove = {}
+        const toRemove = []
         for (const versionDir of applicationDirs) {
             if (!versionDir.isDirectory())
                 continue
@@ -125,7 +125,7 @@ class AssetGuard extends EventEmitter {
             if (requiredVersion.has(versionNumber))
                 continue
 
-            toRemove[versionNumber] = path.join(this.applicationsPath, versionNumber)
+            toRemove.push(path.join(this.applicationsPath, versionNumber))
         }
 
         for (const versionDir of instancesDirs) {
@@ -136,14 +136,12 @@ class AssetGuard extends EventEmitter {
             if (requiredVersion.has(versionNumber))
                 continue
 
-            toRemove[versionNumber] = path.join(this.instancesPath, versionNumber)
+            toRemove.push(path.join(this.instancesPath, versionNumber))
         }
 
-        const ids = Object.keys(toRemove)
-
-        for (const id of ids) {
-            await fs.remove(toRemove[id])
-        }
+        await async.eachLimit(toRemove, 5, async (dir) => {
+            await fs.remove(dir)
+        })
     }
 
     async generatePaths(applicationVersion, assetsVersion, fileType) {
