@@ -101,6 +101,7 @@ class AssetGuard extends EventEmitter {
     }
 
     async cleanupPreviousVersionData(distroIndex) {
+        const requiredAppVersion = new Set()
         const requiredVersion = new Set()
         const servers = distroIndex.getServers()
         for (const server of servers) {
@@ -108,40 +109,22 @@ class AssetGuard extends EventEmitter {
             for (const version of versions) {
                 requiredVersion.add(version.id)
                 for (const appVersion of version.applications) {
-                    requiredVersion.add(appVersion.id)
+                    requiredAppVersion.add(appVersion.id)
                 }
             }
         }
 
-        const applicationDirs = await fs.readdir(this.applicationsPath, {withFileTypes: true})
-        const instancesDirs = await fs.readdir(this.instancesPath, {withFileTypes: true})
-
-        const toRemove = []
-        for (const versionDir of applicationDirs) {
-            if (!versionDir.isDirectory())
-                continue
-
-            const versionNumber = versionDir.name
-            if (requiredVersion.has(versionNumber))
-                continue
-
-            toRemove.push(path.join(this.applicationsPath, versionNumber))
+        const rm = async (dirPath, requireds) => {
+            return (await fs.readdir(dirPath, {withFileTypes: true}))
+                .filter(file => !requireds.has(file.name))
+                .map(file => path.join(dirPath, file.name))
+                .map(filePath => fs.remove(filePath))
         }
 
-        for (const versionDir of instancesDirs) {
-            if (!versionDir.isDirectory())
-                continue
-
-            const versionNumber = versionDir.name
-            if (requiredVersion.has(versionNumber))
-                continue
-
-            toRemove.push(path.join(this.instancesPath, versionNumber))
-        }
-
-        await async.eachLimit(toRemove, 5, async (dir) => {
-            await fs.remove(dir)
-        })
+        await Promise.all([
+            ... await rm(this.applicationsPath, requiredAppVersion),
+            ... await rm(this.instancesPath, requiredVersion)
+        ])
     }
 
     async generatePaths(applicationVersion, assetsVersion, fileType) {
