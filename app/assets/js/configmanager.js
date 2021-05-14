@@ -1,6 +1,8 @@
 const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
+const {ConfigDBManager} = require('./databasemanager')
+
 const Fingerprint = require('./fingerprint')
 const logger = require('./loggerutil')('%c[ConfigManager]', 'color: #a02d2a; font-weight: bold')
 
@@ -102,7 +104,11 @@ const DEFAULT_CONFIG = {
     selectedAccount: null,
     authenticationDatabase: {},
     modConfigurations: [],
-    fingerprint: []
+    fingerprint: [],
+    settingsFileHashes: {
+        preferencesHash: null,
+        abilityBarHash: null
+    }
 }
 
 let config = null
@@ -112,8 +118,8 @@ let config = null
 /**
  * Save the current configuration to a file.
  */
-exports.save = function () {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'UTF-8')
+exports.save = () => {
+    ConfigDBManager.save(config)
 }
 
 /**
@@ -122,26 +128,24 @@ exports.save = function () {
  * be generated. Note that "resolved" values default to null and will
  * need to be externally assigned.
  */
-exports.load = function () {
+exports.load = () => {
     let doLoad = true
-
-    if (!fs.existsSync(configPath)) {
-        // Create all parent directories.
-        fs.ensureDirSync(path.join(configPath, '..'))
+    const rawConfig = ConfigDBManager.get()
+    if (!rawConfig) {
         doLoad = false
         config = DEFAULT_CONFIG
         exports.save()
     }
+
     if (doLoad) {
         let doValidate = false
         try {
-            config = JSON.parse(fs.readFileSync(configPath, 'UTF-8'))
+            config = JSON.parse(rawConfig.config)
             doValidate = true
         } catch (err) {
             logger.error(err)
             logger.log('Configuration file contains malformed JSON or is corrupt.')
             logger.log('Generating a new configuration file.')
-            fs.ensureDirSync(path.join(configPath, '..'))
             config = DEFAULT_CONFIG
             exports.save()
         }
@@ -254,20 +258,19 @@ exports.getCrashDumpDirectory = function () {
  *
  * @returns {string} The launcher's instance directory.
  */
-exports.getInstanceDirectory = function () {
+exports.getInstanceDirectory = () => {
     return path.join(exports.getDataDirectory(), 'instances')
 }
 
-exports.getApplicationDirectory = function () {
+exports.getApplicationDirectory = () => {
     return path.join(exports.getDataDirectory(), 'applications')
 }
 
-exports.getConfigDirectory = function () {
-
+exports.getConfigDirectory = () => {
     return path.join(exports.getCommonDirectory(), 'config')
 }
 
-exports.getGameConfigPath = function () {
+exports.getGameConfigPath = () => {
     return path.join(exports.getConfigDirectory(), exports.getSelectedAccount().uuid, 'preferences.xml')
 }
 
@@ -704,4 +707,15 @@ exports.getIsBetaChannel = function () {
 exports.switchReleaseChannel = function (channel) {
     config.settings.launcher.releaseChannel = channel
     exports.save()
+}
+
+exports.setSettingsFileHashes = async (preferencesHash, abilityBarHash) => {
+    config.settingsFileHashes.preferencesHash = preferencesHash
+    config.settingsFileHashes.abilityBarHash = abilityBarHash
+    exports.save()
+}
+
+exports.getSettingsFileHashes = async () => {
+    return [config.settingsFileHashes.preferencesHash,
+    config.settingsFileHashes.abilityBarHash]
 }

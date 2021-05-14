@@ -564,10 +564,6 @@ class AssetGuard extends EventEmitter {
 
             // Validate Everything
 
-            if (!VersionManager.isInited()) {
-                await VersionManager.init()
-            }
-
             const versions = server.getVersions()
             if (versions.length < 1) {
                 throw new Error('Server do not have any available versions')

@@ -439,7 +439,6 @@ function _compareArtifactInfo(a, b) {
  */
 function analyzePreviousVersionAssets(targetVersionMeta) {
     const versions = VersionsManager.versions()
-
     const modules = targetVersionMeta.downloads
     const ids = Object.keys(modules)
 
