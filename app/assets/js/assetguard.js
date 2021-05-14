@@ -96,7 +96,8 @@ class AssetGuard extends EventEmitter {
             ConfigManager.load()
         }
 
-        this.commonPath = ConfigManager.getCommonDirectory()
+        this.applicationsPath = ConfigManager.getApplicationDirectory()
+        this.instancesPath = ConfigManager.getInstanceDirectory()
     }
 
     async cleanupPreviousVersionData(distroIndex) {
@@ -106,33 +107,43 @@ class AssetGuard extends EventEmitter {
             const versions = server.getVersions()
             for (const version of versions) {
                 requiredVersion.add(version.id)
+                for (const appVersion of version.applications) {
+                    requiredVersion.add(appVersion.id)
+                }
             }
         }
 
-        const versionsPath = path.join(this.commonPath, 'versions')
-
-        let versionDirs = await fs.readdir(versionsPath, {withFileTypes: true})
+        const applicationDirs = await fs.readdir(this.applicationsPath, {withFileTypes: true})
+        const instancesDirs = await fs.readdir(this.instancesPath, {withFileTypes: true})
 
         const toRemove = {}
-        for (let versionDir of versionDirs) {
+        for (const versionDir of applicationDirs) {
             if (!versionDir.isDirectory())
                 continue
-
 
             const versionNumber = versionDir.name
             if (requiredVersion.has(versionNumber))
                 continue
 
-            toRemove[versionNumber] = path.join(versionsPath, versionNumber)
+            toRemove[versionNumber] = path.join(this.applicationsPath, versionNumber)
+        }
+
+        for (const versionDir of instancesDirs) {
+            if (!versionDir.isDirectory())
+                continue
+
+            const versionNumber = versionDir.name
+            if (requiredVersion.has(versionNumber))
+                continue
+
+            toRemove[versionNumber] = path.join(this.instancesPath, versionNumber)
         }
 
         const ids = Object.keys(toRemove)
-        await async.eachLimit(ids, 5, async (id) => {
-            const previousLibPath = path.join(ConfigManager.getInstanceDirectory(), id)
-            await fs.remove(previousLibPath)
-            const configDirPath = toRemove[id]
-            await fs.remove(configDirPath)
-        })
+
+        for (const id of ids) {
+            await fs.remove(toRemove[id])
+        }
     }
 
     async generatePaths(applicationVersion, assetsVersion, fileType) {
