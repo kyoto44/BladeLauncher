@@ -25,11 +25,11 @@
     "node": "14.x.x"
   },
   "dependencies": {
-    "@kaciras-blog/nativelib": "github:kaciras-blog/nativelib#v0.2.4",
+    "xxhash3lib": "0.2.4",
     "adm-zip": "^0.5.5",
     "arch": "^2.2.0",
     "async": "^3.2.0",
-    "better-sqlite3": "^7.1.5",
+    "better-sqlite3": "github:kyoto44/better-sqlite3#^7.4.0",
     "directory-tree": "^2.2.7",
     "discord-rpc": "^3.2.0",
     "ejs": "^3.1.6",

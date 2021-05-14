@@ -1,6 +1,6 @@
 const EventEmitter = require('events')
 const fs = require('fs-extra')
-const {createXXH3_128} = require('@kaciras-blog/nativelib')
+const {createXXH3_128} = require('xxhash3lib')
 const crypto = require('crypto')
 
 
