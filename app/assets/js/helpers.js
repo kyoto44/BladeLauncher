@@ -1,6 +1,6 @@
 const EventEmitter = require('events')
 const fs = require('fs-extra')
-const {createXXH3_128} = require('xxhash3lib')
+const {XXHash128} = require('xxhash-addon');
 const crypto = require('crypto')
 
 
@@ -70,7 +70,7 @@ class Util {
             if (algo === 'sha512' || algo === 'md5') {
                 hash = crypto.createHash(algo)
             } else if (algo === 'xxh128') {
-                hash = new createXXH3_128()
+                hash = new XXHash128()
             } else {
                 reject('Unsupported hash algorithm: ' + algo)
                 return
@@ -79,7 +79,7 @@ class Util {
             let stream = fs.createReadStream(filepath)
             stream.on('error', reject)
             stream.on('data', chunk => hash.update(chunk))
-            stream.on('end', () => resolve(hash.digest('hex')))
+            stream.on('end', () => resolve(hash.digest().toString('hex')))
         })
     }
 

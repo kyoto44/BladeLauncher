@@ -1,6 +1,6 @@
 const path = require('path')
 const isDev = require('./isdev')
-const Database = require('better-sqlite3')
+const Database = require('better-sqlite3-with-prebuilds-latest')
 const fs = require('fs-extra')
 const LoggerUtil = require('./loggerutil')
 
