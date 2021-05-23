@@ -10,6 +10,8 @@ const log = require('electron-log')
 const dirTree = require('directory-tree')
 const xml = require('fast-xml-parser')
 const _ = require('lodash')
+const {promisify} = require('util')
+const stream = require('stream')
 
 const reg = (process.platform === 'win32') ? require('native-reg') : null
 
@@ -325,28 +327,31 @@ class AssetGuard extends EventEmitter {
 
             if (corrupted) {
                 log.info(`Downloading ${reqName}...`)
-                got.stream(url)
-                    .on('response', res => {
-                        if (res.statusCode >= 400) {
-                            throw (`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
-                        }
-                    })
-                    .pipe(fs.createWriteStream(path))
-                    .on('finish', () => {
-                        log.info(`${reqName} download completed`)
-                        let calculatedHash = crypto.createHash('md5')
-                        fs.createReadStream(path)
-                            .on('data', data => calculatedHash.update(data))
-                            .on('end', () => {
-                                calculatedHash = calculatedHash.digest('hex')
-                                if (calculatedHash !== hash) {
-                                    throw (`Wrong Hash! ${calculatedHash} !== ${hash}`)
-                                }
-                            })
-                    })
-                    .on('error', e => {
-                        throw e
-                    })
+                const pipeline = promisify(stream.pipeline)
+                await pipeline(
+                    got.stream(url)
+                        .on('response', res => {
+                            if (res.statusCode >= 400) {
+                                throw (`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
+                            }
+                        }),
+                    fs.createWriteStream(path)
+                        .on('finish', () => {
+                            log.info(`${reqName} download completed`)
+                            let calculatedHash = crypto.createHash('md5')
+                            fs.createReadStream(path)
+                                .on('data', data => calculatedHash.update(data))
+                                .on('end', () => {
+                                    calculatedHash = calculatedHash.digest('hex')
+                                    if (calculatedHash !== hash) {
+                                        throw (`Wrong Hash! ${calculatedHash} !== ${hash}`)
+                                    }
+                                })
+                        })
+                        .on('error', e => {
+                            throw e
+                        })
+                )
             }
         }
 

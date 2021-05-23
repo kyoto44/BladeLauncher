@@ -5,6 +5,8 @@ const arch = require('arch')
 const child_process = require('child_process')
 const path = require('path')
 const ThrottleGroup = require('stream-throttle').ThrottleGroup
+const {promisify} = require('util')
+const stream = require('stream')
 
 const isDev = require('./isdev')
 const {File} = require('./assets')
@@ -85,34 +87,33 @@ class HttpFetcher extends Fetcher {
     }
 
     async fetch(targetPath) {
-        const req = await got.stream(this.url, {
+        const tg = new ThrottleGroup({rate: 1024 * ConfigManager.getAssetDownloadSpeedLimit()})
+        const fileWriterStream = fs.createWriteStream(targetPath)
+            .on('error', (error) => {
+                throw (`Cannot write file to ${targetPath}: ${error.message}`)
+            })
+            .on('finish', () => logger.info(`${path.basename(targetPath)} was downloaded successfully`))
+
+        const downloadStream = got.stream(this.url, {
             headers: {
                 'User-Agent': 'BladeLauncher/' + this.launcherVersion,
                 'Accept': '*/*',
                 'Authorization': `Bearer ${this.account.accessToken}`
             }
         })
-
-        req.on('data', (chunk) => {
-            this.reporter.download(chunk.length)
-        })
-
-        await new Promise((resolve, reject) => {
-            const tg = new ThrottleGroup({rate: 1024 * ConfigManager.getAssetDownloadSpeedLimit()})
-
-            req.on('error', reject)
-            req.on('response', (resp) => {
-                if (resp.statusCode !== 200) {
-                    const msg = `Failed to download ${this.url}. Response code ${resp.statusCode}`
-                    reject(msg)
-                    return
-                }
-
-                let writeStream = fs.createWriteStream(targetPath)
-                writeStream.on('close', resolve)
-                req.pipe(tg.throttle()).pipe(writeStream)
+            .on('data', (chunk) => {
+                this.reporter.download(chunk.length)
             })
-        })
+            .on('response', (resp) => {
+                if (resp.statusCode !== 200) {
+                    throw (`Failed to download ${this.url}. Response code ${resp.statusCode}`)
+                }
+            })
+            .on('error', (error) => {
+                throw (`Download failed: ${error.message}`)
+            })
+        const pipeline = promisify(stream.pipeline)
+        await pipeline(downloadStream, tg.throttle(), fileWriterStream)
     }
 }
 
