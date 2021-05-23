@@ -148,7 +148,8 @@ server_selection_button.onclick = (e) => {
     if (distro == null) {
         return
     }
-    const servers = distro.getServers()
+    const channels = ConfigManager.getReleaseChannels()
+    const servers = distro.getServers(channels)
     if (servers.length < 2) {
         return
     }
@@ -158,16 +159,9 @@ server_selection_button.onclick = (e) => {
 
 // Update Mojang Status Color
 const refreshMojangStatuses = async function () {
-    if (true)
-        return
-
 }
 
 const refreshServerStatus = async function (fade = false) {
-    if (true)
-        return
-
-
 }
 
 refreshMojangStatuses()
@@ -483,7 +477,8 @@ function dlAsync(login = true) {
     DistroManager.refresh()
         .then((data) => {
             return onDistroRefresh(data).then(() => {
-                serv = data.getServer(ConfigManager.getSelectedServer())
+                const channels = ConfigManager.getReleaseChannels()
+                serv = data.getServer(ConfigManager.getSelectedServer(), channels)
                 aEx.send({
                     task: 'execute',
                     function: 'validateEverything',

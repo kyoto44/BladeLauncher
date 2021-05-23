@@ -91,7 +91,7 @@ const DEFAULT_CONFIG = {
                 uploadLimit: Number.MAX_VALUE,
             },
             assetDownloadLimit: Number.MAX_VALUE,
-            releaseChannel: 'stable'
+            releaseChannels: ['stable', 'release']
         }
     },
     newsCache: {
@@ -692,20 +692,31 @@ exports.setFingerprint = async function () {
     exports.save()
 }
 
-exports.getReleaseChannel = function (def = false) {
-    return !def ? config.settings.launcher.releaseChannel : DEFAULT_CONFIG.settings.launcher.releaseChannel
+exports.getReleaseChannels = function (def = false) {
+    return !def ? config.settings.launcher.releaseChannels : DEFAULT_CONFIG.settings.launcher.releaseChannels
 }
 
-exports.getIsBetaChannel = function () {
-    if (config.settings.launcher.releaseChannel === 'beta') {
-        return true
+exports.getBetaChannel = function () {
+    return config.settings.launcher.releaseChannels.includes('beta')
+}
+
+exports.setBetaChannel = function (value) {
+    if (value) {
+        exports.addReleaseChannel('beta')
+    } else  {
+        exports.popReleaseChannel('beta')
     }
-    return false
 }
 
+exports.addReleaseChannel = function (channel) {
+    const channels = new Set(config.settings.launcher.releaseChannels)
+    channels.add(channel)
+    config.settings.launcher.releaseChannels = [...channels]
+    exports.save()
+}
 
-exports.switchReleaseChannel = function (channel) {
-    config.settings.launcher.releaseChannel = channel
+exports.popReleaseChannel = function (channel) {
+    config.settings.launcher.releaseChannels = config.settings.launcher.releaseChannels.filter(v => v !== channel)
     exports.save()
 }
 
@@ -716,6 +727,8 @@ exports.setSettingsFileHashes = async (preferencesHash, abilityBarHash) => {
 }
 
 exports.getSettingsFileHashes = async () => {
-    return [config.settingsFileHashes.preferencesHash,
-    config.settingsFileHashes.abilityBarHash]
+    return [
+        config.settingsFileHashes.preferencesHash,
+        config.settingsFileHashes.abilityBarHash,
+    ]
 }

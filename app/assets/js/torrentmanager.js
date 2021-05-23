@@ -16,11 +16,11 @@ const logger = LoggerUtil('%c[TorrentManager]', 'color: #a02d2a; font-weight: bo
 class TorrentHolder {
 
     static async add(targetPath, torrentFile) {
-        TorrentDBManager.addTorrent(targetPath, torrentFile)
+        TorrentDBManager.add(targetPath, torrentFile)
     }
 
     static async getData() {
-        return TorrentDBManager.getAllTorrents()
+        return TorrentDBManager.getAll()
     }
 }
 

@@ -151,8 +151,9 @@ function showFatalStartupError() {
  */
 function onDistroRefresh(data) {
     const selected = ConfigManager.getSelectedServer()
+    const channels = ConfigManager.getReleaseChannels()
     // Resolve the selected server if its value has yet to be set.
-    if (selected == null || data.getServer(selected) == null) {
+    if (selected == null || data.getServer(selected, channels) == null) {
         ConfigManager.setSelectedServer(data.getMainServer().getID())
         ConfigManager.save()
     }

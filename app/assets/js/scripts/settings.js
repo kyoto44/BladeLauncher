@@ -68,29 +68,31 @@ function initSettingsValidators() {
     const sEls = document.getElementById('settingsContainer').querySelectorAll('[cValue]')
     Array.from(sEls).map((v, index, arr) => {
         const vFn = ConfigManager['validate' + v.getAttribute('cValue')]
-        if (typeof vFn === 'function') {
-            if (v.tagName === 'INPUT') {
-                if (v.type === 'number' || v.type === 'text') {
-                    v.addEventListener('keyup', (e) => {
-                        const v = e.target
-                        if (!vFn(v.value)) {
-                            settingsState.invalid.add(v.id)
-                            v.setAttribute('error', '')
-                            settingsSaveDisabled(true)
-                        } else {
-                            if (v.hasAttribute('error')) {
-                                v.removeAttribute('error')
-                                settingsState.invalid.delete(v.id)
-                                if (settingsState.invalid.size === 0) {
-                                    settingsSaveDisabled(false)
-                                }
-                            }
-                        }
-                    })
+        if (typeof vFn !== 'function') {
+            return
+        }
+        if (v.tagName !== 'INPUT') {
+            return
+        }
+        if (!(v.type === 'number' || v.type === 'text')) {
+            return
+        }
+        v.addEventListener('keyup', (e) => {
+            const v = e.target
+            if (!vFn(v.value)) {
+                settingsState.invalid.add(v.id)
+                v.setAttribute('error', '')
+                settingsSaveDisabled(true)
+            } else {
+                if (v.hasAttribute('error')) {
+                    v.removeAttribute('error')
+                    settingsState.invalid.delete(v.id)
+                    if (settingsState.invalid.size === 0) {
+                        settingsSaveDisabled(false)
+                    }
                 }
             }
-        }
-
+        })
     })
 }
 
@@ -153,8 +155,11 @@ function saveSettingsValues() {
     Array.from(sEls).map((v, index, arr) => {
         const cVal = v.getAttribute('cValue')
         const sFn = ConfigManager['set' + cVal]
-        if (typeof sFn === 'function') {
-            if (v.tagName === 'INPUT') {
+        if (typeof sFn !== 'function') {
+            return
+        }
+        switch (v.tagName) {
+            case 'INPUT':
                 if (v.type === 'number' || v.type === 'text') {
                     // Special Conditions
                     if (cVal === 'JVMOptions') {
@@ -169,7 +174,8 @@ function saveSettingsValues() {
                         changeAllowPrerelease(v.checked)
                     }
                 }
-            } else if (v.tagName === 'DIV') {
+                break
+            case 'DIV':
                 if (v.classList.contains('rangeSlider')) {
                     // Special Conditions
                     if (cVal === 'MinRAM' || cVal === 'MaxRAM') {
@@ -185,7 +191,7 @@ function saveSettingsValues() {
                         sFn(v.getAttribute('value'))
                     }
                 }
-            }
+                break
         }
     })
 }
@@ -961,11 +967,7 @@ if (ConfigManager.getAssetDownloadSpeedLimit() === Number.MAX_VALUE) {
 
 settingsReleaseChannel.onchange = (e) => {
     const releaseChannelValue = document.getElementById('settingsReleaseChannelValue')
-    if (releaseChannelValue.checked) {
-        ConfigManager.switchReleaseChannel('beta')
-    } else {
-        ConfigManager.switchReleaseChannel('stable')
-    }
+    ConfigManager.setBetaChannel(releaseChannelValue.checked)
 }
 
 // Bind on change event for max dl speed container.

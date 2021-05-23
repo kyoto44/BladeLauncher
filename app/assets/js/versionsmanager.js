@@ -171,10 +171,10 @@ class Application extends ArtifactsHolder {
 class Assets extends ArtifactsHolder {
 
     /**
-         * @param {string} id
-         * @param {Downloads} downloads
-         * @param {Array.<Modifier>} modifiers
-         */
+     * @param {string} id
+     * @param {Downloads} downloads
+     * @param {Array.<Modifier>} modifiers
+     */
     constructor(id, downloads, modifiers) {
         super(id, downloads, modifiers)
     }
@@ -195,65 +195,67 @@ exports.Application = Application
  * Get or fetch the version data for a given version.
  *
  * @param {DistroManager.Version} version The game version for which to load the index data.
+ * @param {string} launcherVersion
  * @param {boolean} force Optional. If true, the version index will be downloaded even if it exists locally. Defaults to false.
  * @returns {Promise.<Version>} Promise which resolves to the version data object.
  */
 exports.fetch = async function (version, launcherVersion, force = false) {
 
     const token = ConfigManager.getSelectedAccount().accessToken
-    const getMeta = async (descriptorParser, url, token, existedDescriptor = undefined) => {
+    const getMeta = async (descriptorParser, url, token, existedDescriptor) => {
 
         const customHeaders = {
             'User-Agent': 'BladeLauncher/' + launcherVersion,
             'Authorization': `Bearer ${token}`
         }
 
-        if (existedDescriptor !== undefined) {
+        if (existedDescriptor) {
             customHeaders['If-Modified-Since'] = existedDescriptor.fetchTime
         }
 
-        try {
-            logger.info(`Fetching descriptor '${url}' metadata.`)
-            const response = await got.get(url, {
-                headers: customHeaders,
-                timeout: 5000
-            })
-            switch (response.statusCode) {
-                case 304: {
-                    logger.info(`No need to downloading ${url} - up to date`)
-                    return descriptorParser(existedDescriptor)
-                }
-                case 200: {
-                    let descriptor
-                    try {
-                        descriptor = JSON.parse(response.body)
-                    } catch (error) {
-                        throw ("Bad descriptor", error)
-                    }
-                    descriptor.fetchTime = new Date().toUTCString()
-                    return descriptorParser(descriptor)
-                }
-                default:
-                    throw (response.statusCode, 'Failed to retrieve version data')
-
+        logger.info(`Fetching descriptor '${url}' metadata.`)
+        const response = await got.get(url, {
+            headers: customHeaders,
+            timeout: 5000
+        })
+        switch (response.statusCode) {
+            case 304: {
+                logger.info(`No need to downloading ${url} - up to date`)
+                return descriptorParser(existedDescriptor)
             }
-        } catch (error) {
-            logger.error(`Failed to download ${url}: `, error)
-            return
+            case 200: {
+                let descriptor
+                try {
+                    descriptor = JSON.parse(response.body)
+                } catch (error) {
+                    const newErr = new Error('Bad descriptor')
+                    newErr.stack += '\nCaused by: ' + error.stack
+                    throw newErr
+                }
+                descriptor.fetchTime = new Date().toUTCString()
+                return descriptorParser(descriptor)
+            }
+            default:
+                throw new Error(`Failed to retrieve version data: ${response.statusCode}`)
+
         }
     }
 
     const resolvedDescriptor = (json) => {
-        const app = _.find(json, {'type': ConfigManager.getReleaseChannel()})
+        const channels = ConfigManager.getReleaseChannels()
+        let app = _.find(json, v => channels.includes(v.type))
         if (app === undefined) {
-            return _.find(json, {'type': 'stable'}) //fallback
+            app = _.find(json, {'type': 'stable'}) // fallback
+        }
+        if (app === undefined) {
+            throw new Error('No available version')
         }
         return app
     }
 
     let promises = []
     const application = resolvedDescriptor(version.applications)
-    let existedDescriptor
+    let existedDescriptor = null
     try {
         const existedApplication = ApplicationDBManager.get(application.id)
         if (existedApplication && !force) {
@@ -266,10 +268,10 @@ exports.fetch = async function (version, launcherVersion, force = false) {
         const desc = Application.fromJSON(descriptor)
         ApplicationDBManager.put(descriptor)
         return desc
-    }, application.url, application.type, token, existedDescriptor))
+    }, application.url, token, existedDescriptor))
 
 
-    const assets = resolvedDescriptor(version) //Change below when server will be fixed
+    existedDescriptor = null
     try {
         const existedAssets = AssetsDBManager.get(version.id)
         if (existedAssets && !force) {
@@ -282,7 +284,7 @@ exports.fetch = async function (version, launcherVersion, force = false) {
         const desc = Assets.fromJSON(descriptor)
         AssetsDBManager.put(descriptor)
         return desc
-    }, version.url, version.type, token, existedDescriptor))
+    }, version.url, token, existedDescriptor))
 
     return await Promise.all(promises)
 }

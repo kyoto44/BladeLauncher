@@ -1,6 +1,7 @@
 const fs = require('fs')
 const got = require('got')
 const path = require('path')
+const _ = require('lodash')
 
 const ConfigManager = require('./configmanager')
 const logger = require('./loggerutil')('%c[DistroManager]', 'color: #a02d2a; font-weight: bold')
@@ -318,6 +319,7 @@ class Version {
      * @param {string} id
      * @param {string} type
      * @param {string} url
+     * @param {Array} applications
      */
     constructor(id, type, url, applications) {
         this.id = id
@@ -374,7 +376,7 @@ class Server {
      * @param {string} name
      * @param {string} description
      * @param {string} icon
-     * @param {string} version
+     * @param {string} versions
      * @param {string} address
      * @param {Object} discord
      * @param {boolean} mainServer
@@ -421,17 +423,38 @@ class Server {
     }
 
     /**
-     * @returns {str} The latest version of the server configuration.
+     * @returns {string} The latest version of the server configuration.
      */
     getVersion() {
         return this.versions[0].id
     }
 
     /**
+     * @param {?Array<Version>} channels
+     *
      * @returns {Array<Version>} The version of the server configuration.
      */
-    getVersions() {
-        return this.versions
+    getVersions(channels = null) {
+        if (channels === null || channels.length === 0) {
+            return this.versions
+        }
+        const result = []
+        for (const version of this.versions) {
+            if (!channels.includes(version.type)) {
+                continue
+            }
+            const apps = []
+            for (const application of version.applications) {
+                if (channels.includes(application.type)) {
+                    apps.push(application)
+                }
+            }
+
+            if (apps.length) {
+                result.push(new Version(version.id, version.type, version.url, apps))
+            }
+        }
+        return result
     }
 
     /**
@@ -514,10 +537,22 @@ class DistroIndex {
     }
 
     /**
+     * @param {?Array<Version>} channels release channel
+     *
      * @returns {Array.<Server>} An array of declared server configurations.
      */
-    getServers() {
-        return this.servers
+    getServers(channels = null) {
+        if (channels === null || channels.length === 0) {
+            return this.servers
+        }
+        const result = []
+        for (let serv of this.servers) {
+            const versions = serv.getVersions(channels)
+            if (versions.length) {
+                result.push(serv)
+            }
+        }
+        return result
     }
 
     /**
@@ -525,14 +560,24 @@ class DistroIndex {
      * exist, null will be returned.
      *
      * @param {string} id The ID of the server.
+     * @param {?Array<Version>} channels release channel
      *
      * @returns {Server} The server configuration with the given ID or null.
      */
-    getServer(id) {
+    getServer(id, channels = null) {
         for (let serv of this.servers) {
-            if (serv.getID() === id) {
+            if (serv.getID() !== id) {
+                continue
+            }
+            if (channels === null || channels.length === 0) {
                 return serv
             }
+
+            const versions = serv.getVersions(channels)
+            if (versions.length) {
+                return serv
+            }
+            break
         }
         return null
     }

@@ -11,6 +11,8 @@ const dirTree = require('directory-tree')
 const xml = require('fast-xml-parser')
 const _ = require('lodash')
 
+const reg = (process.platform === 'win32') ? require('native-reg') : null
+
 const ConfigManager = require('./configmanager')
 const DistroManager = require('./distromanager')
 const DumpsManager = require('./dumpsmanager')
@@ -20,19 +22,6 @@ const {DumpsReporter} = require('./reportmanager')
 
 const {Util} = require('./helpers')
 const {Asset, XmlModifierRule} = require('./assets')
-
-
-function defer(call) {
-    return new Promise((resolve, reject) => {
-        call(function (err, data) {
-            if (err) {
-                reject(err)
-            } else {
-                resolve(data)
-            }
-        })
-    })
-}
 
 
 /**
@@ -75,7 +64,7 @@ class AssetGuard extends EventEmitter {
      */
     constructor(launcherVersion) {
         super()
-        this.syncURI = "https://sync.n-blade.ru"
+        this.syncURI = 'https://sync.n-blade.ru'
         this.totaldlsize = 0
         this.progress = 0
         this.assets = new DLTracker([], 0)
@@ -123,8 +112,8 @@ class AssetGuard extends EventEmitter {
         }
 
         await Promise.all([
-            ... await rm(this.applicationsPath, requiredAppVersion),
-            ... await rm(this.instancesPath, requiredVersion)
+            ...await rm(this.applicationsPath, requiredAppVersion),
+            ...await rm(this.instancesPath, requiredVersion)
         ])
     }
 
@@ -168,7 +157,10 @@ class AssetGuard extends EventEmitter {
 
                 pathsXML.root.Paths.Path.push(...pathsJSON.paths)
                 pathsXML.root.Paths.Path.push(pathsJSON.exportPath)
-                await fs.promises.writeFile(pathsXMLPath, new xml.j2xParser({format: true, indentBy: '  '}).parse(pathsXML))
+                await fs.promises.writeFile(pathsXMLPath, new xml.j2xParser({
+                    format: true,
+                    indentBy: '  '
+                }).parse(pathsXML))
             }
                 break
             default:
@@ -185,7 +177,7 @@ class AssetGuard extends EventEmitter {
         try {
             preferencesHash = await Util.calculateHash(preferencesPath, 'xxh128')
             abilityBarHash = await Util.calculateHash(abilityBarSettingsPath, 'xxh128')
-            if (oldPreferencesHash == preferencesHash && oldAbilityBarHash == abilityBarHash) {
+            if (oldPreferencesHash === preferencesHash && oldAbilityBarHash === abilityBarHash) {
                 return
             }
         } catch (error) {
@@ -201,10 +193,10 @@ class AssetGuard extends EventEmitter {
                     'preferences': preferences,
                     'abilityBar': abilityBar
                 }
-                await got.post(this.syncURI + "/post", {
+                await got.post(`${this.syncURI}/post`, {
                     json: postJSON,
                     headers: {
-                        'User-Agent': 'BladeLauncher/' + this.launcherVersion,
+                        'User-Agent': `BladeLauncher/${this.launcherVersion}`,
                         'Authorization': `Bearer ${ConfigManager.getSelectedAccount().accessToken}`
                     }
                 })
@@ -214,10 +206,10 @@ class AssetGuard extends EventEmitter {
             }
         } else {
             try {
-                const response = await got.get(this.syncURI + "/get", {
+                const response = await got.get(`${this.syncURI}/get`, {
                     headers: {
                         'userid': ConfigManager.getSelectedAccount().uuid,
-                        'User-Agent': 'BladeLauncher/' + this.launcherVersion,
+                        'User-Agent': `BladeLauncher/${this.launcherVersion}`,
                         'Authorization': `Bearer ${ConfigManager.getSelectedAccount().accessToken}`
                     }
                 })
@@ -251,17 +243,17 @@ class AssetGuard extends EventEmitter {
         }
 
         async function checkVCPP08() {
-            const reg = require('native-reg')
             let regKey = null
             try {
-                if (arch() === 'x64') {
+                const archValue = arch()
+                if (archValue === 'x64') {
                     log.info('x64 system detected')
                     regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.READ)
-                } else if (arch() === 'x86') {
+                } else if (archValue === 'x86') {
                     log.info('x32 system detected')
                     regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{9BE518E6-ECC6-35A9-88E4-87755C07200F}', reg.Access.READ)
                 } else {
-                    throw 'Unknown architecture'
+                    throw new Error(`Failed to determinate architecture: ${archValue}`)
                 }
             } catch (e) {
                 log.error(e)
@@ -275,17 +267,17 @@ class AssetGuard extends EventEmitter {
         }
 
         async function checkVCPP19() {
-            const reg = require('native-reg')
             let regKey = null
             try {
-                if (arch() === 'x64') {
+                const archValue = arch()
+                if (archValue === 'x64') {
                     log.info('x64 system detected')
                     regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.READ)
-                } else if (arch() === 'x86') {
+                } else if (archValue === 'x86') {
                     log.info('x32 system detected')
                     regKey = reg.openKey(reg.HKLM, 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86', reg.Access.READ)
                 } else {
-                    throw 'Unknown architecture'
+                    throw new Error(`Failed to determinate architecture: ${archValue}`)
                 }
             } catch (e) {
                 log.error(e)
@@ -323,7 +315,6 @@ class AssetGuard extends EventEmitter {
                         calculatedHash = calculatedHash.digest('hex')
                         if (calculatedHash === hash) {
                             log.info(`${reqName} executable exist and not corrupted`)
-                            return
                         } else {
                             corrupted = true
                         }
@@ -435,7 +426,7 @@ class AssetGuard extends EventEmitter {
      * check to see if the local file exists and is valid. If not, it will be added to the download
      * queue for the 'libraries' identifier.
      *
-     * @param {Object} versionData The version data for the assets.
+     * @param {Object} versionMeta The version data for the assets.
      * @returns {Promise.<void>} An empty promise to indicate the async processing has completed.
      */
     async validateVersion(versionMeta) {
@@ -443,7 +434,7 @@ class AssetGuard extends EventEmitter {
 
         const libDlQueue = []
         let dlSize = 0
-        let currentid = 0
+        let currentId = 0
         const idsLen = _(versionMeta).map('downloads').map(_.size).sum(_.values)
 
         for (const meta of versionMeta) {
@@ -459,8 +450,8 @@ class AssetGuard extends EventEmitter {
                     libDlQueue.push(lib)
                 }
 
-                currentid++
-                self.emit('progress', 'validating', currentid, idsLen)
+                currentId++
+                self.emit('progress', 'validating', currentId, idsLen)
             })
         }
 
@@ -603,11 +594,14 @@ class AssetGuard extends EventEmitter {
             DistroManager.setDevMode(dev)
             const dI = await DistroManager.pullLocal()
 
-            const server = dI.getServer(serverId)
+            const channels = ConfigManager.getReleaseChannels()
+            const server = dI.getServer(serverId, channels)
+            if (server === null) {
+                throw new Error(`Server is not available for selected channels: ${channels}`)
+            }
 
             // Validate Everything
-
-            const versions = server.getVersions()
+            const versions = server.getVersions(channels)
             if (versions.length < 1) {
                 throw new Error('Server do not have any available versions')
             }
