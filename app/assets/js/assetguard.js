@@ -310,48 +310,34 @@ class AssetGuard extends EventEmitter {
             let corrupted = false
             try {
                 await fs.promises.access(path)
-                let calculatedHash = crypto.createHash('md5')
-                fs.createReadStream(path)
-                    .on('data', data => calculatedHash.update(data))
-                    .on('end', () => {
-                        calculatedHash = calculatedHash.digest('hex')
-                        if (calculatedHash === hash) {
+                if (await Util.calculateHash(path, 'md5') === hash) {
                             log.info(`${reqName} executable exist and not corrupted`)
                         } else {
                             corrupted = true
                         }
-                    })
             } catch (err) {
                 corrupted = true
             }
 
             if (corrupted) {
                 log.info(`Downloading ${reqName}...`)
-                const pipeline = promisify(stream.pipeline)
-                await pipeline(
-                    got.stream(url)
-                        .on('response', res => {
-                            if (res.statusCode >= 400) {
-                                throw (`${reqName} unavailable at the moment. Status code: ${res.statusCode}`)
-                            }
-                        }),
-                    fs.createWriteStream(path)
+                const fileWriteStream = fs.createWriteStream(path)
                         .on('finish', () => {
                             log.info(`${reqName} download completed`)
-                            let calculatedHash = crypto.createHash('md5')
-                            fs.createReadStream(path)
-                                .on('data', data => calculatedHash.update(data))
-                                .on('end', () => {
-                                    calculatedHash = calculatedHash.digest('hex')
-                                    if (calculatedHash !== hash) {
-                                        throw (`Wrong Hash! ${calculatedHash} !== ${hash}`)
-                                    }
                                 })
+                    .on('error', (error) => {
+                        log.error(`Cannot write file to ${path}: ${error.message}`)
                         })
-                        .on('error', e => {
-                            throw e
+                const downloadStream = got.stream(url)
+                    .on('error', (error) => {
+                        log.error(`Failed to download ${url}. ${error.message}`)
                         })
-                )
+                const pipeline = promisify(stream.pipeline)
+                await pipeline(downloadStream, fileWriteStream)
+                if (await Util.calculateHash(path, 'md5') !== hash) {
+                    log.error(`Wrong Hash! ${calculatedHash} !== ${hash}, removing file...`)
+                    await fs.promises.unlink(path)
+                }
             }
         }
 

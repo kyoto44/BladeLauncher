@@ -104,13 +104,8 @@ class HttpFetcher extends Fetcher {
             .on('data', (chunk) => {
                 this.reporter.download(chunk.length)
             })
-            .on('response', (resp) => {
-                if (resp.statusCode !== 200) {
-                    throw (`Failed to download ${this.url}. Response code ${resp.statusCode}`)
-                }
-            })
             .on('error', (error) => {
-                throw (`Download failed: ${error.message}`)
+                throw (`Failed to download ${this.url}. ${error.message}`)
             })
         const pipeline = promisify(stream.pipeline)
         await pipeline(downloadStream, tg.throttle(), fileWriterStream)
