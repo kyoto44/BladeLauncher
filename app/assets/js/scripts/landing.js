@@ -88,10 +88,6 @@ document.getElementById('launch_button').addEventListener('click', function (e) 
     loggerLanding.log('Launching game..')
 
     dlAsync()
-
-    if (true)
-        return
-
 })
 
 // Bind settings button
@@ -126,15 +122,10 @@ updateSelectedAccount(ConfigManager.getSelectedAccount())
 
 // Bind selected server
 function updateSelectedServer(serv) {
-    if (getCurrentView() === VIEWS.settings) {
-        saveAllModConfigurations()
-    }
     ConfigManager.setSelectedServer(serv != null ? serv.getID() : null)
     ConfigManager.save()
     server_selection_button.innerHTML = '\u2022 ' + (serv != null ? serv.getName() : 'No Server Selected')
-    if (getCurrentView() === VIEWS.settings) {
-        animateModsTabRefresh()
-    }
+
     setLaunchEnabled(serv != null)
     return Promise.resolve()
 }

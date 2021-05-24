@@ -147,7 +147,7 @@ function showFatalStartupError() {
 /**
  * Common functions to perform after refreshing the distro index.
  * 
- * @param {Object} data The distro index object.
+ * @param {Promise<Object>} data The distro index object.
  */
 function onDistroRefresh(data) {
     const selected = ConfigManager.getSelectedServer()

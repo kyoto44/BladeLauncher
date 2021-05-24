@@ -292,6 +292,8 @@ settingsNavDone.onclick = () => {
     ConfigManager.save()
     // saveDropinModConfiguration()
     // saveShaderpackSettings()
+    const data = DistroManager.getDistribution()
+    onDistroRefresh(data).catch(e => console.error(e))
     switchView(getCurrentView(), VIEWS.landing)
 }
 
