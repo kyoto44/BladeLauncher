@@ -54,9 +54,6 @@ exports.setDataDirectory = function (dataDirectory) {
     config.settings.launcher.dataDirectory = dataDirectory
 }
 
-const configPath = path.join(exports.getLauncherDirectory(), 'config.json')
-const firstLaunch = !fs.existsSync(configPath)
-
 exports.getAbsoluteMinRAM = function () {
     const mem = os.totalmem()
     return mem >= 6000000000 ? 3 : 2
@@ -186,16 +183,6 @@ function validateKeySet(srcObj, destObj) {
         }
     }
     return destObj
-}
-
-/**
- * Check to see if this is the first time the user has launched the
- * application. This is determined by the existance of the data path.
- *
- * @returns {boolean} True if this is the first launch, otherwise false.
- */
-exports.isFirstLaunch = function () {
-    return firstLaunch
 }
 
 /**
@@ -703,7 +690,7 @@ exports.getBetaChannel = function () {
 exports.setBetaChannel = function (value) {
     if (value) {
         exports.addReleaseChannel('beta')
-    } else  {
+    } else {
         exports.popReleaseChannel('beta')
     }
 }

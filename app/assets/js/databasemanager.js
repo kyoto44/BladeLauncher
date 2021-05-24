@@ -4,8 +4,19 @@ const Database = require('better-sqlite3-with-prebuilds-latest')
 const fs = require('fs-extra')
 const LoggerUtil = require('./loggerutil')
 
-const sysRoot = process.env.APPDATA || (process.platform === 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
-const dbPath = path.join(sysRoot, '.nblade', 'bladelauncher.db')
+function _getLauncherDir() {
+    let config = process.env.CONFIG_DIRECT_PATH
+    if (config) {
+        return config
+    }
+    const electron = require('electron')
+    if (electron.remote) {
+        return electron.remote.app.getPath('userData')
+    }
+    return electron.app.getPath('userData')
+}
+
+const dbPath = path.join(_getLauncherDir(), 'bladelauncher.db')
 const logger = LoggerUtil('%c[DatabaseManager]', 'color: #a02d2a; font-weight: bold')
 
 const init = () => {
