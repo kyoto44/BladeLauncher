@@ -311,10 +311,10 @@ class AssetGuard extends EventEmitter {
             try {
                 await fs.promises.access(path)
                 if (await Util.calculateHash(path, 'md5') === hash) {
-                            log.info(`${reqName} executable exist and not corrupted`)
-                        } else {
-                            corrupted = true
-                        }
+                    log.info(`${reqName} executable exist and not corrupted`)
+                } else {
+                    corrupted = true
+                }
             } catch (err) {
                 corrupted = true
             }
@@ -322,20 +322,20 @@ class AssetGuard extends EventEmitter {
             if (corrupted) {
                 log.info(`Downloading ${reqName}...`)
                 const fileWriteStream = fs.createWriteStream(path)
-                        .on('finish', () => {
-                            log.info(`${reqName} download completed`)
-                                })
+                    .on('finish', () => {
+                        log.info(`${reqName} download completed`)
+                    })
                     .on('error', (error) => {
                         log.error(`Cannot write file to ${path}: ${error.message}`)
-                        })
+                    })
                 const downloadStream = got.stream(url)
                     .on('error', (error) => {
                         log.error(`Failed to download ${url}. ${error.message}`)
-                        })
+                    })
                 const pipeline = promisify(stream.pipeline)
                 await pipeline(downloadStream, fileWriteStream)
                 if (await Util.calculateHash(path, 'md5') !== hash) {
-                    log.error(`Wrong Hash! ${calculatedHash} !== ${hash}, removing file...`)
+                    log.error(`Wrong Hash! ${hash}, removing file...`)
                     await fs.promises.unlink(path)
                 }
             }
